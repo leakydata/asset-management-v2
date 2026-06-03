@@ -66,21 +66,28 @@ SUBSCRIPTION_HEADER = os.environ.get(
 
 HTTP_TIMEOUT = float(os.environ.get("CAT_HTTP_TIMEOUT", "30"))
 
-# Optional default dealer code (partyNumber). During the testing phase, set this
-# to your entitled test dealer code; switch to your production dealer code once
-# Caterpillar upgrades your credentials. Used only when a tool call omits
-# party_number — an explicit value always wins.
+# Dealer code (partyNumber) resolution. Two optional env knobs:
+#   CAT_FORCE_PARTY_NUMBER   — if set, OVERRIDES whatever the caller passes. Use
+#                              during the testing phase to pin every call to your
+#                              entitled test dealer code, even if the agent insists
+#                              on sending a different (not-yet-entitled) code.
+#   CAT_DEFAULT_PARTY_NUMBER — used only when the caller omits party_number.
+# Once Caterpillar upgrades your credentials to your production dealer code,
+# clear CAT_FORCE_PARTY_NUMBER so callers can specify any code they're entitled to.
+FORCE_PARTY_NUMBER = os.environ.get("CAT_FORCE_PARTY_NUMBER") or ""
 DEFAULT_PARTY_NUMBER = os.environ.get("CAT_DEFAULT_PARTY_NUMBER") or ""
 
 mcp = FastMCP("cat-asset-management")
 
 
 def _resolve_party(party_number: str) -> str:
-    """Return the explicit party_number, or fall back to the configured default."""
+    """Resolve the effective partyNumber: forced override > explicit > default."""
+    if FORCE_PARTY_NUMBER:
+        return FORCE_PARTY_NUMBER
     resolved = party_number or DEFAULT_PARTY_NUMBER
     if not resolved:
         raise ValueError(
-            "party_number is required (no CAT_DEFAULT_PARTY_NUMBER configured). "
+            "party_number is required (no CAT_FORCE/DEFAULT_PARTY_NUMBER configured). "
             "Provide the dealer code, e.g. your test dealer code during onboarding."
         )
     return resolved
