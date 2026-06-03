@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Caterpillar Confidential source documents — do not publish (esp. to a public repo)
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# uv
+.uv/
