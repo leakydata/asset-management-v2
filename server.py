@@ -67,9 +67,9 @@ SUBSCRIPTION_HEADER = os.environ.get(
 HTTP_TIMEOUT = float(os.environ.get("CAT_HTTP_TIMEOUT", "30"))
 
 # Optional default dealer code (partyNumber). During the testing phase, set this
-# to your entitled test dealer code (e.g. ZZIO); switch to your real code (e.g.
-# B150) once Caterpillar upgrades your credentials. Used only when a tool call
-# omits party_number — an explicit value always wins.
+# to your entitled test dealer code; switch to your production dealer code once
+# Caterpillar upgrades your credentials. Used only when a tool call omits
+# party_number — an explicit value always wins.
 DEFAULT_PARTY_NUMBER = os.environ.get("CAT_DEFAULT_PARTY_NUMBER") or ""
 
 mcp = FastMCP("cat-asset-management")
