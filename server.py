@@ -371,53 +371,102 @@ def expire_ownership_record(
 
 @mcp.tool()
 def search_ownership_records(
-    filters: list[dict],
+    dcn: str = "",
+    serial_number: str = "",
+    asset_name: str = "",
+    make_code: str = "",
     party_number: str = "",
-    response_attributes: Optional[list[str]] = None,
+    case_sensitive: bool = False,
     sort_by: Optional[list[str]] = None,
     order_by: Optional[list[str]] = None,
+    response_attributes: Optional[list[str]] = None,
+    filters: Optional[list[dict]] = None,
     user_preferences: str = "",
     tracking_id: str = "",
 ) -> dict:
     """Search ACTIVE or PENDING asset ownership records.
 
-    Maps to POST /ownershipRecords/search.
+    Maps to POST /ownershipRecords/search. Provide one or two of the search
+    fields below — they are matched **exactly** (not partial/contains). When you
+    give two, they combine with logical AND.
 
-    Filtering rules:
-    * 1-2 filters allowed. Each filter is a StringEquals filter shaped like:
-        {"type": "stringEquals", "propertyName": "dcn",
-         "values": ["12345"], "isCaseSensitive": true}
-    * propertyName is one of: dcn | assetName | serialNumber | makeCode.
-    * If you filter by makeCode, at least one OTHER filter is required.
-    * Each filter's `values` array holds exactly one value.
+    You can search by ANY of these four fields, alone or in pairs:
+      * dcn            — Dealer Customer Number, e.g. "12345"
+      * serial_number  — asset serial number, e.g. "2WS23456"
+      * asset_name     — asset name
+      * make_code      — manufacturer code, e.g. "CW1"
+                         (make_code can't be used alone — pair it with another field)
+
+    Examples:
+      * Search by DCN:            dcn="12345"
+      * Search by serial:         serial_number="2WS23456"
+      * Search by make + serial:  make_code="CW1", serial_number="2WS23456"
 
     Args:
-        party_number: Organization with access to the equipment.
-        filters: List of 1-2 filter objects (see above). Required.
-        response_attributes: Optional list of dotted attribute paths to return
-            (e.g. ["metadata", "ownership.dealerAssociation.dcn"]). Null/empty
-            returns all attributes.
-        sort_by: Up to 3 of: dcn | assetName | serialNumber | makeCode. Defaults to serialNumber.
+        dcn: Filter by Dealer Customer Number (exact match).
+        serial_number: Filter by asset serial number (exact match).
+        asset_name: Filter by asset name (exact match).
+        make_code: Filter by manufacturer code (exact match; needs a 2nd field).
+        party_number: Dealer code; usually leave blank (the server supplies it).
+        case_sensitive: Match values case-sensitively (default false).
+        sort_by: Up to 3 of: dcn | assetName | serialNumber | makeCode.
         order_by: Up to 3 of ASC | DESC, positionally matched to sort_by.
+        response_attributes: Optional dotted attribute paths to return
+            (e.g. ["metadata", "ownership.dealerAssociation.dcn"]). Empty = all.
+        filters: Advanced escape hatch — raw filter objects. Ignored unless the
+            flat fields above are all empty. Most callers should not use this.
         user_preferences: Optional base64 X-Cat-User-Preferences header value.
         tracking_id: Optional X-Cat-API-Tracking-Id.
 
     Returns:
-        dict with `ok`, `tracking_id`, and `data` (OwnershipRecordsSearchResponse
-        — an object with `ownershipRecords`) or `error`.
+        dict with `ok`, `tracking_id`, and `data` (an object with
+        `ownershipRecords`) or `error`.
     """
-    if not filters:
-        raise ValueError("At least one filter is required.")
-    if len(filters) > 2:
-        raise ValueError("A maximum of 2 filters is allowed.")
-    # Guide p.25: makeCode cannot be the sole filter — another property is required.
-    props = [str(f.get("propertyName", "")).lower() for f in filters]
-    if "makecode" in props and len(filters) < 2:
+    # Build filters from the flat fields (the normal path).
+    field_map = [
+        ("dcn", dcn),
+        ("serialNumber", serial_number),
+        ("assetName", asset_name),
+        ("makeCode", make_code),
+    ]
+    provided = [(prop, val) for prop, val in field_map if val]
+
+    if provided:
+        if len(provided) > 2:
+            raise ValueError(
+                "Search supports at most 2 fields at once (API limit). "
+                "Choose up to two of: dcn, serial_number, asset_name, make_code."
+            )
+        names = [p for p, _ in provided]
+        if "makeCode" in names and len(provided) < 2:
+            raise ValueError(
+                "make_code can't be the only search field — pair it with "
+                "serial_number, dcn, or asset_name."
+            )
+        built_filters = [
+            {
+                "type": "stringEquals",
+                "propertyName": prop,
+                "values": [val],
+                "isCaseSensitive": case_sensitive,
+            }
+            for prop, val in provided
+        ]
+    elif filters:
+        # Advanced fallback: caller supplied raw filter objects directly.
+        if len(filters) > 2:
+            raise ValueError("A maximum of 2 filters is allowed.")
+        raw_props = [str(f.get("propertyName", "")).lower() for f in filters]
+        if "makecode" in raw_props and len(filters) < 2:
+            raise ValueError(
+                "When filtering by makeCode, at least one additional filter is required."
+            )
+        built_filters = filters
+    else:
         raise ValueError(
-            "When filtering by makeCode, at least one additional filter "
-            "(e.g. serialNumber or dcn) is required."
+            "Provide at least one search field: dcn, serial_number, asset_name, "
+            "or make_code."
         )
-    # Multiple filters combine with logical AND (guide p.25).
 
     params: dict[str, Any] = {"partyNumber": _resolve_party(party_number)}
     if sort_by:
@@ -425,7 +474,7 @@ def search_ownership_records(
     if order_by:
         params["orderBy"] = ",".join(order_by)
 
-    body: dict[str, Any] = {"filters": filters}
+    body: dict[str, Any] = {"filters": built_filters}
     if response_attributes:
         body["responseAttributes"] = response_attributes
 

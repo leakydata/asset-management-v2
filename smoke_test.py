@@ -19,9 +19,9 @@ import server
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--party", default="TD00", help="partyNumber (dealer code)")
-    ap.add_argument("--dcn", default="12345", help="filter by DCN")
-    ap.add_argument("--serial", default="", help="filter by serial number")
+    ap.add_argument("--party", default="", help="partyNumber (blank = server default/override)")
+    ap.add_argument("--dcn", default="", help="filter by DCN")
+    ap.add_argument("--serial", default="9303", help="filter by serial number")
     ap.add_argument("--make", default="", help="filter by make code (needs a 2nd filter)")
     args = ap.parse_args()
 
@@ -30,19 +30,15 @@ def main() -> None:
     token = server._token_cache.get()
     print(f"   OK — token length {len(token)}\n")
 
-    # 2) Build filters from whatever was provided
-    filters = []
-    if args.dcn:
-        filters.append({"type": "stringEquals", "propertyName": "dcn", "values": [args.dcn]})
-    if args.serial:
-        filters.append({"type": "stringEquals", "propertyName": "serialNumber", "values": [args.serial]})
-    if args.make:
-        filters.append({"type": "stringEquals", "propertyName": "makeCode", "values": [args.make]})
-    if not filters:
-        filters.append({"type": "stringEquals", "propertyName": "dcn", "values": ["12345"]})
-
-    print(f"2) search_ownership_records(party={args.party!r}, filters={filters})")
-    result = server.search_ownership_records(party_number=args.party, filters=filters)
+    # 2) Search using the flat fields (any combination, just like the agent)
+    print(f"2) search_ownership_records(party={args.party!r}, dcn={args.dcn!r}, "
+          f"serial_number={args.serial!r}, make_code={args.make!r})")
+    result = server.search_ownership_records(
+        party_number=args.party,
+        dcn=args.dcn,
+        serial_number=args.serial,
+        make_code=args.make,
+    )
     print(json.dumps(result, indent=2, default=str))
 
     print()
