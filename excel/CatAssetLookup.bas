@@ -1,11 +1,10 @@
 Attribute VB_Name = "CatAssetLookup"
 '==============================================================================
-' Cat Asset Management V2 - Excel lookup
+' Cat Asset Management V2 - core + worksheet function
 '
-' Exposes =CatLookupSerial("<serial>") as a worksheet function that calls the
-' Caterpillar Asset Management V2 search endpoint and spills a row per matching
-' ownership record. Handles OAuth2 client-credentials auth (Entra ID) with a
-' cached token.
+' Exposes =CatLookupSerial("<serial>") and the shared building blocks
+' (CatSearch, HeaderArray, RecordValues) used by the CatBatchLookup module.
+' Handles OAuth2 client-credentials auth (Entra ID) with a cached token.
 '
 ' DEPENDENCIES:
 '   1. VBA-JSON (JsonConverter.bas)  -> import into the same workbook.
@@ -24,12 +23,14 @@ Attribute VB_Name = "CatAssetLookup"
 '     TokenUrl        (optional - overrides TenantId)
 '
 ' USAGE in a cell:   =CatLookupSerial(B1)     where B1 holds a serial number
+' For a whole column of serials, run the CatBatchLookup macro (other module).
 '==============================================================================
 Option Explicit
 
 Private Const CFG_SHEET As String = "Config"
 
-' --- token cache (module-level) ---
+' --- token cache (module-level; shared across the function and the batch macro
+'     because the batch macro calls CatSearch -> GetToken in this module) ---
 Private mToken As String
 Private mTokenExpiry As Double          ' Date serial; refresh ~60s early
 
@@ -86,115 +87,11 @@ Public Sub CatClearTokenCache()
 End Sub
 
 '==============================================================================
-' PUBLIC: batch macro - prompts for a column of serials, writes a results sheet
-' (one row per ownership record). Run it from the Macros dialog or a button.
+' PUBLIC: shared building blocks (used here and by the CatBatchLookup module)
 '==============================================================================
-Public Sub CatBatchLookup()
-    On Error GoTo Fail
 
-    ' 1) Ask the user to select the column of serial numbers
-    Dim rng As Range
-    On Error Resume Next
-    Set rng = Application.InputBox( _
-        Prompt:="Select the column of serial numbers (a header row is OK):", _
-        Title:="Cat Asset Lookup", Type:=8)
-    On Error GoTo Fail
-    If rng Is Nothing Then Exit Sub                 ' user cancelled
-
-    ' Limit to the used area so selecting a whole column isn't a million cells
-    Set rng = Application.Intersect(rng.Columns(1), rng.Worksheet.UsedRange)
-    If rng Is Nothing Then MsgBox "That selection has no data.", vbExclamation: Exit Sub
-
-    ' 2) Collect serials (skip blanks and an obvious header cell)
-    Dim serials As Collection: Set serials = New Collection
-    Dim cell As Range, s As String
-    For Each cell In rng.Cells
-        s = Trim$(CStr(cell.Value))
-        If Len(s) > 0 Then
-            If Not (serials.Count = 0 And LCase$(s) Like "*serial*") Then serials.Add s
-        End If
-    Next cell
-    If serials.Count = 0 Then MsgBox "No serial numbers found in the selection.", vbExclamation: Exit Sub
-
-    ' 3) Loop the serials, accumulate result rows
-    Dim headers As Variant: headers = HeaderArray()
-    Dim nFields As Long: nFields = UBound(headers) + 1
-    Dim totalCols As Long: totalCols = 1 + nFields + 1     ' QuerySerial + fields + Note
-
-    Dim rowsOut As Collection: Set rowsOut = New Collection
-    Application.ScreenUpdating = False
-
-    Dim idx As Long
-    For idx = 1 To serials.Count
-        s = serials(idx)
-        Application.StatusBar = "Looking up " & idx & " of " & serials.Count & "  (" & s & ")"
-
-        Dim respText As String, errMsg As String
-        errMsg = ""
-        On Error Resume Next
-        respText = CatSearch(s, "")
-        If Err.Number <> 0 Then errMsg = Err.Description: Err.Clear
-        On Error GoTo Fail
-
-        If Len(errMsg) > 0 Then
-            rowsOut.Add MakeRow(s, Nothing, "ERROR: " & errMsg, totalCols, nFields)
-        Else
-            Dim root As Object, recs As Object
-            Set root = JsonConverter.ParseJson(respText)
-            Set recs = Nothing
-            If Not root Is Nothing Then
-                If root.Exists("ownershipRecords") Then Set recs = root("ownershipRecords")
-            End If
-            If recs Is Nothing Then
-                rowsOut.Add MakeRow(s, Nothing, "no data", totalCols, nFields)
-            ElseIf recs.Count = 0 Then
-                rowsOut.Add MakeRow(s, Nothing, "no records found", totalCols, nFields)
-            Else
-                Dim k As Long
-                For k = 1 To recs.Count
-                    rowsOut.Add MakeRow(s, recs(k), "", totalCols, nFields)
-                Next k
-            End If
-        End If
-    Next idx
-
-    ' 4) Write everything to a fresh sheet in one shot
-    Dim ws As Worksheet: Set ws = MakeOutputSheet()
-    Dim grid() As Variant
-    ReDim grid(1 To rowsOut.Count + 1, 1 To totalCols)
-
-    grid(1, 1) = "QuerySerial"
-    Dim c As Long
-    For c = 0 To nFields - 1: grid(1, 2 + c) = headers(c): Next c
-    grid(1, totalCols) = "Note"
-
-    Dim rr As Long, rowArr As Variant
-    For rr = 1 To rowsOut.Count
-        rowArr = rowsOut(rr)
-        For c = 0 To totalCols - 1: grid(rr + 1, c + 1) = rowArr(c): Next c
-    Next rr
-
-    ws.Range(ws.Cells(1, 1), ws.Cells(rowsOut.Count + 1, totalCols)).Value = grid
-    ws.Rows(1).Font.Bold = True
-    ws.Range("A1").AutoFilter
-    ws.Columns.AutoFit
-    ws.Activate
-
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
-    MsgBox serials.Count & " serial(s) looked up -> " & rowsOut.Count & _
-           " record row(s) on '" & ws.Name & "'.", vbInformation
-    Exit Sub
-Fail:
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
-    MsgBox "Error: " & Err.Description, vbCritical
-End Sub
-
-'==============================================================================
-' HTTP: search + token
-'==============================================================================
-Private Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As String
+' POST the search endpoint and return the raw JSON response text.
+Public Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As String
     Dim baseUrl As String, party As String, url As String
     baseUrl = Cfg("BaseUrl")
     If Len(baseUrl) = 0 Then baseUrl = "https://services.cat.com/catDigital/assetManagement/v2"
@@ -223,6 +120,44 @@ Private Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As
     CatSearch = http.responseText
 End Function
 
+' Column headers for the 14 record fields.
+Public Function HeaderArray() As Variant
+    HeaderArray = Array("SerialNumber", "MakeCode", "MakeName", "Model", "ModelYear", _
+                        "AssetName", "DealerCode", "DealerName", "DCN", "DcnName", _
+                        "CCID", "CcidName", "OwnershipType", "Status")
+End Function
+
+' Returns a 1-D array of the 14 field values for one ownership record.
+Public Function RecordValues(ByVal rec As Object) As Variant
+    Dim md As Object, ow As Object, da As Object, mk As Object, ot As Object, rs As Object
+    Set md = SafeObj(rec, "metadata")
+    Set ow = SafeObj(rec, "ownership")
+    Set da = SafeObj(ow, "dealerAssociation")
+    Set mk = SafeObj(md, "makeInfo")
+    Set ot = SafeObj(da, "dcnOwnershipType")
+    Set rs = SafeObj(da, "dcnRelationStatus")
+
+    Dim v(0 To 13) As Variant
+    v(0) = SafeStr(md, "serialNumber")
+    v(1) = SafeStr(mk, "code")
+    v(2) = SafeStr(mk, "name")
+    v(3) = SafeStr(md, "model")
+    v(4) = SafeStr(md, "modelYear")
+    v(5) = SafeStr(md, "assetName")
+    v(6) = SafeStr(da, "dealerCode")
+    v(7) = SafeStr(da, "dealerName")
+    v(8) = SafeStr(da, "dcn")
+    v(9) = SafeStr(da, "dcnName")
+    v(10) = SafeStr(ow, "ccid")
+    v(11) = SafeStr(ow, "ccidName")
+    v(12) = SafeStr(ot, "code")
+    v(13) = SafeStr(rs, "code")
+    RecordValues = v
+End Function
+
+'==============================================================================
+' PRIVATE: token + request internals
+'==============================================================================
 Private Function GetToken() As String
     If Len(mToken) > 0 And Now < mTokenExpiry Then
         GetToken = mToken
@@ -268,7 +203,7 @@ Private Function FilterJson(ByVal prop As String, ByVal val As String) As String
 End Function
 
 '==============================================================================
-' Config sheet access
+' PRIVATE: config + small helpers
 '==============================================================================
 Private Function Cfg(ByVal label As String) As String
     Dim ws As Worksheet, found As Range
@@ -280,88 +215,6 @@ Private Function Cfg(ByVal label As String) As String
     If Not found Is Nothing Then Cfg = Trim$(CStr(ws.Cells(found.Row, 2).Value))
 End Function
 
-'==============================================================================
-' Record shaping (shared by the function and the batch macro)
-'==============================================================================
-Private Function HeaderArray() As Variant
-    HeaderArray = Array("SerialNumber", "MakeCode", "MakeName", "Model", "ModelYear", _
-                        "AssetName", "DealerCode", "DealerName", "DCN", "DcnName", _
-                        "CCID", "CcidName", "OwnershipType", "Status")
-End Function
-
-' Returns a 1-D array of the 14 field values for one ownership record.
-Private Function RecordValues(ByVal rec As Object) As Variant
-    Dim md As Object, ow As Object, da As Object, mk As Object, ot As Object, rs As Object
-    Set md = SafeObj(rec, "metadata")
-    Set ow = SafeObj(rec, "ownership")
-    Set da = SafeObj(ow, "dealerAssociation")
-    Set mk = SafeObj(md, "makeInfo")
-    Set ot = SafeObj(da, "dcnOwnershipType")
-    Set rs = SafeObj(da, "dcnRelationStatus")
-
-    Dim v(0 To 13) As Variant
-    v(0) = SafeStr(md, "serialNumber")
-    v(1) = SafeStr(mk, "code")
-    v(2) = SafeStr(mk, "name")
-    v(3) = SafeStr(md, "model")
-    v(4) = SafeStr(md, "modelYear")
-    v(5) = SafeStr(md, "assetName")
-    v(6) = SafeStr(da, "dealerCode")
-    v(7) = SafeStr(da, "dealerName")
-    v(8) = SafeStr(da, "dcn")
-    v(9) = SafeStr(da, "dcnName")
-    v(10) = SafeStr(ow, "ccid")
-    v(11) = SafeStr(ow, "ccidName")
-    v(12) = SafeStr(ot, "code")
-    v(13) = SafeStr(rs, "code")
-    RecordValues = v
-End Function
-
-' Builds one output row: QuerySerial + 14 fields (if rec given) + Note.
-Private Function MakeRow(ByVal serial As String, ByVal rec As Object, _
-                         ByVal note As String, ByVal totalCols As Long, _
-                         ByVal nFields As Long) As Variant
-    Dim r() As Variant
-    ReDim r(0 To totalCols - 1)
-    r(0) = serial
-    If Not rec Is Nothing Then
-        Dim vals As Variant: vals = RecordValues(rec)
-        Dim c As Long
-        For c = 0 To nFields - 1: r(1 + c) = vals(c): Next c
-    End If
-    r(totalCols - 1) = note
-    MakeRow = r
-End Function
-
-'==============================================================================
-' Output sheet
-'==============================================================================
-Private Function MakeOutputSheet() As Worksheet
-    Dim base As String: base = "Asset Lookup Results"
-    Dim nm As String: nm = base
-    Dim i As Long: i = 1
-    Do While SheetExists(nm)
-        i = i + 1
-        nm = base & " " & i
-    Loop
-    Dim ws As Worksheet
-    Set ws = ThisWorkbook.Worksheets.Add( _
-        After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
-    ws.Name = nm
-    Set MakeOutputSheet = ws
-End Function
-
-Private Function SheetExists(ByVal nm As String) As Boolean
-    Dim ws As Worksheet
-    On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(nm)
-    On Error GoTo 0
-    SheetExists = Not ws Is Nothing
-End Function
-
-'==============================================================================
-' Small helpers
-'==============================================================================
 Private Function SafeObj(ByVal parent As Object, ByVal key As String) As Object
     If parent Is Nothing Then Exit Function
     On Error Resume Next
