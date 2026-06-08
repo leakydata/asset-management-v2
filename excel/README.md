@@ -30,10 +30,11 @@ Type a serial number and the function returns a spilled table:
    | `BaseUrl` | `https://services.cat.com/catDigital/assetManagement/v2` |
    | `TokenUrl` | _(leave blank)_ |
 
-3. **Open the VBA editor** (`Alt`+`F11`) and import both modules
+3. **Open the VBA editor** (`Alt`+`F11`) and import these modules
    (File ▸ Import File…):
    - `JsonConverter.bas`  (VBA-JSON — you already have it)
-   - `CatAssetLookup.bas`  (this folder)
+   - `CatAssetLookup.bas`  (core + the `=CatLookupSerial` function)
+   - `CatBatchLookup.bas`  (the batch macro)
 
 4. **Add the Scripting Runtime reference** (Tools ▸ References…) — check
    **Microsoft Scripting Runtime**. VBA-JSON needs it for `Scripting.Dictionary`.

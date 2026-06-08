@@ -109,6 +109,7 @@ Public Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As 
     Dim http As Object
     Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
     http.Open "POST", url, False
+    http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
     http.SetRequestHeader "Authorization", "Bearer " & GetToken()
     http.SetRequestHeader "Content-Type", "application/json"
     http.SetRequestHeader "Accept", "application/json"
@@ -179,6 +180,7 @@ Private Function GetToken() As String
     Dim http As Object
     Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
     http.Open "POST", tokenUrl, False
+    http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
     http.SetRequestHeader "Content-Type", "application/x-www-form-urlencoded"
     http.Send body
 
