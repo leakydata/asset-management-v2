@@ -90,35 +90,107 @@ End Sub
 ' PUBLIC: shared building blocks (used here and by the CatBatchLookup module)
 '==============================================================================
 
-' POST the search endpoint and return the raw JSON response text.
+' POST /ownershipRecords/search - returns raw JSON text (raises on non-200).
 Public Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As String
-    Dim baseUrl As String, party As String, url As String
-    baseUrl = Cfg("BaseUrl")
-    If Len(baseUrl) = 0 Then baseUrl = "https://services.cat.com/catDigital/assetManagement/v2"
-    party = Cfg("PartyNumber")
-    url = baseUrl & "/ownershipRecords/search?partyNumber=" & UrlEncode(party)
-
     Dim filters As String
     If Len(dcn) > 0 Then filters = filters & FilterJson("dcn", dcn) & ","
     If Len(serialNumber) > 0 Then filters = filters & FilterJson("serialNumber", serialNumber) & ","
     If Len(filters) > 0 Then filters = Left$(filters, Len(filters) - 1)
 
-    Dim payload As String
-    payload = "{""filters"":[" & filters & "]}"
+    Dim q As String
+    q = "/ownershipRecords/search?partyNumber=" & UrlEncode(Cfg("PartyNumber"))
+
+    Dim status As Long, txt As String
+    txt = CatPost(q, "{""filters"":[" & filters & "]}", status)
+    If status <> 200 Then Err.Raise vbObjectError + 2, , "API " & status & ": " & Left$(txt, 300)
+    CatSearch = txt
+End Function
+
+' Low-level authenticated POST. Returns response text and sets statusOut to the
+' HTTP status. Does NOT raise on non-2xx - the caller decides what to do.
+Public Function CatPost(ByVal pathWithQuery As String, ByVal jsonBody As String, _
+                        ByRef statusOut As Long) As String
+    Dim baseUrl As String
+    baseUrl = Cfg("BaseUrl")
+    If Len(baseUrl) = 0 Then baseUrl = "https://services.cat.com/catDigital/assetManagement/v2"
 
     Dim http As Object
     Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
-    http.Open "POST", url, False
+    http.Open "POST", baseUrl & pathWithQuery, False
     http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
     http.SetRequestHeader "Authorization", "Bearer " & GetToken()
-    http.SetRequestHeader "Content-Type", "application/json"
     http.SetRequestHeader "Accept", "application/json"
-    http.Send payload
+    If Len(jsonBody) > 0 Then http.SetRequestHeader "Content-Type", "application/json"
+    http.Send jsonBody
+    statusOut = http.Status
+    CatPost = http.responseText
+End Function
 
-    If http.Status <> 200 Then
-        Err.Raise vbObjectError + 2, , "API " & http.Status & ": " & Left$(http.responseText, 300)
-    End If
-    CatSearch = http.responseText
+' POST /ownershipRecords - add or update an ownership record. Returns the
+' response body (AddOwnershipResponse JSON) and sets statusOut.
+Public Function CatAddUpdate(ByVal serialNumber As String, ByVal dcn As String, _
+        ByVal makeCode As String, ByVal dealerMakeCode As String, _
+        ByVal ownershipTypeCode As String, ByVal model As String, _
+        ByVal modelYear As String, ByVal productFamilyCode As String, _
+        ByVal productFamilyName As String, ByVal baseAssetName As String, _
+        ByVal customAssetName As String, ByRef statusOut As Long) As String
+    Dim q As String
+    q = "/ownershipRecords?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
+        AssetQuery(serialNumber, dcn, makeCode, dealerMakeCode)
+
+    Dim b As String
+    b = b & JF("ownershipTypeCode", ownershipTypeCode)
+    b = b & JF("model", model)
+    b = b & JF("modelYear", modelYear)
+    b = b & JF("productFamilyCode", productFamilyCode)
+    b = b & JF("productFamilyName", productFamilyName)
+    b = b & JF("baseAssetName", baseAssetName)
+    b = b & JF("customAssetName", customAssetName)
+    If Len(b) > 0 Then b = Left$(b, Len(b) - 1)        ' strip trailing comma
+
+    CatAddUpdate = CatPost(q, "{" & b & "}", statusOut)
+End Function
+
+' POST /ownershipRecords/expire - expire an ownership record (success = 204).
+Public Function CatExpire(ByVal serialNumber As String, ByVal dcn As String, _
+        ByVal makeCode As String, ByVal dealerMakeCode As String, _
+        ByRef statusOut As Long) As String
+    Dim q As String
+    q = "/ownershipRecords/expire?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
+        AssetQuery(serialNumber, dcn, makeCode, dealerMakeCode)
+    CatExpire = CatPost(q, "", statusOut)
+End Function
+
+' POST /ownershipRequests/transfer - approve/reject a pending transfer (204).
+' No DCN is used for this endpoint.
+Public Function CatTransfer(ByVal serialNumber As String, ByVal makeCode As String, _
+        ByVal dealerMakeCode As String, ByVal statusValue As String, _
+        ByVal reason As String, ByRef statusOut As Long) As String
+    Dim q As String
+    q = "/ownershipRequests/transfer?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
+        AssetQuery(serialNumber, "", makeCode, dealerMakeCode)
+    Dim b As String
+    b = JF("status", UCase$(statusValue))
+    b = b & JF("reason", reason)
+    If Len(b) > 0 Then b = Left$(b, Len(b) - 1)
+    CatTransfer = CatPost(q, "{" & b & "}", statusOut)
+End Function
+
+' Build the shared asset-identifier query (&serialNumber=..&makeCode=..&dcn=..).
+Private Function AssetQuery(ByVal serialNumber As String, ByVal dcn As String, _
+        ByVal makeCode As String, ByVal dealerMakeCode As String) As String
+    Dim s As String
+    If Len(serialNumber) > 0 Then s = s & "&serialNumber=" & UrlEncode(serialNumber)
+    If Len(makeCode) > 0 Then s = s & "&makeCode=" & UrlEncode(makeCode)
+    If Len(dealerMakeCode) > 0 Then s = s & "&dealerMakeCode=" & UrlEncode(dealerMakeCode)
+    If Len(dcn) > 0 Then s = s & "&dcn=" & UrlEncode(dcn)
+    AssetQuery = s
+End Function
+
+' One JSON "name":"value", pair (trailing comma) - empty if val is blank.
+Private Function JF(ByVal name As String, ByVal val As String) As String
+    If Len(val) = 0 Then Exit Function
+    JF = """" & name & """:""" & JsonEsc(val) & ""","
 End Function
 
 ' Column headers for the 14 record fields.

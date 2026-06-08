@@ -33,8 +33,9 @@ Type a serial number and the function returns a spilled table:
 3. **Open the VBA editor** (`Alt`+`F11`) and import these modules
    (File ▸ Import File…):
    - `JsonConverter.bas`  (VBA-JSON — you already have it)
-   - `CatAssetLookup.bas`  (core + the `=CatLookupSerial` function)
-   - `CatBatchLookup.bas`  (the batch macro)
+   - `CatAssetLookup.bas`  (core API + the `=CatLookupSerial` function)
+   - `CatBatchLookup.bas`  (the batch lookup macro)
+   - `CatActions.bas`  (add / update / expire / transfer / check macros)
 
 4. **Add the Scripting Runtime reference** (Tools ▸ References…) — check
    **Microsoft Scripting Runtime**. VBA-JSON needs it for `Scripting.Dictionary`.
@@ -74,6 +75,31 @@ so the results sheet won't re-call the API on recalculation.
 
 > Tip: to run it from a button, insert a shape (Insert ▸ Shapes), right-click ▸
 > **Assign Macro** ▸ `CatBatchLookup`.
+
+## Actions: add / update / expire / transfer
+
+The `CatActions` module covers the API's write operations plus a read-only
+ownership check. These are **macros, not worksheet functions**, because they
+change data and must never fire on recalculation.
+
+1. Run **`CatSetupActionsSheet`** once — it builds an **"Actions"** sheet with
+   labeled input cells and buttons.
+2. Fill the **Asset Identifier** block (Serial, Make Code *or* Dealer Make Code,
+   DCN), plus the fields for the action you want, then click its button:
+
+   | Button | Endpoint | Notes |
+   |---|---|---|
+   | Add / Update | `POST /ownershipRecords` | New records require Ownership Type, Model, Model Year |
+   | Expire | `POST /ownershipRecords/expire` | Removes the record (asks to confirm) |
+   | Approve / Reject | `POST /ownershipRequests/transfer` | Status APPROVED/REJECTED; reason required to reject; no DCN |
+   | Check Ownership | `POST /ownershipRecords/search` | Read-only; summarizes who owns the serial |
+
+3. Each action asks for confirmation, then writes the outcome (record status, or
+   the API's error code + message) to the **Result** cell.
+
+> ⚠️ **These change real data.** Add/expire/transfer act on the dealer code in
+> `Config!PartyNumber`. Keep that on your **test dealer code** and use test
+> assets until you intend to touch production. The Check button is always safe.
 
 ## Notes
 
