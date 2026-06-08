@@ -54,11 +54,23 @@ For a whole list of serials, use the macro instead of the live function:
 3. When prompted, **select the column of serials** and click OK.
 4. It creates a new **"Asset Lookup Results"** sheet with one row per ownership
    record, plus a `QuerySerial` column (so you can tie rows back to your input)
-   and a `Note` column (`no records found` / `ERROR: …` where applicable).
+   and a `Note` column.
 
-The macro reuses one cached token for the entire batch and shows progress in the
-status bar. Because it writes values once (not a live formula), the results sheet
-won't re-call the API on recalculation.
+Each serial gets exactly one of three outcomes, so a failed call is never
+mistaken for an empty result:
+
+| Outcome | Note value | Row shading | Meaning |
+|---|---|---|---|
+| Found | _(blank)_ | none | one row per ownership record |
+| Not in CCAT | `NOT IN CCAT` | grey | the API answered successfully with **zero** records |
+| Failed | `LOOKUP FAILED: …` | red | the call errored / timed out — **we don't know** if the asset exists |
+
+`LOOKUP FAILED` rows are highlighted so you can spot and **re-run just those**.
+Transient failures (timeouts, HTTP 429/5xx, connection drops) are retried
+automatically up to 3 times before being marked failed; permanent errors (e.g.
+403) are not retried. The macro reuses one cached token for the whole batch,
+shows progress in the status bar, and writes values once (not a live formula),
+so the results sheet won't re-call the API on recalculation.
 
 > Tip: to run it from a button, insert a shape (Insert ▸ Shapes), right-click ▸
 > **Assign Macro** ▸ `CatBatchLookup`.
