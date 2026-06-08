@@ -29,6 +29,11 @@ Option Explicit
 
 Private Const CFG_SHEET As String = "Config"
 
+' Read-only switch. While True, the write endpoints (CatAddUpdate / CatExpire /
+' CatTransfer) are disabled and raise an error if called. Set to False to
+' re-enable writes, then re-run CatSetupActionsSheet to show the write buttons.
+Public Const CAT_READ_ONLY As Boolean = True
+
 ' --- token cache (module-level; shared across the function and the batch macro
 '     because the batch macro calls CatSearch -> GetToken in this module) ---
 Private mToken As String
@@ -134,6 +139,7 @@ Public Function CatAddUpdate(ByVal serialNumber As String, ByVal dcn As String, 
         ByVal modelYear As String, ByVal productFamilyCode As String, _
         ByVal productFamilyName As String, ByVal baseAssetName As String, _
         ByVal customAssetName As String, ByRef statusOut As Long) As String
+    If CAT_READ_ONLY Then Err.Raise vbObjectError + 100, , "Writes are disabled (read-only mode)."
     Dim q As String
     q = "/ownershipRecords?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
         AssetQuery(serialNumber, dcn, makeCode, dealerMakeCode)
@@ -155,6 +161,7 @@ End Function
 Public Function CatExpire(ByVal serialNumber As String, ByVal dcn As String, _
         ByVal makeCode As String, ByVal dealerMakeCode As String, _
         ByRef statusOut As Long) As String
+    If CAT_READ_ONLY Then Err.Raise vbObjectError + 100, , "Writes are disabled (read-only mode)."
     Dim q As String
     q = "/ownershipRecords/expire?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
         AssetQuery(serialNumber, dcn, makeCode, dealerMakeCode)
@@ -166,6 +173,7 @@ End Function
 Public Function CatTransfer(ByVal serialNumber As String, ByVal makeCode As String, _
         ByVal dealerMakeCode As String, ByVal statusValue As String, _
         ByVal reason As String, ByRef statusOut As Long) As String
+    If CAT_READ_ONLY Then Err.Raise vbObjectError + 100, , "Writes are disabled (read-only mode)."
     Dim q As String
     q = "/ownershipRequests/transfer?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
         AssetQuery(serialNumber, "", makeCode, dealerMakeCode)

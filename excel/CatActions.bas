@@ -21,6 +21,7 @@ Private Const ACTIONS_SHEET As String = "Actions"
 '==============================================================================
 Public Sub CatAddOwnership()
     On Error GoTo Fail
+    If CAT_READ_ONLY Then SetResult "Read-only mode: writes are disabled.": Exit Sub
     Dim serial As String, dcn As String, mk As String, dmk As String
     serial = NV("act_Serial"): dcn = NV("act_DCN")
     mk = NV("act_MakeCode"): dmk = NV("act_DealerMakeCode")
@@ -48,6 +49,7 @@ End Sub
 
 Public Sub CatExpireOwnership()
     On Error GoTo Fail
+    If CAT_READ_ONLY Then SetResult "Read-only mode: writes are disabled.": Exit Sub
     Dim serial As String, dcn As String, mk As String, dmk As String
     serial = NV("act_Serial"): dcn = NV("act_DCN")
     mk = NV("act_MakeCode"): dmk = NV("act_DealerMakeCode")
@@ -73,6 +75,7 @@ End Sub
 
 Public Sub CatTransferDecision()
     On Error GoTo Fail
+    If CAT_READ_ONLY Then SetResult "Read-only mode: writes are disabled.": Exit Sub
     Dim serial As String, mk As String, dmk As String, st As String, reason As String
     serial = NV("act_Serial"): mk = NV("act_MakeCode"): dmk = NV("act_DealerMakeCode")
     st = UCase$(NV("act_Status")): reason = NV("act_Reason")
@@ -183,6 +186,13 @@ Public Sub CatSetupActionsSheet()
 
     PutTitle ws, 1, "Cat Asset Management - Actions"
     ws.Range("A2").Value = "Fill in fields, then click a button. partyNumber comes from the Config sheet."
+    If CAT_READ_ONLY Then
+        With ws.Range("A3")
+            .Value = "READ-ONLY MODE: Add/Update, Expire and Transfer are disabled. Only Check Ownership is available."
+            .Font.Bold = True
+            .Font.Color = RGB(192, 0, 0)
+        End With
+    End If
 
     PutHeader ws, 4, "Asset Identifier (shared by all actions)"
     PutField ws, 5, "Serial Number", "act_Serial"
@@ -203,17 +213,17 @@ Public Sub CatSetupActionsSheet()
     PutField ws, 18, "Custom Asset Name", "act_CustomName"
     ws.Range("A19").Value = "New records require Ownership Type, Model, Model Year."
     ws.Range("A19").Font.Italic = True
-    AddButton ws, "Add / Update", "CatAddOwnership", 12
+    If Not CAT_READ_ONLY Then AddButton ws, "Add / Update", "CatAddOwnership", 12
 
     PutHeader ws, 21, "Expire Ownership"
     ws.Range("A22").Value = "Uses the shared identifier above (Serial, Make, DCN)."
-    AddButton ws, "Expire", "CatExpireOwnership", 22
+    If Not CAT_READ_ONLY Then AddButton ws, "Expire", "CatExpireOwnership", 22
 
     PutHeader ws, 24, "Transfer Decision (approve / reject a pending request)"
     PutField ws, 25, "Status", "act_Status"
     AddList ws, "act_Status", "APPROVED,REJECTED"
     PutField ws, 26, "Reason (required if REJECTED)", "act_Reason"
-    AddButton ws, "Approve / Reject", "CatTransferDecision", 25
+    If Not CAT_READ_ONLY Then AddButton ws, "Approve / Reject", "CatTransferDecision", 25
 
     PutHeader ws, 28, "Check Ownership (read-only)"
     AddButton ws, "Check Ownership", "CatCheckOwnership", 29
