@@ -134,6 +134,54 @@ e.g. when equipment is sold or the customer relationship ends.
 
 This is the human approval step in the cross-dealer workflow that §5 sets up.
 
+### 4.5 Adding a record in practice — minimum fields and make codes
+
+Because "add a record" is the operation we'll most often automate, it's worth
+spelling out exactly what it requires.
+
+**Minimum to create a *new* record** (the three body fields are required *only*
+because the record is new — updates send just the fields that change):
+
+- **Identity (query parameters):** `partyNumber` (dealer code), `serialNumber`,
+  **`makeCode` or `dealerMakeCode`**, and `dcn`.
+- **Body (required for a new record):** `ownershipTypeCode`, `model`, `modelYear`.
+- **Body (optional):** `productFamilyCode`, `productFamilyName`, `baseAssetName`,
+  `customAssetName`.
+
+**Preconditions that must already be true,** or the call is rejected:
+
+- The **DCN already exists, is active, and is tied to a valid customer (CCID).**
+  This is the most common stumbling point: *the API attaches an asset to an
+  existing dealer–customer relationship; it does not create the customer or the
+  DCN.* Those are established in the Customer Admin Tool first.
+- The **make code is a recognized manufacturer**, the **serial matches the
+  required format**, and your **credentials are entitled** to that dealer code.
+
+**Make codes — a field we have to get right.** Every asset is keyed by *make code
++ serial number*, so a make code is mandatory on every add. Two forms exist;
+provide exactly one:
+
+| Field | Format | What it is | Examples |
+|---|---|---|---|
+| `makeCode` | 3 chars | Caterpillar's master manufacturer code | `CW1` (CAT), `KDC` (Komatsu), `FA1` (Ford), `G02` (Galion), `SB6` (Snow Wolf) |
+| `dealerMakeCode` | 2 chars | A dealer's own shorthand for a make | `CW`, `AA` |
+
+Four implications worth planning around:
+
+1. **It must be valid/recognized** — you can't invent a code (`400.202` / `400.209`
+   for `makeCode`, `400.208` for `dealerMakeCode`).
+2. **CAT and non-CAT (competitive) makes are both tracked**, each with its own
+   code — a Komatsu asset needs the Komatsu code, not a generic CAT one.
+3. **The make drives serial-number validation** — CAT makes enforce the strict
+   8-character serial format (3 alphanumeric + 5 numeric); non-CAT makes allow the
+   looser 4–50 character format. The wrong make can cause a valid serial to be
+   rejected.
+4. **Dependency to line up:** this API *validates* make codes against Caterpillar's
+   reference data but does not *return a list of them*. To populate the field
+   reliably at scale we need a source of truth for valid make codes and our dealer
+   make-code mappings. That lookup is a prerequisite for any bulk add / onboarding
+   integration.
+
 ---
 
 ## 5. The clever part: automatic conflict resolution

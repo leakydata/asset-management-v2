@@ -75,6 +75,71 @@ reject → it stays (a reason is required to reject).
 
 ---
 
+## Adding a record: what it actually takes
+
+To **create a new** ownership record (`POST /ownershipRecords`), you supply an
+asset identity (query parameters) plus a small body. Three body fields are
+required *only because the record is new* — updates send just what changes.
+
+> **Minimum to add a new record**
+>
+> **Identity (query parameters):**
+> `partyNumber` (dealer code) · `serialNumber` · **`makeCode` or `dealerMakeCode`** · `dcn`
+>
+> **Body (required for a new record):**
+> `ownershipTypeCode` · `model` · `modelYear`
+>
+> **Optional body:** `productFamilyCode`, `productFamilyName`, `baseAssetName`,
+> `customAssetName`
+
+**Preconditions that must already be true** (or the call is rejected):
+
+- The **DCN already exists**, is **active**, and is tied to a valid customer
+  (CCID). *This API attaches an asset to an existing dealer–customer relationship;
+  it does not create the customer or the DCN.* Those are set up in the Customer
+  Admin Tool first.
+- The **make code is a recognized manufacturer** (see below).
+- The **serial number matches the required format** (format depends on the make —
+  see below).
+- Your **credentials are entitled** to that dealer code.
+
+Minimal example:
+
+```
+POST /ownershipRecords?partyNumber=ZZIO&makeCode=CAT&serialNumber=SERIAL1&dcn=DCN1
+{ "ownershipTypeCode": "owned", "model": "980H", "modelYear": "2006" }
+```
+
+### Make codes — a field we must get right
+
+Every asset is identified by **make code + serial number**, so a make code is
+**mandatory on every add** — there is no way to create a record without one. There
+are two forms, and you provide **exactly one**:
+
+| Field | Format | What it is | Examples |
+|---|---|---|---|
+| `makeCode` | 3 characters | Caterpillar's master manufacturer code | `CW1` (CAT), `KDC` (Komatsu), `FA1` (Ford), `G02` (Galion), `SB6` (Snow Wolf) |
+| `dealerMakeCode` | 2 characters | A dealer's own shorthand for a make | `CW`, `AA` |
+
+Things to know — and to plan for:
+
+- **It must be a *valid, recognized* code**, or the API rejects the call
+  (`400.202` / `400.209` for `makeCode`, `400.208` for `dealerMakeCode`). You can't
+  invent one.
+- **CAT *and* non-CAT (competitive) makes are tracked**, each with its own code. So
+  you must use the correct code for the *actual* manufacturer of the machine — a
+  Komatsu asset needs the Komatsu make code, not a generic CAT one.
+- **The make also drives serial-number validation.** CAT makes enforce the strict
+  8-character serial format (3 alphanumeric + 5 numeric); non-CAT makes allow the
+  looser 4–50 character format. Pick the wrong make and a valid serial can be
+  rejected.
+- **Dependency to flag:** to populate this reliably at scale we need a **source of
+  truth for valid make codes and our dealer make-code mappings**. This API doesn't
+  hand back a make-code list — it validates against Caterpillar's reference data.
+  Lining up that lookup is a prerequisite for any bulk add/onboarding work.
+
+---
+
 ## The important part: it encodes business rules, not just data
 
 Most APIs are storage — your code keeps the data sane. This one **enforces an
@@ -189,6 +254,10 @@ chat, spreadsheets, SQL, and dashboards.
   Don't embed it in distributed tools.
 - **Entitlement timeline** — credentials start on a test dealer code and are
   upgraded to real data over ~1–2 weeks. Plan rollout around it.
+- **Make-code reference data.** Every add requires a valid `makeCode` /
+  `dealerMakeCode`, and the API validates but does not list them. *We need a
+  source of truth for valid make codes and our dealer make-code mappings before
+  any bulk add/onboarding work — who owns that lookup?*
 - **Rate limits** — the API throttles with `429`; bulk tools need backoff. *What
   are the documented limits for our tier?*
 
