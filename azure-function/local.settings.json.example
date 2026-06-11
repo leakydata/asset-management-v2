@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "CAT_CLIENT_ID": "",
+    "CAT_CLIENT_SECRET": "",
+    "CAT_SCOPE": "",
+    "CAT_TENANT_ID": "ceb177bf-013b-49ab-8a9c-4abce32afc1e",
+    "CAT_DEFAULT_PARTY_NUMBER": "ZZIO"
+  }
+}

@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+local.settings.json
 
 # Caterpillar Confidential source documents — do not publish (esp. to a public repo)
 data/
