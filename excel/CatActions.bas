@@ -1,16 +1,23 @@
 Attribute VB_Name = "CatActions"
 '==============================================================================
-' Cat Asset Management V2 - actions (add/update, expire, transfer, check)
+' Cat Asset Management V2 - actions (add/update, expire, transfer, check) via PROXY
 '
-' These call WRITE endpoints, so they are deliberate macros (never worksheet
-' functions) and each asks for confirmation. Run CatSetupActionsSheet once to
-' build an "Actions" sheet with input cells and buttons.
+' These call WRITE endpoints on the Asset Management PROXY, so they are deliberate
+' macros (never worksheet functions) and each asks for confirmation. Run
+' CatSetupActionsSheet once to build an "Actions" sheet with input cells and
+' buttons. No credentials live in the workbook - only the proxy URL + function
+' key (Config sheet).
+'
+' The PROXY decides whether writes are allowed: if its CAT_ENABLE_WRITES setting
+' is false (the default), the write buttons return "403 writes_disabled". The
+' Check button (read) always works.
 '
 ' Depends on the CatAssetLookup module (CatAddUpdate, CatExpire, CatTransfer,
-' CatSearch, RecordValues) and VBA-JSON.
+' CatSearch, OwnershipRecords, RecordValues, FieldOf, ProxyError) and VBA-JSON.
 '
-' WARNING: add / expire / transfer change real data. Use your test dealer code
-' (Config!PartyNumber) and test assets until you intend to touch production.
+' WARNING: add / expire / transfer change real data. The proxy acts on the dealer
+' code it is configured with - keep that on a test dealer code and use test assets
+' until you intend to touch production.
 '==============================================================================
 Option Explicit
 
@@ -21,7 +28,6 @@ Private Const ACTIONS_SHEET As String = "Actions"
 '==============================================================================
 Public Sub CatAddOwnership()
     On Error GoTo Fail
-    If CAT_READ_ONLY Then SetResult "Read-only mode: writes are disabled.": Exit Sub
     Dim serial As String, dcn As String, mk As String, dmk As String
     serial = NV("act_Serial"): dcn = NV("act_DCN")
     mk = NV("act_MakeCode"): dmk = NV("act_DealerMakeCode")
@@ -40,7 +46,7 @@ Public Sub CatAddOwnership()
     If status = 200 Or status = 201 Then
         SetResult "OK (" & status & "). Record status: " & FieldOf(txt, "status")
     Else
-        SetResult "FAILED " & status & ": " & ErrText(txt)
+        SetResult "FAILED " & status & ": " & ProxyError(txt, status)
     End If
     Exit Sub
 Fail:
@@ -49,7 +55,6 @@ End Sub
 
 Public Sub CatExpireOwnership()
     On Error GoTo Fail
-    If CAT_READ_ONLY Then SetResult "Read-only mode: writes are disabled.": Exit Sub
     Dim serial As String, dcn As String, mk As String, dmk As String
     serial = NV("act_Serial"): dcn = NV("act_DCN")
     mk = NV("act_MakeCode"): dmk = NV("act_DealerMakeCode")
@@ -63,10 +68,10 @@ Public Sub CatExpireOwnership()
 
     Dim status As Long, txt As String
     txt = CatExpire(serial, dcn, mk, dmk, status)
-    If status = 204 Then
-        SetResult "OK - ownership expired (204)."
+    If status = 204 Or status = 200 Then
+        SetResult "OK - ownership expired (" & status & ")."
     Else
-        SetResult "FAILED " & status & ": " & ErrText(txt)
+        SetResult "FAILED " & status & ": " & ProxyError(txt, status)
     End If
     Exit Sub
 Fail:
@@ -75,7 +80,6 @@ End Sub
 
 Public Sub CatTransferDecision()
     On Error GoTo Fail
-    If CAT_READ_ONLY Then SetResult "Read-only mode: writes are disabled.": Exit Sub
     Dim serial As String, mk As String, dmk As String, st As String, reason As String
     serial = NV("act_Serial"): mk = NV("act_MakeCode"): dmk = NV("act_DealerMakeCode")
     st = UCase$(NV("act_Status")): reason = NV("act_Reason")
@@ -90,10 +94,10 @@ Public Sub CatTransferDecision()
 
     Dim status As Long, txt As String
     txt = CatTransfer(serial, mk, dmk, st, reason, status)
-    If status = 204 Then
-        SetResult "OK - transfer " & st & " (204)."
+    If status = 204 Or status = 200 Then
+        SetResult "OK - transfer " & st & " (" & status & ")."
     Else
-        SetResult "FAILED " & status & ": " & ErrText(txt)
+        SetResult "FAILED " & status & ": " & ProxyError(txt, status)
     End If
     Exit Sub
 Fail:
@@ -106,9 +110,7 @@ Public Sub CatCheckOwnership()
     If Len(serial) = 0 Then SetResult "Enter a Serial Number to check.": Exit Sub
 
     Dim txt As String: txt = CatSearch(serial, NV("act_DCN"))   ' read-only
-    Dim j As Object: Set j = JsonConverter.ParseJson(txt)
-    Dim recs As Object
-    If Not j Is Nothing Then If j.Exists("ownershipRecords") Then Set recs = j("ownershipRecords")
+    Dim recs As Object: Set recs = OwnershipRecords(txt)
 
     If recs Is Nothing Then SetResult "Unexpected response.": Exit Sub
     If recs.Count = 0 Then SetResult "NOT IN CCAT - no ownership records for " & serial: Exit Sub
@@ -142,29 +144,6 @@ Private Sub SetResult(ByVal msg As String)
     If r Is Nothing Then MsgBox msg, vbInformation Else r.Value = Format$(Now, "hh:nn:ss") & "  " & msg
 End Sub
 
-Private Function FieldOf(ByVal txt As String, ByVal key As String) As String
-    On Error Resume Next
-    Dim j As Object: Set j = JsonConverter.ParseJson(txt)
-    If Not j Is Nothing Then If j.Exists(key) Then FieldOf = CStr(j(key))
-End Function
-
-Private Function ErrText(ByVal txt As String) As String
-    On Error Resume Next
-    Dim j As Object: Set j = JsonConverter.ParseJson(txt)
-    If Not j Is Nothing Then
-        If j.Exists("code") Then ErrText = CStr(j("code")) & " "
-        If j.Exists("description") Then ErrText = ErrText & CStr(j("description"))
-        Dim det As Object
-        If j.Exists("details") Then
-            Set det = j("details")
-            If det.Count >= 1 Then
-                If det(1).Exists("message") Then ErrText = ErrText & " (" & CStr(det(1)("message")) & ")"
-            End If
-        End If
-    End If
-    If Len(Trim$(ErrText)) = 0 Then ErrText = Left$(txt, 200)
-End Function
-
 '==============================================================================
 ' One-time setup: build the Actions sheet with inputs and buttons
 '==============================================================================
@@ -184,46 +163,54 @@ Public Sub CatSetupActionsSheet()
     ws.Columns("A").ColumnWidth = 24
     ws.Columns("B").ColumnWidth = 36
 
-    PutTitle ws, 1, "Cat Asset Management - Actions"
-    ws.Range("A2").Value = "Fill in fields, then click a button. partyNumber comes from the Config sheet."
-    If CAT_READ_ONLY Then
-        With ws.Range("A3")
-            .Value = "READ-ONLY MODE: Add/Update, Expire and Transfer are disabled. Only Check Ownership is available."
-            .Font.Bold = True
-            .Font.Color = RGB(192, 0, 0)
-        End With
-    End If
+    PutTitle ws, 1, "Cat Asset Management - Actions (via proxy)"
+    ws.Range("A2").Value = "Fill in fields, then click a button. Credentials stay in the proxy; this workbook holds only ProxyUrl + FunctionKey (Config sheet)."
+    ws.Range("A3").Value = "Field colour: dark = always required; medium = required for a NEW record; light = optional. Hover a label for details."
+    ws.Range("A3").Font.Italic = True
 
     PutHeader ws, 4, "Asset Identifier (shared by all actions)"
-    PutField ws, 5, "Serial Number", "act_Serial"
-    PutField ws, 6, "Make Code", "act_MakeCode"
-    PutField ws, 7, "Dealer Make Code", "act_DealerMakeCode"
-    PutField ws, 8, "DCN", "act_DCN"
+    PutField ws, 5, "Serial Number", "act_Serial", _
+        "REQUIRED. Asset serial number (exact match).", 0
+    PutField ws, 6, "Make Code", "act_MakeCode", _
+        "REQUIRED (this OR Dealer Make Code, not both). Caterpillar manufacturer code, e.g. CW1.", 0
+    PutField ws, 7, "Dealer Make Code", "act_DealerMakeCode", _
+        "REQUIRED (this OR Make Code, not both). Dealer-specific make code, usually 2 chars, e.g. CW.", 0
+    PutField ws, 8, "DCN", "act_DCN", _
+        "REQUIRED for Add/Update and Expire. Dealer Customer Number. Not used by Transfer.", 0
     ws.Range("A9").Value = "Provide Make Code OR Dealer Make Code. (DCN is not used for Transfer.)"
     ws.Range("A9").Font.Italic = True
 
     PutHeader ws, 11, "Add / Update Ownership"
-    PutField ws, 12, "Ownership Type", "act_OwnType"
+    PutField ws, 12, "Ownership Type", "act_OwnType", _
+        "Required for a NEW record. One of: owned, rental, leased, sold, inventory, unknown.", 1
     AddList ws, "act_OwnType", "owned,rental,leased,sold,inventory,unknown"
-    PutField ws, 13, "Model", "act_Model"
-    PutField ws, 14, "Model Year", "act_ModelYear"
-    PutField ws, 15, "Product Family Code", "act_PFCode"
-    PutField ws, 16, "Product Family Name", "act_PFName"
-    PutField ws, 17, "Base Asset Name", "act_BaseName"
-    PutField ws, 18, "Custom Asset Name", "act_CustomName"
+    PutField ws, 13, "Model", "act_Model", _
+        "Required for a NEW record. Asset model, e.g. 980H. Max 65 characters.", 1
+    PutField ws, 14, "Model Year", "act_ModelYear", _
+        "Required for a NEW record. 4-digit year of manufacture, e.g. 2006.", 1
+    PutField ws, 15, "Product Family Code", "act_PFCode", _
+        "Optional. Cat product family code, e.g. MDWL. Max 50 characters.", 2
+    PutField ws, 16, "Product Family Name", "act_PFName", _
+        "Optional. Product family name, e.g. MEDIUM WHEEL LOADER. Max 50 characters.", 2
+    PutField ws, 17, "Base Asset Name", "act_BaseName", _
+        "Optional. Canonical asset name set by the dealer, e.g. ABC123. Max 60 characters.", 2
+    PutField ws, 18, "Custom Asset Name", "act_CustomName", _
+        "Optional. Custom asset name, e.g. Excavator #1. Shown in preference to Base Asset Name. Max 60 characters.", 2
     ws.Range("A19").Value = "New records require Ownership Type, Model, Model Year."
     ws.Range("A19").Font.Italic = True
-    If Not CAT_READ_ONLY Then AddButton ws, "Add / Update", "CatAddOwnership", 12
+    AddButton ws, "Add / Update", "CatAddOwnership", 12
 
     PutHeader ws, 21, "Expire Ownership"
     ws.Range("A22").Value = "Uses the shared identifier above (Serial, Make, DCN)."
-    If Not CAT_READ_ONLY Then AddButton ws, "Expire", "CatExpireOwnership", 22
+    AddButton ws, "Expire", "CatExpireOwnership", 22
 
     PutHeader ws, 24, "Transfer Decision (approve / reject a pending request)"
-    PutField ws, 25, "Status", "act_Status"
+    PutField ws, 25, "Status", "act_Status", _
+        "Transfer only. APPROVED or REJECTED.", 0
     AddList ws, "act_Status", "APPROVED,REJECTED"
-    PutField ws, 26, "Reason (required if REJECTED)", "act_Reason"
-    If Not CAT_READ_ONLY Then AddButton ws, "Approve / Reject", "CatTransferDecision", 25
+    PutField ws, 26, "Reason (required if REJECTED)", "act_Reason", _
+        "Required only when Status is REJECTED; optional otherwise.", 2
+    AddButton ws, "Approve / Reject", "CatTransferDecision", 25
 
     PutHeader ws, 28, "Check Ownership (read-only)"
     AddButton ws, "Check Ownership", "CatCheckOwnership", 29
@@ -237,8 +224,11 @@ Public Sub CatSetupActionsSheet()
     End With
     ws.Rows(32).RowHeight = 90
 
+    ws.Range("A34").Value = "Note: write buttons return 'writes_disabled' unless the proxy has CAT_ENABLE_WRITES=true."
+    ws.Range("A34").Font.Italic = True
+
     ws.Activate
-    MsgBox "Actions sheet is ready.", vbInformation, "Cat Asset Management"
+    MsgBox "Actions sheet is ready.", vbInformation, "Cat Asset Management (proxy)"
 End Sub
 
 '==============================================================================
@@ -262,8 +252,32 @@ Private Sub PutHeader(ByVal ws As Worksheet, ByVal r As Long, ByVal t As String)
     ws.Cells(r, 1).Value = t
 End Sub
 
-Private Sub PutField(ByVal ws As Worksheet, ByVal r As Long, ByVal labelText As String, ByVal nm As String)
-    ws.Cells(r, 1).Value = labelText
+' tier: -1 = no colour; 0 = always required (dark); 1 = required for a NEW
+' record (medium); 2 = optional (light). note (if given) becomes a hover comment
+' on the label cell.
+Private Sub PutField(ByVal ws As Worksheet, ByVal r As Long, ByVal labelText As String, _
+                     ByVal nm As String, Optional ByVal note As String = "", _
+                     Optional ByVal tier As Long = -1)
+    With ws.Cells(r, 1)
+        .Value = labelText
+        If tier >= 0 Then
+            Dim bg As Long, fg As Long
+            Select Case tier
+                Case 0: bg = RGB(31, 78, 121): fg = vbWhite          ' always required
+                Case 1: bg = RGB(46, 117, 182): fg = vbWhite         ' required for a NEW record
+                Case Else: bg = RGB(189, 215, 238): fg = RGB(31, 31, 31) ' optional
+            End Select
+            .Interior.Color = bg
+            .Font.Color = fg
+            .Font.Bold = True
+        End If
+        If Len(note) > 0 Then
+            If Not .Comment Is Nothing Then .Comment.Delete
+            .AddComment note
+            .Comment.Shape.TextFrame.AutoSize = True
+            .Comment.Visible = False
+        End If
+    End With
     With ws.Cells(r, 2)
         .Name = nm
         .Interior.Color = RGB(255, 255, 204)

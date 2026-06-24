@@ -1,7 +1,10 @@
-# Excel demo — serial-number lookup
+# Excel demo — serial-number lookup (via the proxy)
 
-A worksheet function `=CatLookupSerial("<serial>")` that calls the Cat Asset
-Management V2 API and spills one row per matching ownership record.
+A worksheet function `=CatLookupSerial("<serial>")` that calls the **Asset
+Management Proxy** (an Azure Function) and spills one row per matching ownership
+record. The proxy holds the Cat credentials server-side, so **this workbook holds
+no client secret** — only the proxy URL and a function key. Share the `.xlsm`
+with anyone allowed to have the function key.
 
 ## What you'll see
 
@@ -22,20 +25,17 @@ Type a serial number and the function returns a spilled table:
 
    | A | B |
    |---|---|
-   | `ClientId` | _your client id_ |
-   | `ClientSecret` | _your client secret_ |
-   | `Scope` | _your client id_`/.default` |
-   | `TenantId` | `ceb177bf-013b-49ab-8a9c-4abce32afc1e` |
-   | `PartyNumber` | `ZZIO` |
-   | `BaseUrl` | `https://services.cat.com/catDigital/assetManagement/v2` |
-   | `TokenUrl` | _(leave blank)_ |
+   | `ProxyUrl` | `https://<app>.azurewebsites.net/api` |
+   | `FunctionKey` | _the function key from the proxy_ |
+   | `PartyNumber` | _(optional — usually blank; the proxy supplies the dealer code)_ |
 
 3. **Open the VBA editor** (`Alt`+`F11`) and import these modules
    (File ▸ Import File…):
-   - `JsonConverter.bas`  (VBA-JSON — you already have it)
-   - `CatAssetLookup.bas`  (core API + the `=CatLookupSerial` function)
+   - `JsonConverter.bas`  (VBA-JSON — <https://github.com/VBA-tools/VBA-JSON>)
+   - `CatAssetLookup.bas`  (core proxy client + the `=CatLookupSerial` function)
    - `CatBatchLookup.bas`  (the batch lookup macro)
-   - `CatActions.bas`  (add / update / expire / transfer / check macros)
+   - `CatActions.bas`  (single add / update / expire / transfer / check macros)
+   - `CatBatchActions.bas`  (the batch add / update macro)
 
 4. **Add the Scripting Runtime reference** (Tools ▸ References…) — check
    **Microsoft Scripting Runtime**. VBA-JSON needs it for `Scripting.Dictionary`.
@@ -63,15 +63,14 @@ mistaken for an empty result:
 | Outcome | Note value | Row shading | Meaning |
 |---|---|---|---|
 | Found | _(blank)_ | none | one row per ownership record |
-| Not in CCAT | `NOT IN CCAT` | grey | the API answered successfully with **zero** records |
+| Not in CCAT | `NOT IN CCAT` | grey | the proxy answered successfully with **zero** records |
 | Failed | `LOOKUP FAILED: …` | red | the call errored / timed out — **we don't know** if the asset exists |
 
 `LOOKUP FAILED` rows are highlighted so you can spot and **re-run just those**.
 Transient failures (timeouts, HTTP 429/5xx, connection drops) are retried
 automatically up to 3 times before being marked failed; permanent errors (e.g.
-403) are not retried. The macro reuses one cached token for the whole batch,
-shows progress in the status bar, and writes values once (not a live formula),
-so the results sheet won't re-call the API on recalculation.
+400/401/403) are not retried. The macro writes values once (not a live formula),
+so the results sheet won't re-call the proxy on recalculation.
 
 > Tip: to run it from a button, insert a shape (Insert ▸ Shapes), right-click ▸
 > **Assign Macro** ▸ `CatBatchLookup`.
@@ -87,36 +86,78 @@ change data and must never fire on recalculation.
 2. Fill the **Asset Identifier** block (Serial, Make Code *or* Dealer Make Code,
    DCN), plus the fields for the action you want, then click its button:
 
-   | Button | Endpoint | Notes |
+   | Button | Proxy route | Notes |
    |---|---|---|
-   | Add / Update | `POST /ownershipRecords` | New records require Ownership Type, Model, Model Year |
-   | Expire | `POST /ownershipRecords/expire` | Removes the record (asks to confirm) |
-   | Approve / Reject | `POST /ownershipRequests/transfer` | Status APPROVED/REJECTED; reason required to reject; no DCN |
-   | Check Ownership | `POST /ownershipRecords/search` | Read-only; summarizes who owns the serial |
+   | Add / Update | `POST /api/ownership` | New records require Ownership Type, Model, Model Year |
+   | Expire | `POST /api/expire` | Removes the record (asks to confirm) |
+   | Approve / Reject | `POST /api/transfer` | Status APPROVED/REJECTED; reason required to reject; no DCN |
+   | Check Ownership | `GET /api/search` | Read-only; summarizes who owns the serial |
 
 3. Each action asks for confirmation, then writes the outcome (record status, or
-   the API's error code + message) to the **Result** cell.
+   the proxy's error code + message) to the **Result** cell.
 
-> ⚠️ **These change real data.** Add/expire/transfer act on the dealer code in
-> `Config!PartyNumber`. Keep that on your **test dealer code** and use test
-> assets until you intend to touch production. The Check button is always safe.
+> ⚠️ **Writes are gated by the proxy.** If the proxy's `CAT_ENABLE_WRITES` is
+> `false` (the default), the three write buttons return **`writes_disabled`** —
+> that's expected until an admin enables writes. The proxy acts on the dealer
+> code it is configured with; keep that on a **test dealer code** until you
+> intend to touch production. The Check button is always safe.
+
+## Batch add / update macro
+
+The write counterpart to `CatBatchLookup`: add or update many assets from a
+sheet in one run (module `CatBatchActions`).
+
+1. Run **`CatSetupBatchAddUpdateSheet`** once — it builds a **"Batch Add-Update"**
+   sheet with the right column headers, an Ownership Type dropdown, and a
+   **Run Batch Add / Update** button.
+2. Fill **one row per asset**. Columns (matched by header name, so order and
+   extra columns don't matter):
+
+   | Column | Required | Notes |
+   |---|---|---|
+   | `Serial` | ✅ | Asset serial number (exact match) |
+   | `Make Code` *or* `Dealer Make Code` | ✅ | Exactly one of the two (e.g. `CW1` / `CW`) |
+   | `DCN` | ✅ | Dealer Customer Number |
+   | `Ownership Type` | new records | `owned/rental/leased/sold/inventory/unknown` |
+   | `Model` | new records | e.g. `980H` (max 65 chars) |
+   | `Model Year` | new records | 4-digit year of manufacture, e.g. `2006` |
+   | `Product Family Code` / `Product Family Name` | optional | e.g. `MDWL` / `MEDIUM WHEEL LOADER` (max 50) |
+   | `Base Asset Name` | optional | Canonical name set by the dealer (max 60) |
+   | `Custom Asset Name` | optional | Your own label; **shown in preference to** Base Asset Name (max 60) |
+   | `Result` | — | Written by the macro (don't edit) |
+
+   Headers are matched by name (spaces/case ignored), so the friendly labels
+   above and the bare API names (`MakeCode`, `ModelYear`, …) both work. On an
+   **existing** record, only the columns you fill are updated; blank optional
+   cells are left untouched.
+
+3. Click **Run** (one confirmation for the whole batch). Each row gets a
+   colour-coded outcome in its `Result` cell:
+
+   | Result | Shading | Meaning |
+   |---|---|---|
+   | `OK (200/201) - <status>` | green | added / updated |
+   | `FAILED …` | red | the proxy/API rejected it (incl. `writes_disabled`) — safe to re-run, add/update is idempotent |
+   | `SKIPPED …` | yellow | missing a required field; nothing sent |
+
+Transient failures (timeouts, 429, the proxy's 5xx) are retried up to 3 times.
+
+> ⚠️ **Same write gate as the buttons.** With the proxy's `CAT_ENABLE_WRITES`
+> `false` (default), every row returns `403 writes_disabled` and nothing changes.
+> Keep the proxy on a **test dealer code** until you intend to touch production.
 
 ## Notes
 
-- **Credentials live in the `Config` sheet, not in code** — so don't share the
-  `.xlsm` with anyone who shouldn't have the client secret. Treat the file like
-  a password.
-- **The token is cached** in memory and auto-refreshes ~1 minute before expiry,
-  so repeated lookups don't re-authenticate every time. Use the
-  `CatClearTokenCache` macro to force a fresh token (e.g. after changing creds).
+- **No credentials in the workbook.** Only `ProxyUrl` + `FunctionKey` live here.
+  Treat the function key like a password — but it is revocable on the proxy
+  without touching the Cat credentials.
+- **Which dealer code?** The proxy decides the `partyNumber` server-side. Leave
+  `Config!PartyNumber` blank unless an admin tells you otherwise.
+- **Errors are explicit.** Failed calls surface the proxy envelope's
+  `error.code` + `error.description`, so a failure is never mistaken for an empty
+  result.
 - **Recalculation:** as a live function, Excel re-runs `CatLookupSerial` when its
-  input changes (and on full recalc). Each run is one API call. For a heavy demo
-  with many serials, consider copying results as values, or ask and I can supply a
-  button-driven macro version that writes results once instead of recalculating.
-- **Dealer code:** this demo searches as `PartyNumber = ZZIO` (your entitled test
-  dealer code). Change the `PartyNumber` cell to your production code once
-  Caterpillar upgrades your credentials.
-- The function uses `serialNumber` as the filter. To also support DCN lookups,
-  the underlying `CatSearch` already accepts a `dcn` argument — say the word and
-  I'll expose a `=CatLookupDcn(...)` too.
-```
+  input changes (and on full recalc). Each run is one proxy call. For many
+  serials, prefer the `CatBatchLookup` macro, which writes values once.
+- The function uses `serialNumber` as the filter. The underlying `CatSearch`
+  already accepts a `dcn` argument too.

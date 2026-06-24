@@ -1,10 +1,16 @@
 Attribute VB_Name = "CatAssetLookup"
 '==============================================================================
-' Cat Asset Management V2 - core + worksheet function
+' Cat Asset Management V2 - core + worksheet function (via PROXY)
+'
+' Talks to the Asset Management PROXY (an Azure Function) instead of calling the
+' Cat API directly. The proxy holds the Cat OAuth credentials server-side, so
+' THIS WORKBOOK NEVER HOLDS A CLIENT SECRET - only the proxy URL and a function
+' key. Share the .xlsm freely with anyone allowed to have the function key.
 '
 ' Exposes =CatLookupSerial("<serial>") and the shared building blocks
-' (CatSearch, HeaderArray, RecordValues) used by the CatBatchLookup module.
-' Handles OAuth2 client-credentials auth (Entra ID) with a cached token.
+' (CatSearch, CatProxyCall, CatAddUpdate/CatExpire/CatTransfer, HeaderArray,
+' RecordValues, OwnershipRecords) used by the CatBatchLookup and CatActions
+' modules.
 '
 ' DEPENDENCIES:
 '   1. VBA-JSON (JsonConverter.bas)  -> import into the same workbook.
@@ -14,13 +20,9 @@ Attribute VB_Name = "CatAssetLookup"
 '
 ' SETUP: add a sheet named "Config" with these labels in column A and your
 ' values in column B:
-'     ClientId        <your client id>
-'     ClientSecret    <your client secret>
-'     Scope           <your client id>/.default
-'     TenantId        ceb177bf-013b-49ab-8a9c-4abce32afc1e
-'     PartyNumber     ZZIO
-'     BaseUrl         https://services.cat.com/catDigital/assetManagement/v2
-'     TokenUrl        (optional - overrides TenantId)
+'     ProxyUrl      https://<app>.azurewebsites.net/api
+'     FunctionKey   <the function key from the proxy>
+'     PartyNumber   (optional - usually blank; the proxy supplies the dealer code)
 '
 ' USAGE in a cell:   =CatLookupSerial(B1)     where B1 holds a serial number
 ' For a whole column of serials, run the CatBatchLookup macro (other module).
@@ -28,16 +30,6 @@ Attribute VB_Name = "CatAssetLookup"
 Option Explicit
 
 Private Const CFG_SHEET As String = "Config"
-
-' Read-only switch. While True, the write endpoints (CatAddUpdate / CatExpire /
-' CatTransfer) are disabled and raise an error if called. Set to False to
-' re-enable writes, then re-run CatSetupActionsSheet to show the write buttons.
-Public Const CAT_READ_ONLY As Boolean = True
-
-' --- token cache (module-level; shared across the function and the batch macro
-'     because the batch macro calls CatSearch -> GetToken in this module) ---
-Private mToken As String
-Private mTokenExpiry As Double          ' Date serial; refresh ~60s early
 
 '==============================================================================
 ' PUBLIC: worksheet function
@@ -51,16 +43,12 @@ Public Function CatLookupSerial(ByVal Serial As String) As Variant
     End If
 
     Dim respText As String
-    respText = CatSearch(CStr(Serial), "")          ' filter by serialNumber
-
-    Dim root As Object
-    Set root = JsonConverter.ParseJson(respText)
-
-    If root Is Nothing Then CatLookupSerial = "No data": Exit Function
-    If Not root.Exists("ownershipRecords") Then CatLookupSerial = "No data": Exit Function
+    respText = CatSearch(CStr(Serial), "")          ' filter by serialNumber (raises on non-200)
 
     Dim recs As Object
-    Set recs = root("ownershipRecords")
+    Set recs = OwnershipRecords(respText)
+    If recs Is Nothing Then CatLookupSerial = "No data": Exit Function
+
     Dim n As Long: n = recs.Count
     If n = 0 Then CatLookupSerial = "No records found for " & Serial: Exit Function
 
@@ -84,121 +72,154 @@ Fail:
     CatLookupSerial = "Error: " & Err.Description
 End Function
 
-' Clear the cached token (handy for demos / after changing credentials).
-Public Sub CatClearTokenCache()
-    mToken = ""
-    mTokenExpiry = 0
-    MsgBox "Cat token cache cleared.", vbInformation
-End Sub
-
 '==============================================================================
-' PUBLIC: shared building blocks (used here and by the CatBatchLookup module)
+' PUBLIC: shared building blocks (used here and by CatBatchLookup / CatActions)
 '==============================================================================
 
-' POST /ownershipRecords/search - returns raw JSON text (raises on non-200).
+' GET /search - returns the proxy envelope JSON text. Raises on non-200 so the
+' batch macro and worksheet function can classify success vs. failure.
 Public Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As String
-    Dim filters As String
-    If Len(dcn) > 0 Then filters = filters & FilterJson("dcn", dcn) & ","
-    If Len(serialNumber) > 0 Then filters = filters & FilterJson("serialNumber", serialNumber) & ","
-    If Len(filters) > 0 Then filters = Left$(filters, Len(filters) - 1)
-
+    serialNumber = CleanId(serialNumber)
+    dcn = CleanId(dcn)
     Dim q As String
-    q = "/ownershipRecords/search?partyNumber=" & UrlEncode(Cfg("PartyNumber"))
+    If Len(serialNumber) > 0 Then q = q & "serial=" & UrlEncode(serialNumber) & "&"
+    If Len(dcn) > 0 Then q = q & "dcn=" & UrlEncode(dcn) & "&"
+    If Len(q) > 0 Then q = Left$(q, Len(q) - 1)
 
     Dim status As Long, txt As String
-    txt = CatPost(q, "{""filters"":[" & filters & "]}", status)
-    If status <> 200 Then Err.Raise vbObjectError + 2, , "API " & status & ": " & Left$(txt, 300)
+    txt = CatProxyCall("GET", "search", q, "", status)
+    If status <> 200 Then Err.Raise vbObjectError + 2, , "API " & status & ": " & Left$(ProxyError(txt, status), 300)
     CatSearch = txt
 End Function
 
-' Low-level authenticated POST. Returns response text and sets statusOut to the
-' HTTP status. Does NOT raise on non-2xx - the caller decides what to do.
-Public Function CatPost(ByVal pathWithQuery As String, ByVal jsonBody As String, _
-                        ByRef statusOut As Long) As String
-    Dim baseUrl As String
-    baseUrl = Cfg("BaseUrl")
-    If Len(baseUrl) = 0 Then baseUrl = "https://services.cat.com/catDigital/assetManagement/v2"
-
-    Dim http As Object
-    Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
-    http.Open "POST", baseUrl & pathWithQuery, False
-    http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
-    http.SetRequestHeader "Authorization", "Bearer " & GetToken()
-    http.SetRequestHeader "Accept", "application/json"
-    If Len(jsonBody) > 0 Then http.SetRequestHeader "Content-Type", "application/json"
-    http.Send jsonBody
-    statusOut = http.Status
-    CatPost = http.responseText
-End Function
-
-' POST /ownershipRecords - add or update an ownership record. Returns the
-' response body (AddOwnershipResponse JSON) and sets statusOut.
+' POST /ownership - add or update an ownership record. Returns the proxy
+' envelope text and sets statusOut to the HTTP status.
 Public Function CatAddUpdate(ByVal serialNumber As String, ByVal dcn As String, _
         ByVal makeCode As String, ByVal dealerMakeCode As String, _
         ByVal ownershipTypeCode As String, ByVal model As String, _
         ByVal modelYear As String, ByVal productFamilyCode As String, _
         ByVal productFamilyName As String, ByVal baseAssetName As String, _
         ByVal customAssetName As String, ByRef statusOut As Long) As String
-    If CAT_READ_ONLY Then Err.Raise vbObjectError + 100, , "Writes are disabled (read-only mode)."
-    Dim q As String
-    q = "/ownershipRecords?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
-        AssetQuery(serialNumber, dcn, makeCode, dealerMakeCode)
-
+    serialNumber = CleanId(serialNumber)
+    dcn = CleanId(dcn)
     Dim b As String
-    b = b & JF("ownershipTypeCode", ownershipTypeCode)
-    b = b & JF("model", model)
-    b = b & JF("modelYear", modelYear)
-    b = b & JF("productFamilyCode", productFamilyCode)
-    b = b & JF("productFamilyName", productFamilyName)
-    b = b & JF("baseAssetName", baseAssetName)
-    b = b & JF("customAssetName", customAssetName)
-    If Len(b) > 0 Then b = Left$(b, Len(b) - 1)        ' strip trailing comma
-
-    CatAddUpdate = CatPost(q, "{" & b & "}", statusOut)
+    b = JF("serial_number", serialNumber) & JF("dcn", dcn) & _
+        JF("make_code", makeCode) & JF("dealer_make_code", dealerMakeCode) & _
+        JF("ownership_type_code", ownershipTypeCode) & JF("model", model) & _
+        JF("model_year", modelYear) & JF("product_family_code", productFamilyCode) & _
+        JF("product_family_name", productFamilyName) & JF("base_asset_name", baseAssetName) & _
+        JF("custom_asset_name", customAssetName)
+    CatAddUpdate = CatProxyCall("POST", "ownership", "", "{" & TrimComma(b) & "}", statusOut)
 End Function
 
-' POST /ownershipRecords/expire - expire an ownership record (success = 204).
+' POST /expire - expire an ownership record (success = 204).
 Public Function CatExpire(ByVal serialNumber As String, ByVal dcn As String, _
         ByVal makeCode As String, ByVal dealerMakeCode As String, _
         ByRef statusOut As Long) As String
-    If CAT_READ_ONLY Then Err.Raise vbObjectError + 100, , "Writes are disabled (read-only mode)."
-    Dim q As String
-    q = "/ownershipRecords/expire?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
-        AssetQuery(serialNumber, dcn, makeCode, dealerMakeCode)
-    CatExpire = CatPost(q, "", statusOut)
+    serialNumber = CleanId(serialNumber)
+    dcn = CleanId(dcn)
+    Dim b As String
+    b = JF("serial_number", serialNumber) & JF("dcn", dcn) & _
+        JF("make_code", makeCode) & JF("dealer_make_code", dealerMakeCode)
+    CatExpire = CatProxyCall("POST", "expire", "", "{" & TrimComma(b) & "}", statusOut)
 End Function
 
-' POST /ownershipRequests/transfer - approve/reject a pending transfer (204).
+' POST /transfer - approve/reject a pending transfer (success = 204).
 ' No DCN is used for this endpoint.
 Public Function CatTransfer(ByVal serialNumber As String, ByVal makeCode As String, _
         ByVal dealerMakeCode As String, ByVal statusValue As String, _
         ByVal reason As String, ByRef statusOut As Long) As String
-    If CAT_READ_ONLY Then Err.Raise vbObjectError + 100, , "Writes are disabled (read-only mode)."
-    Dim q As String
-    q = "/ownershipRequests/transfer?partyNumber=" & UrlEncode(Cfg("PartyNumber")) & _
-        AssetQuery(serialNumber, "", makeCode, dealerMakeCode)
+    serialNumber = CleanId(serialNumber)
     Dim b As String
-    b = JF("status", UCase$(statusValue))
-    b = b & JF("reason", reason)
-    If Len(b) > 0 Then b = Left$(b, Len(b) - 1)
-    CatTransfer = CatPost(q, "{" & b & "}", statusOut)
+    b = JF("serial_number", serialNumber) & JF("make_code", makeCode) & _
+        JF("dealer_make_code", dealerMakeCode) & JF("status", UCase$(statusValue)) & _
+        JF("reason", reason)
+    CatTransfer = CatProxyCall("POST", "transfer", "", "{" & TrimComma(b) & "}", statusOut)
 End Function
 
-' Build the shared asset-identifier query (&serialNumber=..&makeCode=..&dcn=..).
-Private Function AssetQuery(ByVal serialNumber As String, ByVal dcn As String, _
-        ByVal makeCode As String, ByVal dealerMakeCode As String) As String
-    Dim s As String
-    If Len(serialNumber) > 0 Then s = s & "&serialNumber=" & UrlEncode(serialNumber)
-    If Len(makeCode) > 0 Then s = s & "&makeCode=" & UrlEncode(makeCode)
-    If Len(dealerMakeCode) > 0 Then s = s & "&dealerMakeCode=" & UrlEncode(dealerMakeCode)
-    If Len(dcn) > 0 Then s = s & "&dcn=" & UrlEncode(dcn)
-    AssetQuery = s
+' Low-level proxy call. method = "GET"/"POST"; route = "search"/"ownership"/
+' "expire"/"transfer"; query is appended to the URL; jsonBody is sent for POST.
+' Returns the response text and sets statusOut to the HTTP status. Does NOT raise
+' on non-2xx - the caller decides. Sends the function key as the x-functions-key
+' header (kept out of the URL).
+Public Function CatProxyCall(ByVal method As String, ByVal route As String, _
+        ByVal query As String, ByVal jsonBody As String, ByRef statusOut As Long) As String
+    Dim baseUrl As String: baseUrl = Cfg("ProxyUrl")
+    If Len(baseUrl) = 0 Then Err.Raise vbObjectError + 10, , "Config!ProxyUrl is empty."
+    If Right$(baseUrl, 1) = "/" Then baseUrl = Left$(baseUrl, Len(baseUrl) - 1)
+
+    Dim url As String: url = baseUrl & "/" & route
+    If Len(query) > 0 Then url = url & "?" & query
+
+    Dim http As Object
+    Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
+    http.Open method, url, False
+    http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
+
+    Dim key As String: key = Cfg("FunctionKey")
+    If Len(key) > 0 Then http.SetRequestHeader "x-functions-key", key
+    http.SetRequestHeader "Accept", "application/json"
+    If UCase$(method) = "POST" Then http.SetRequestHeader "Content-Type", "application/json"
+
+    http.Send jsonBody
+    statusOut = http.status
+    CatProxyCall = http.responseText
 End Function
 
-' One JSON "name":"value", pair (trailing comma) - empty if val is blank.
-Private Function JF(ByVal name As String, ByVal val As String) As String
-    If Len(val) = 0 Then Exit Function
-    JF = """" & name & """:""" & JsonEsc(val) & ""","
+'==============================================================================
+' PUBLIC: envelope + record parsing
+'==============================================================================
+
+' Pull ownershipRecords out of the proxy envelope: { ok, data:{ ownershipRecords:[...] } }
+Public Function OwnershipRecords(ByVal envelopeText As String) As Object
+    On Error Resume Next
+    Dim root As Object: Set root = JsonConverter.ParseJson(envelopeText)
+    If root Is Nothing Then Exit Function
+    Dim data As Object: Set data = SafeObj(root, "data")
+    If data Is Nothing Then Exit Function
+    If data.Exists("ownershipRecords") Then Set OwnershipRecords = data("ownershipRecords")
+End Function
+
+' Read a single field from the proxy envelope's data object (e.g. "status").
+Public Function FieldOf(ByVal txt As String, ByVal key As String) As String
+    On Error Resume Next
+    Dim root As Object: Set root = JsonConverter.ParseJson(txt)
+    If root Is Nothing Then Exit Function
+    Dim data As Object: Set data = SafeObj(root, "data")
+    If Not data Is Nothing Then If data.Exists(key) Then FieldOf = CStr(data(key))
+End Function
+
+' Turn the proxy error envelope ({ ok:false, error:{ code, description } }) into a
+' short message; falls back to the raw text.
+Public Function ProxyError(ByVal txt As String, ByVal status As Long) As String
+    On Error Resume Next
+    Dim root As Object: Set root = JsonConverter.ParseJson(txt)
+    If Not root Is Nothing Then
+        Dim er As Object: Set er = SafeObj(root, "error")
+        If Not er Is Nothing Then
+            If er.Exists("code") Then ProxyError = CStr(er("code")) & " "
+            If er.Exists("description") Then ProxyError = ProxyError & CStr(er("description"))
+        End If
+    End If
+    If Len(Trim$(ProxyError)) = 0 Then ProxyError = Left$(txt, 200)
+End Function
+
+' Normalize a pasted identifier (serial / DCN): convert non-breaking spaces,
+' tabs and line breaks to regular spaces, strip zero-width characters, then trim
+' the ends. Internal regular spaces and hyphens are preserved (both are valid in
+' CCAT serials) so the value still matches exactly - this only removes the
+' invisible junk that pasted data tends to carry.
+Public Function CleanId(ByVal s As String) As String
+    If Len(s) = 0 Then Exit Function
+    s = Replace(s, ChrW$(160), " ")     ' non-breaking space
+    s = Replace(s, vbTab, " ")
+    s = Replace(s, vbCr, " ")
+    s = Replace(s, vbLf, " ")
+    s = Replace(s, ChrW$(8203), "")     ' zero-width space
+    s = Replace(s, ChrW$(8204), "")     ' zero-width non-joiner
+    s = Replace(s, ChrW$(8205), "")     ' zero-width joiner
+    s = Replace(s, ChrW$(65279), "")    ' zero-width no-break space / BOM
+    CleanId = Trim$(s)
 End Function
 
 ' Column headers for the 14 record fields.
@@ -237,51 +258,18 @@ Public Function RecordValues(ByVal rec As Object) As Variant
 End Function
 
 '==============================================================================
-' PRIVATE: token + request internals
+' PRIVATE: JSON building helpers
 '==============================================================================
-Private Function GetToken() As String
-    If Len(mToken) > 0 And Now < mTokenExpiry Then
-        GetToken = mToken
-        Exit Function
-    End If
 
-    Dim tokenUrl As String
-    tokenUrl = Cfg("TokenUrl")
-    If Len(tokenUrl) = 0 Then
-        tokenUrl = "https://login.microsoftonline.com/" & Cfg("TenantId") & "/oauth2/v2.0/token"
-    End If
-
-    Dim body As String
-    body = "grant_type=client_credentials" & _
-           "&client_id=" & UrlEncode(Cfg("ClientId")) & _
-           "&client_secret=" & UrlEncode(Cfg("ClientSecret")) & _
-           "&scope=" & UrlEncode(Cfg("Scope"))
-
-    Dim http As Object
-    Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
-    http.Open "POST", tokenUrl, False
-    http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
-    http.SetRequestHeader "Content-Type", "application/x-www-form-urlencoded"
-    http.Send body
-
-    If http.Status <> 200 Then
-        Err.Raise vbObjectError + 1, , "Token " & http.Status & ": " & Left$(http.responseText, 300)
-    End If
-
-    Dim j As Object
-    Set j = JsonConverter.ParseJson(http.responseText)
-    mToken = CStr(j("access_token"))
-
-    Dim expiresIn As Double: expiresIn = 3600
-    If j.Exists("expires_in") Then expiresIn = CDbl(j("expires_in"))
-    mTokenExpiry = Now + (expiresIn - 60) / 86400#
-
-    GetToken = mToken
+' One JSON "name":"value", pair (trailing comma) - empty if val is blank.
+Private Function JF(ByVal name As String, ByVal val As String) As String
+    If Len(val) = 0 Then Exit Function
+    JF = """" & name & """:""" & JsonEsc(val) & ""","
 End Function
 
-Private Function FilterJson(ByVal prop As String, ByVal val As String) As String
-    FilterJson = "{""type"":""stringEquals"",""propertyName"":""" & prop & _
-                 """,""values"":[""" & JsonEsc(val) & """]}"
+Private Function TrimComma(ByVal s As String) As String
+    If Len(s) > 0 Then If Right$(s, 1) = "," Then s = Left$(s, Len(s) - 1)
+    TrimComma = s
 End Function
 
 '==============================================================================

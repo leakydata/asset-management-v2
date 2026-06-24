@@ -1,15 +1,16 @@
 Attribute VB_Name = "CatBatchLookup"
 '==============================================================================
-' Cat Asset Management V2 - batch lookup macro
+' Cat Asset Management V2 - batch lookup macro (via PROXY)
 '
-' Prompts you to select a column of serial numbers, looks each one up via the
-' Cat Asset Management V2 API, and writes a fresh results sheet with one row per
-' ownership record. Calls into the CatAssetLookup module (CatSearch, HeaderArray,
-' RecordValues) so both modules stay consistent and share one cached token.
+' Prompts you to select a column of serial numbers, looks each one up through
+' the Asset Management PROXY, and writes a fresh results sheet with one row per
+' ownership record. Calls into the CatAssetLookup module (CatSearch,
+' OwnershipRecords, HeaderArray, RecordValues) so both modules stay consistent.
+' No credentials live in the workbook - only the proxy URL + function key.
 '
 ' Each input serial is classified into exactly one outcome:
 '   * found        -> one row per ownership record (Note blank)
-'   * NOT IN CCAT  -> the API returned successfully with zero records
+'   * NOT IN CCAT  -> the proxy returned successfully with zero records
 '   * LOOKUP FAILED-> the call errored / timed out / gave an unexpected response.
 '                     These are NEVER recorded as "not in CCAT", because we don't
 '                     actually know whether the asset exists. Re-run failed ones.
@@ -41,7 +42,7 @@ Public Sub CatBatchLookup()
     Dim serials As Collection: Set serials = New Collection
     Dim cell As Range, s As String
     For Each cell In rng.Cells
-        s = Trim$(CStr(cell.Value))
+        s = CleanId(CStr(cell.Value))
         If Len(s) > 0 Then
             If Not (serials.Count = 0 And LCase$(s) Like "*serial*") Then serials.Add s
         End If
@@ -83,31 +84,25 @@ Public Sub CatBatchLookup()
             rowsOut.Add MakeRow(s, Nothing, "LOOKUP FAILED: " & errMsg, totalCols, nFields)
             nFailed = nFailed + 1
         Else
-            Dim root As Object, recs As Object
-            Set root = Nothing: Set recs = Nothing
+            Dim recs As Object
+            Set recs = Nothing
             On Error Resume Next
-            Set root = JsonConverter.ParseJson(respText)
+            Set recs = OwnershipRecords(respText)
             On Error GoTo Fail
 
-            If root Is Nothing Then
-                rowsOut.Add MakeRow(s, Nothing, "LOOKUP FAILED: unreadable response", totalCols, nFields)
-                nFailed = nFailed + 1
-            ElseIf Not root.Exists("ownershipRecords") Then
+            If recs Is Nothing Then
                 rowsOut.Add MakeRow(s, Nothing, "LOOKUP FAILED: unexpected response", totalCols, nFields)
                 nFailed = nFailed + 1
+            ElseIf recs.Count = 0 Then
+                ' confirmed: proxy answered, asset not present
+                rowsOut.Add MakeRow(s, Nothing, "NOT IN CCAT", totalCols, nFields)
+                nNotInCcat = nNotInCcat + 1
             Else
-                Set recs = root("ownershipRecords")
-                If recs.Count = 0 Then
-                    ' confirmed: API answered, asset not present
-                    rowsOut.Add MakeRow(s, Nothing, "NOT IN CCAT", totalCols, nFields)
-                    nNotInCcat = nNotInCcat + 1
-                Else
-                    Dim k As Long
-                    For k = 1 To recs.Count
-                        rowsOut.Add MakeRow(s, recs(k), "", totalCols, nFields)
-                    Next k
-                    nFound = nFound + 1
-                End If
+                Dim k As Long
+                For k = 1 To recs.Count
+                    rowsOut.Add MakeRow(s, recs(k), "", totalCols, nFields)
+                Next k
+                nFound = nFound + 1
             End If
         End If
     Next idx
@@ -153,12 +148,13 @@ End Sub
 ' Helpers (private to this module)
 '==============================================================================
 
-' Decide whether an error is worth retrying. 4xx like 403 are permanent;
-' 429, 5xx, timeouts and connection errors are transient.
+' Decide whether an error is worth retrying. 4xx like 400/401/403 are permanent;
+' 429, 5xx (incl. the proxy's 502 upstream errors), timeouts and connection
+' errors are transient.
 Private Function IsTransient(ByVal msg As String) As Boolean
     Dim m As String: m = LCase$(msg)
     If InStr(m, "429") > 0 Then IsTransient = True: Exit Function
-    If InStr(m, "api 5") > 0 Or InStr(m, "token 5") > 0 Then IsTransient = True: Exit Function
+    If InStr(m, "api 5") > 0 Then IsTransient = True: Exit Function
     If InStr(m, "timed out") > 0 Or InStr(m, "timeout") > 0 Then IsTransient = True: Exit Function
     If InStr(m, "could not be resolved") > 0 Or InStr(m, "cannot connect") > 0 _
        Or InStr(m, "connection") > 0 Or InStr(m, "winhttp") > 0 Then IsTransient = True: Exit Function
