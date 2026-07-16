@@ -43,8 +43,15 @@ Type a serial number and the function returns a spilled table:
 5. Back in Excel, in any cell:
    ```
    =CatLookupSerial("9303")
+   =CatLookupDCN("12345")
    ```
-   or point it at a cell: put a serial in `B1` and use `=CatLookupSerial(B1)`.
+   or point them at a cell: put a serial in `B1` and use `=CatLookupSerial(B1)`,
+   or a DCN in `B2` and use `=CatLookupDCN(B2)`.
+
+   `CatLookupDCN` returns the same 14-column spilled table, filtered by Dealer
+   Customer Number instead of serial — one row per ownership record. A DCN
+   typically has many assets, so expect a taller spill than a serial lookup;
+   leave empty rows below the formula or Excel shows a `#SPILL!` error.
 
 ## Batch lookup macro
 
@@ -159,5 +166,6 @@ Transient failures (timeouts, 429, the proxy's 5xx) are retried up to 3 times.
 - **Recalculation:** as a live function, Excel re-runs `CatLookupSerial` when its
   input changes (and on full recalc). Each run is one proxy call. For many
   serials, prefer the `CatBatchLookup` macro, which writes values once.
-- The function uses `serialNumber` as the filter. The underlying `CatSearch`
-  already accepts a `dcn` argument too.
+- `CatLookupSerial` filters by `serialNumber`; `CatLookupDCN` filters by `dcn`.
+  Both are exact-match (the API has no partial/fuzzy search) and both run
+  through the same `CatSearch` building block.

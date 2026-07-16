@@ -7,10 +7,10 @@ Attribute VB_Name = "CatAssetLookup"
 ' THIS WORKBOOK NEVER HOLDS A CLIENT SECRET - only the proxy URL and a function
 ' key. Share the .xlsm freely with anyone allowed to have the function key.
 '
-' Exposes =CatLookupSerial("<serial>") and the shared building blocks
-' (CatSearch, CatProxyCall, CatAddUpdate/CatExpire/CatTransfer, HeaderArray,
-' RecordValues, OwnershipRecords) used by the CatBatchLookup and CatActions
-' modules.
+' Exposes =CatLookupSerial("<serial>") and =CatLookupDCN("<dcn>") plus the
+' shared building blocks (CatSearch, CatProxyCall, CatAddUpdate/CatExpire/
+' CatTransfer, HeaderArray, RecordValues, OwnershipRecords) used by the
+' CatBatchLookup and CatActions modules.
 '
 ' DEPENDENCIES:
 '   1. VBA-JSON (JsonConverter.bas)  -> import into the same workbook.
@@ -25,6 +25,7 @@ Attribute VB_Name = "CatAssetLookup"
 '     PartyNumber   (optional - usually blank; the proxy supplies the dealer code)
 '
 ' USAGE in a cell:   =CatLookupSerial(B1)     where B1 holds a serial number
+'                    =CatLookupDCN(B2)        where B2 holds a DCN
 ' For a whole column of serials, run the CatBatchLookup macro (other module).
 '==============================================================================
 Option Explicit
@@ -70,6 +71,46 @@ Public Function CatLookupSerial(ByVal Serial As String) As Variant
     Exit Function
 Fail:
     CatLookupSerial = "Error: " & Err.Description
+End Function
+
+' Same spilled table, filtered by DCN instead of serial. A DCN typically has
+' many assets, so expect many rows (one per ownership record).
+Public Function CatLookupDCN(ByVal Dcn As String) As Variant
+    On Error GoTo Fail
+
+    If Len(Trim$(Dcn)) = 0 Then
+        CatLookupDCN = "Enter a DCN"
+        Exit Function
+    End If
+
+    Dim respText As String
+    respText = CatSearch("", CStr(Dcn))             ' filter by dcn (raises on non-200)
+
+    Dim recs As Object
+    Set recs = OwnershipRecords(respText)
+    If recs Is Nothing Then CatLookupDCN = "No data": Exit Function
+
+    Dim n As Long: n = recs.Count
+    If n = 0 Then CatLookupDCN = "No records found for DCN " & Dcn: Exit Function
+
+    Dim cols As Variant: cols = HeaderArray()
+
+    Dim out() As Variant
+    ReDim out(0 To n, 0 To UBound(cols))
+
+    Dim c As Long
+    For c = 0 To UBound(cols): out(0, c) = cols(c): Next c   ' header row
+
+    Dim i As Long
+    For i = 1 To n
+        Dim vals As Variant: vals = RecordValues(recs(i))
+        For c = 0 To UBound(cols): out(i, c) = vals(c): Next c
+    Next i
+
+    CatLookupDCN = out
+    Exit Function
+Fail:
+    CatLookupDCN = "Error: " & Err.Description
 End Function
 
 '==============================================================================
