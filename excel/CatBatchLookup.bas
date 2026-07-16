@@ -1,35 +1,72 @@
 Attribute VB_Name = "CatBatchLookup"
 '==============================================================================
-' Cat Asset Management V2 - batch lookup macro (via PROXY)
+' Cat Asset Management V2 - batch lookup macros (via PROXY)
 '
-' Prompts you to select a column of serial numbers, looks each one up through
-' the Asset Management PROXY, and writes a fresh results sheet with one row per
-' ownership record. Calls into the CatAssetLookup module (CatSearch,
-' OwnershipRecords, HeaderArray, RecordValues) so both modules stay consistent.
-' No credentials live in the workbook - only the proxy URL + function key.
+' Two macros sharing one engine:
+'   * CatBatchLookup    - select a column of SERIAL NUMBERS; one row per
+'                         ownership record on an "Asset Lookup Results" sheet.
+'   * CatBatchLookupDCN - select a column of DCNs; one row per ownership
+'                         record on a "DCN Lookup Results" sheet. A DCN
+'                         typically owns many assets, so expect many rows
+'                         per input value.
 '
-' Each input serial is classified into exactly one outcome:
-'   * found        -> one row per ownership record (Note blank)
-'   * NOT IN CCAT  -> the proxy returned successfully with zero records
-'   * LOOKUP FAILED-> the call errored / timed out / gave an unexpected response.
-'                     These are NEVER recorded as "not in CCAT", because we don't
-'                     actually know whether the asset exists. Re-run failed ones.
+' Both call into the CatAssetLookup module (CatSearch, OwnershipRecords,
+' HeaderArray, RecordValues) so all modules stay consistent. No credentials
+' live in the workbook - only the proxy URL + function key.
 '
-' Run from Developer > Macros, or assign CatBatchLookup to a button/shape.
+' Each input value is classified into exactly one outcome:
+'   * found            -> one row per ownership record (Note blank)
+'   * no records       -> the proxy returned successfully with zero records
+'                         ("NOT IN CCAT" for serials; "NO ACTIVE RECORDS" for
+'                         DCNs - the DCN may exist but own nothing right now)
+'   * LOOKUP FAILED    -> the call errored / timed out / gave an unexpected
+'                         response. These are NEVER recorded as "no records",
+'                         because we don't actually know. Re-run failed ones.
+'
+' Run from Developer > Macros, or assign either macro to a button/shape.
 '==============================================================================
 Option Explicit
 
 Private Const MAX_ATTEMPTS As Long = 3        ' retry transient failures
 Private Const RETRY_WAIT_SECONDS As Long = 1
 
+'==============================================================================
+' PUBLIC: the two macros
+'==============================================================================
 Public Sub CatBatchLookup()
+    BatchLookupCore False
+End Sub
+
+Public Sub CatBatchLookupDCN()
+    BatchLookupCore True
+End Sub
+
+'==============================================================================
+' PRIVATE: shared engine. byDcn = False -> serial mode, True -> DCN mode.
+'==============================================================================
+Private Sub BatchLookupCore(ByVal byDcn As Boolean)
     On Error GoTo Fail
 
-    ' 1) Ask the user to select the column of serial numbers
+    ' Mode-specific labels
+    Dim kind As String, keyCol As String, sheetBase As String
+    Dim notFoundNote As String, hdrPat As String
+    If byDcn Then
+        kind = "DCN": keyCol = "QueryDCN"
+        sheetBase = "DCN Lookup Results"
+        notFoundNote = "NO ACTIVE RECORDS"
+        hdrPat = "*dcn*"
+    Else
+        kind = "serial number": keyCol = "QuerySerial"
+        sheetBase = "Asset Lookup Results"
+        notFoundNote = "NOT IN CCAT"
+        hdrPat = "*serial*"
+    End If
+
+    ' 1) Ask the user to select the column of input values
     Dim rng As Range
     On Error Resume Next
     Set rng = Application.InputBox( _
-        Prompt:="Select the column of serial numbers (a header row is OK):", _
+        Prompt:="Select the column of " & kind & "s (a header row is OK):", _
         Title:="Cat Asset Lookup", Type:=8)
     On Error GoTo Fail
     If rng Is Nothing Then Exit Sub                 ' user cancelled
@@ -38,30 +75,30 @@ Public Sub CatBatchLookup()
     Set rng = Application.Intersect(rng.Columns(1), rng.Worksheet.UsedRange)
     If rng Is Nothing Then MsgBox "That selection has no data.", vbExclamation: Exit Sub
 
-    ' 2) Collect serials (skip blanks and an obvious header cell)
-    Dim serials As Collection: Set serials = New Collection
+    ' 2) Collect values (skip blanks and an obvious header cell)
+    Dim keys As Collection: Set keys = New Collection
     Dim cell As Range, s As String
     For Each cell In rng.Cells
         s = CleanId(CStr(cell.Value))
         If Len(s) > 0 Then
-            If Not (serials.Count = 0 And LCase$(s) Like "*serial*") Then serials.Add s
+            If Not (keys.Count = 0 And LCase$(s) Like hdrPat) Then keys.Add s
         End If
     Next cell
-    If serials.Count = 0 Then MsgBox "No serial numbers found in the selection.", vbExclamation: Exit Sub
+    If keys.Count = 0 Then MsgBox "No " & kind & "s found in the selection.", vbExclamation: Exit Sub
 
-    ' 3) Loop the serials, accumulate result rows
+    ' 3) Loop the values, accumulate result rows
     Dim headers As Variant: headers = HeaderArray()
     Dim nFields As Long: nFields = UBound(headers) + 1
-    Dim totalCols As Long: totalCols = 1 + nFields + 1     ' QuerySerial + fields + Note
+    Dim totalCols As Long: totalCols = 1 + nFields + 1     ' key + fields + Note
 
     Dim rowsOut As Collection: Set rowsOut = New Collection
-    Dim nFound As Long, nNotInCcat As Long, nFailed As Long
+    Dim nFound As Long, nEmpty As Long, nFailed As Long
     Application.ScreenUpdating = False
 
     Dim idx As Long
-    For idx = 1 To serials.Count
-        s = serials(idx)
-        Application.StatusBar = "Looking up " & idx & " of " & serials.Count & "  (" & s & ")"
+    For idx = 1 To keys.Count
+        s = keys(idx)
+        Application.StatusBar = "Looking up " & idx & " of " & keys.Count & "  (" & s & ")"
 
         ' --- call with retry for transient failures ---
         Dim respText As String, errMsg As String, gotResp As Boolean
@@ -70,7 +107,11 @@ Public Sub CatBatchLookup()
         For attempt = 1 To MAX_ATTEMPTS
             errMsg = ""
             On Error Resume Next
-            respText = CatSearch(s, "")
+            If byDcn Then
+                respText = CatSearch("", s)         ' filter by dcn
+            Else
+                respText = CatSearch(s, "")         ' filter by serialNumber
+            End If
             If Err.Number <> 0 Then errMsg = Err.Description: Err.Clear
             On Error GoTo Fail
             If Len(errMsg) = 0 Then gotResp = True: Exit For
@@ -80,7 +121,7 @@ Public Sub CatBatchLookup()
 
         ' --- classify the outcome ---
         If Not gotResp Then
-            ' genuine failure - we do NOT know if the asset exists
+            ' genuine failure - we do NOT know if records exist
             rowsOut.Add MakeRow(s, Nothing, "LOOKUP FAILED: " & errMsg, totalCols, nFields)
             nFailed = nFailed + 1
         Else
@@ -94,9 +135,9 @@ Public Sub CatBatchLookup()
                 rowsOut.Add MakeRow(s, Nothing, "LOOKUP FAILED: unexpected response", totalCols, nFields)
                 nFailed = nFailed + 1
             ElseIf recs.Count = 0 Then
-                ' confirmed: proxy answered, asset not present
-                rowsOut.Add MakeRow(s, Nothing, "NOT IN CCAT", totalCols, nFields)
-                nNotInCcat = nNotInCcat + 1
+                ' confirmed: proxy answered, zero records
+                rowsOut.Add MakeRow(s, Nothing, notFoundNote, totalCols, nFields)
+                nEmpty = nEmpty + 1
             Else
                 Dim k As Long
                 For k = 1 To recs.Count
@@ -108,11 +149,11 @@ Public Sub CatBatchLookup()
     Next idx
 
     ' 4) Write everything to a fresh sheet in one shot
-    Dim ws As Worksheet: Set ws = MakeOutputSheet()
+    Dim ws As Worksheet: Set ws = MakeOutputSheet(sheetBase)
     Dim grid() As Variant
     ReDim grid(1 To rowsOut.Count + 1, 1 To totalCols)
 
-    grid(1, 1) = "QuerySerial"
+    grid(1, 1) = keyCol
     Dim c As Long
     For c = 0 To nFields - 1: grid(1, 2 + c) = headers(c): Next c
     grid(1, totalCols) = "Note"
@@ -126,15 +167,15 @@ Public Sub CatBatchLookup()
     ws.Range(ws.Cells(1, 1), ws.Cells(rowsOut.Count + 1, totalCols)).Value = grid
     ws.Rows(1).Font.Bold = True
     ws.Range("A1").AutoFilter
-    HighlightOutcomes ws, rowsOut.Count, totalCols
+    HighlightOutcomes ws, rowsOut.Count, totalCols, notFoundNote
     ws.Columns.AutoFit
     ws.Activate
 
     Application.StatusBar = False
     Application.ScreenUpdating = True
-    MsgBox serials.Count & " serial(s) processed:" & vbCrLf & _
-           "  - " & nFound & " found (" & rowsOut.Count - nNotInCcat - nFailed & " record rows)" & vbCrLf & _
-           "  - " & nNotInCcat & " not in CCAT" & vbCrLf & _
+    MsgBox keys.Count & " " & kind & "(s) processed:" & vbCrLf & _
+           "  - " & nFound & " found (" & rowsOut.Count - nEmpty - nFailed & " record rows)" & vbCrLf & _
+           "  - " & nEmpty & " with no records (" & notFoundNote & ")" & vbCrLf & _
            "  - " & nFailed & " lookup failed (highlighted - safe to re-run)", _
            IIf(nFailed > 0, vbExclamation, vbInformation), "Cat Asset Lookup"
     Exit Sub
@@ -161,13 +202,13 @@ Private Function IsTransient(ByVal msg As String) As Boolean
     IsTransient = False
 End Function
 
-' Builds one output row: QuerySerial + 14 fields (if rec given) + Note.
-Private Function MakeRow(ByVal serial As String, ByVal rec As Object, _
+' Builds one output row: key value + 14 fields (if rec given) + Note.
+Private Function MakeRow(ByVal keyVal As String, ByVal rec As Object, _
                          ByVal note As String, ByVal totalCols As Long, _
                          ByVal nFields As Long) As Variant
     Dim r() As Variant
     ReDim r(0 To totalCols - 1)
-    r(0) = serial
+    r(0) = keyVal
     If Not rec Is Nothing Then
         Dim vals As Variant: vals = RecordValues(rec)
         Dim c As Long
@@ -177,14 +218,15 @@ Private Function MakeRow(ByVal serial As String, ByVal rec As Object, _
     MakeRow = r
 End Function
 
-' Light row shading: red for failures, grey for not-in-CCAT.
-Private Sub HighlightOutcomes(ByVal ws As Worksheet, ByVal nRows As Long, ByVal totalCols As Long)
+' Light row shading: red for failures, grey for the zero-records note.
+Private Sub HighlightOutcomes(ByVal ws As Worksheet, ByVal nRows As Long, _
+                              ByVal totalCols As Long, ByVal notFoundNote As String)
     Dim r As Long, note As String
     For r = 1 To nRows
         note = CStr(ws.Cells(r + 1, totalCols).Value)
         If Left$(note, 13) = "LOOKUP FAILED" Then
             ws.Range(ws.Cells(r + 1, 1), ws.Cells(r + 1, totalCols)).Interior.Color = RGB(255, 220, 220)
-        ElseIf note = "NOT IN CCAT" Then
+        ElseIf note = notFoundNote Then
             ws.Range(ws.Cells(r + 1, 1), ws.Cells(r + 1, totalCols)).Interior.Color = RGB(242, 242, 242)
         End If
     Next r
@@ -193,8 +235,7 @@ End Sub
 '==============================================================================
 ' Output sheet
 '==============================================================================
-Private Function MakeOutputSheet() As Worksheet
-    Dim base As String: base = "Asset Lookup Results"
+Private Function MakeOutputSheet(ByVal base As String) As Worksheet
     Dim nm As String: nm = base
     Dim i As Long: i = 1
     Do While SheetExists(nm)

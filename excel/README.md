@@ -82,6 +82,15 @@ so the results sheet won't re-call the proxy on recalculation.
 > Tip: to run it from a button, insert a shape (Insert ▸ Shapes), right-click ▸
 > **Assign Macro** ▸ `CatBatchLookup`.
 
+### Batch DCN lookup
+
+**`CatBatchLookupDCN`** is the same macro for a column of **DCNs**: select the
+column when prompted and it writes a **"DCN Lookup Results"** sheet with a
+`QueryDCN` column, one row per ownership record. Since one DCN typically owns
+many assets, expect several rows per input value. Outcomes work the same way,
+except the zero-records note reads **`NO ACTIVE RECORDS`** (the DCN may exist
+but simply own nothing right now — only ACTIVE/PENDING records are searchable).
+
 ## Actions: add / update / expire / transfer
 
 The `CatActions` module covers the API's write operations plus a read-only
