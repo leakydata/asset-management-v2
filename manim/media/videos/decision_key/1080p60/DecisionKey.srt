@@ -1,0 +1,20 @@
+1
+00:00:00,000 --> 00:00:10,320
+Every machine we track leads a double life: one record in our system, and one in Caterpillar's registry. Keeping the two in sync starts with a few simple questions.
+
+2
+00:00:10,616 --> 00:00:23,236
+First: do we already have a record in Caterpillar's system? If not, does anyone? And if another dealer does, do they actively own it? Every answer leads to a different action, with a different level of care.
+
+3
+00:00:23,533 --> 00:00:39,063
+Take this brand new excavator. We have no record for it, and neither does anyone else. So it lands in the safest bucket: a simple add. Nobody else is affected, the action is logged, and the next nightly sweep verifies that it landed.
+
+4
+00:00:38,950 --> 00:00:55,290
+Now a harder case. This machine is ours in the field, but in Caterpillar's registry, another dealer actively owns it. Claiming it sends that dealer a formal transfer request. So it goes to a person first, with the evidence, at about ten reviewed decisions per shift.
+
+5
+00:00:54,583 --> 00:01:01,593
+And that is the whole idea. The system sorts every machine. People decide only the ones that need judgment.
+
