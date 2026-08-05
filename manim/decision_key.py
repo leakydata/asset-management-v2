@@ -36,11 +36,16 @@ NARR = {
         "anyone else. So it lands in the safest bucket: a simple add. Nobody else "
         "is affected, the action is logged, and the next nightly sweep verifies "
         "that it landed.", 15.53),
-    4: ("Now a harder case. This machine is ours in the field, but in Caterpillar's "
+    4: ("But sometimes another dealer holds a record without owning the machine. "
+        "This dozer passed through another dealer's rental fleet years ago, and "
+        "that old record is still there. Records like that are not exclusive, so "
+        "our add still completes quietly. No transfer request fires, and nobody "
+        "gets notified. It is logged, all the same.", 19.70),
+    5: ("Now a harder case. This machine is ours in the field, but in Caterpillar's "
         "registry, another dealer actively owns it. Claiming it sends that dealer "
         "a formal transfer request. So it goes to a person first, with the evidence, "
         "at about ten reviewed decisions per shift.", 16.34),
-    5: ("And that is the whole idea. The system sorts every machine. People decide "
+    6: ("And that is the whole idea. The system sorts every machine. People decide "
         "only the ones that need judgment.", 7.01),
 }
 
@@ -154,8 +159,29 @@ class DecisionKey(Scene):
         self.play(Create(glowa), FadeIn(stamp_a), Flash(t_add.get_center(), color=GREEN, line_length=0.35), run_time=1.0)
         self.wait(d - 9.8 + 0.3)
 
-        # ---------- beat 4: machine B, the reviewed transfer (16.34s) ----------
+        # ---------- beat 4: machine C, the quiet add (19.70s) ----------
         d = self.narrate(4)
+        c = chip("6GK02175", TEAL).to_corner(UP + LEFT).shift(DOWN * 0.1 + RIGHT * 0.1)
+        c_tag = Text("dozer -- old rental record elsewhere", font_size=22, color=DIM)
+        c_tag.next_to(c, DOWN, buff=0.12).align_to(c, LEFT)
+        self.play(FadeIn(c, shift=DOWN * 0.3), FadeIn(c_tag), run_time=0.8)
+        self.wait(1.6)
+        self.travel(c, q1)
+        self.play(FadeOut(c_tag), run_time=0.3)
+        self.wait(0.6)
+        self.travel(c, q2)
+        self.wait(0.6)
+        self.travel(c, q3)
+        self.wait(0.6)
+        self.play(c.animate.next_to(t_quiet, UP, buff=0.1), run_time=0.9)
+        glowc = SurroundingRectangle(t_quiet, color=TEAL, buff=0.1, stroke_width=5)
+        stamp_c = Text("no transfer fires -- still audited", font_size=22, color=YELLOW)
+        stamp_c.next_to(t_quiet, DOWN, buff=0.18)
+        self.play(Create(glowc), FadeIn(stamp_c), Flash(t_quiet.get_center(), color=TEAL, line_length=0.35), run_time=1.0)
+        self.wait(d - 11.2 + 0.3)
+
+        # ---------- beat 5: machine B, the reviewed transfer (16.34s) ----------
+        d = self.narrate(5)
         b = chip("9303", RED).to_corner(UP + RIGHT).shift(DOWN * 0.1 + LEFT * 0.1)
         b_tag = Text("ours in the field,\ntheirs in CCAT", font_size=22, color=DIM, line_spacing=0.8)
         b_tag.next_to(b, DOWN, buff=0.12).align_to(b, RIGHT)
@@ -175,11 +201,12 @@ class DecisionKey(Scene):
         self.play(Create(glowb), FadeIn(stamp_b), Flash(t_transfer.get_center(), color=RED, line_length=0.35), run_time=1.0)
         self.wait(d - 12.2 + 0.3)
 
-        # ---------- beat 5: closer (7.01s) ----------
-        d = self.narrate(5)
+        # ---------- beat 6: closer (7.01s) ----------
+        d = self.narrate(6)
         everything = VGroup(
             q1, q2, q3, t_add, t_quiet, t_transfer,
-            e1, e2a, e2b, e3a, e3b, a, b, glowa, glowb, stamp_a, stamp_b,
+            e1, e2a, e2b, e3a, e3b, a, b, c, glowa, glowb, glowc,
+            stamp_a, stamp_b, stamp_c,
         )
         self.play(everything.animate.set_opacity(0.15), run_time=0.8)
         closer1 = Text("The system sorts every machine.", font_size=46, color=INK, weight="BOLD").move_to(UP * 0.5)

@@ -11,10 +11,14 @@ First: do we already have a record in Caterpillar's system? If not, does anyone?
 Take this brand new excavator. We have no record for it, and neither does anyone else. So it lands in the safest bucket: a simple add. Nobody else is affected, the action is logged, and the next nightly sweep verifies that it landed.
 
 4
-00:00:38,950 --> 00:00:55,290
-Now a harder case. This machine is ours in the field, but in Caterpillar's registry, another dealer actively owns it. Claiming it sends that dealer a formal transfer request. So it goes to a person first, with the evidence, at about ten reviewed decisions per shift.
+00:00:38,950 --> 00:00:58,650
+But sometimes another dealer holds a record without owning the machine. This dozer passed through another dealer's rental fleet years ago, and that old record is still there. Records like that are not exclusive, so our add still completes quietly. No transfer request fires, and nobody gets notified. It is logged, all the same.
 
 5
-00:00:54,583 --> 00:01:01,593
+00:00:58,950 --> 00:01:15,290
+Now a harder case. This machine is ours in the field, but in Caterpillar's registry, another dealer actively owns it. Claiming it sends that dealer a formal transfer request. So it goes to a person first, with the evidence, at about ten reviewed decisions per shift.
+
+6
+00:01:14,583 --> 00:01:21,593
 And that is the whole idea. The system sorts every machine. People decide only the ones that need judgment.
 
