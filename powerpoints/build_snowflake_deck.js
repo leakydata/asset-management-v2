@@ -266,8 +266,8 @@ function dot(s, x, y, color, size) {
     "CUE raw tools: the low-level API tools still exist for diagnostics, but nobody will ever be granted them: only the audited wrappers."
   );
   panel(s, 0.6, 1.7, 6.0, 4.9);
-  s.addText("CCAT_ADD_ASSET", { x: 0.9, y: 1.95, w: 5.3, h: 0.4, margin: 0, fontFace: F, fontSize: 17, bold: true, color: BLUE });
-  s.addText("CCAT_REASSIGN_CUSTOMER", { x: 0.9, y: 2.35, w: 5.3, h: 0.4, margin: 0, fontFace: F, fontSize: 17, bold: true, color: ORANGE });
+  s.addText("CCAT_ADD_ASSET  ·  CCAT_ADD_INVENTORY", { x: 0.9, y: 1.95, w: 5.3, h: 0.4, margin: 0, fontFace: F, fontSize: 16, bold: true, color: BLUE });
+  s.addText("CCAT_REASSIGN_CUSTOMER", { x: 0.9, y: 2.35, w: 5.3, h: 0.4, margin: 0, fontFace: F, fontSize: 16, bold: true, color: ORANGE });
   s.addText([
     { text: "Look up the machine by serial number, pull everything else from our records", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
     { text: "Search CCAT live before acting — never write blind", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
@@ -426,7 +426,7 @@ function dot(s, x, y, color, size) {
   s.addText([
     { text: "Detection sweep, proven at thousand-machine scale", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
     { text: "Phase dashboard: phase, action, and why per machine", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
-    { text: "Audited add + customer reassignment procedures — real adds executed in production", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
+    { text: "Audited procedures for adds, inventory adds, and customer reassignment — real adds executed in production", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
     { text: "Audit + history compliance layer", options: { bullet: true, color: INK, breakLine: true, paraSpaceAfter: 6 } },
     { text: "Full documentation and a versioned SQL reference", options: { bullet: true, color: INK, breakLine: true } },
   ], { x: 0.9, y: 2.65, w: 5.3, h: 3.8, margin: 0, fontFace: F, fontSize: 14, lineSpacing: 19 });
