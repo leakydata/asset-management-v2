@@ -1,0 +1,1807 @@
+AI-generated content may be incorrect
+
+Lindsay H. Bruns
+0 minutes 20 seconds0:20
+Lindsay H. Bruns 0 minutes 20 seconds
+to be done accurately and correctly. It's never going to be 100% perfect, but hopefully we get it cleaned up enough that we have, you know, a better success rate of getting these in.
+Lindsay H. Bruns 0 minutes 35 seconds
+That you know that part of me getting them subscribed and set up in the CCAT has been fine. It's when I'm finding the nuances of it's not a next jet or...
+Lindsay H. Bruns 0 minutes 50 seconds
+Like I said, it's delivered to a customer and you didn't get the triggered e-mail for me to get, or it hasn't been PDI'd or whatever the scenario is, or they purchased it from another dealership. We never get any of those.
+JH
+
+John S. Ham
+1 minute 7 seconds1:07
+John S. Ham 1 minute 7 seconds
+Yeah.
+John S. Ham 1 minute 9 seconds
+Yeah, I think that's probably a process gap on the sales side of things. We're trying to figure out where the bridge is between that sale being won and then order fulfillment taking their first step to draft the PDI record. I just, I have a hard time. I mean, I'm not doubting you. I just.
+John S. Ham 1 minute 28 seconds
+It's how can they even...
+John S. Ham 1 minute 31 seconds
+build the, have the bill of sale without a serial number or the store, how are they going to assign a work order to it without the unit being in the system?
+
+Lindsay H. Bruns
+1 minute 47 seconds1:47
+Lindsay H. Bruns 1 minute 47 seconds
+I wonder if part of it is too is this is the machine they were told was coming.
+Lindsay H. Bruns 1 minute 53 seconds
+and then the machine serial number changed or it was a different machine that was delivered.
+JH
+
+John S. Ham
+2 minutes2:00
+John S. Ham 2 minutes
+Yeah.
+
+Lindsay H. Bruns
+2 minutes2:00
+Lindsay H. Bruns 2 minutes
+So then there was no paper trail on that. Something else was set up. This one was missed or...
+Lindsay H. Bruns 2 minutes 8 seconds
+You know.
+Lindsay H. Bruns 2 minutes 11 seconds
+Something along that line.
+
+Nathan E. Jones
+2 minutes 23 seconds2:23
+Nathan E. Jones 2 minutes 23 seconds
+So I missed part of that because, you know, computers. So are we able to use the data in the equipment table as it is now to determine inventory that we could upload to C Cat directly?
+Nathan E. Jones 2 minutes 40 seconds
+Or is that just?
+Nathan E. Jones 2 minutes 42 seconds
+Something we can't do right now.
+
+Lindsay H. Bruns
+2 minutes 48 seconds2:48
+Lindsay H. Bruns 2 minutes 48 seconds
+I think we should.
+JH
+John S. Ham
+2 minutes 48 seconds2:48
+John S. Ham 2 minutes 48 seconds
+And that's probably our best source of data for equipment list.
+
+Lindsay H. Bruns
+2 minutes 51 seconds2:51
+Lindsay H. Bruns 2 minutes 51 seconds
+Yeah.
+Lindsay H. Bruns 2 minutes 54 seconds
+I was just going to say I think we should be okay with that.
+
+Nathan E. Jones
+2 minutes 58 seconds2:58
+Nathan E. Jones 2 minutes 58 seconds
+So how would we do it exactly? So I have a whole list of equipment here. All the Cat makes, the ones without attachments, and they're all active. But we only have limited variables as far as one of the things we put in here was the
+Nathan E. Jones 3 minutes 18 seconds
+agreement status label and the fleet type. And then we have all the customer information and the equipment information. Is there anything in this table? And maybe I could give you like a smaller version so you guys could see it in chat.
+Nathan E. Jones 3 minutes 35 seconds
+To look at.
+Nathan E. Jones 3 minutes 39 seconds
+that we could use to say, you know, make a rule that the system could automatically go through the equipment table and say, these items should be added as inventory to C Cat so that Lindsay can later manually switch them over to whatever, or perhaps
+Nathan E. Jones 3 minutes 57 seconds
+I can make you a tool that can make that easier, too.
+
+Vinod R. Suryawanshi
+4 minutes4:00
+Vinod R. Suryawanshi 4 minutes
+OK, so sorry to sorry to like jump in, Nathan. I understand we are working on the inventory stuff, right? So the question I have is, if we take a step back and think like...
+
+Lindsay H. Bruns
+4 minutes 1 second4:01
+Lindsay H. Bruns 4 minutes 1 second
+I'm good with whatever.
+VS
+Vinod R. Suryawanshi
+4 minutes 18 seconds4:18
+Vinod R. Suryawanshi 4 minutes 18 seconds
+What we are comparing to what and is it both ways now, for example, and what are the different scenarios? The very first scenario which you're talking about is inventory, right? If something new comes in.
+
+Nathan E. Jones
+4 minutes 31 seconds4:31
+Nathan E. Jones 4 minutes 31 seconds
+Yes.
+VS
+Vinod R. Suryawanshi
+4 minutes 31 seconds4:31
+Vinod R. Suryawanshi 4 minutes 31 seconds
+in our next environment.
+Vinod R. Suryawanshi 4 minutes 36 seconds
+which doesn't have any customer in it because inventory has blank customer. Right, Lindsay?
+Vinod R. Suryawanshi 4 minutes 45 seconds
+Usually.
+
+Lindsay H. Bruns
+4 minutes 47 seconds4:47
+Lindsay H. Bruns 4 minutes 47 seconds
+Yeah, there wouldn't be a customer associated with it.
+VS
+Vinod R. Suryawanshi
+4 minutes 47 seconds4:47
+Vinod R. Suryawanshi 4 minutes 47 seconds
+No.
+Vinod R. Suryawanshi 4 minutes 50 seconds
+Yeah, that means number one thing is we are not working with inventory with blank customers. Only the inventory we get, the latest one, like where we see the customer information, that means it has been sold. And that serial number and...
+Vinod R. Suryawanshi 5 minutes 9 seconds
+customer association is not in CCAT, we will go ahead and we will do it. And again, I'm just talking about inventory case. Now in order to define that.
+Vinod R. Suryawanshi 5 minutes 23 seconds
+Nathan, like how you are identifying, like, it's a...
+Vinod R. Suryawanshi 5 minutes 28 seconds
+new change in the inventory and it's this whole by any date, time or anything because now you have a whole big list where you do not know whether it's a mismatch or it's a new entry or whether.
+
+Nathan E. Jones
+5 minutes 43 seconds5:43
+Nathan E. Jones 5 minutes 43 seconds
+Well, I could, yeah.
+VS
+Vinod R. Suryawanshi
+5 minutes 44 seconds5:44
+Vinod R. Suryawanshi 5 minutes 44 seconds
+some updates are needed. So are we looking for latest 10 days? Can we start with that? Because Lindsay, you might have been caught up with all prior to that. If my understanding is correct. Again, I'm trying to define the rules and simplify the process at least for one scenario.
+Vinod R. Suryawanshi 6 minutes 2 seconds
+where we can say like, okay, this is working. And then we can take on to the next scenario where there are mismatch. For example, we have a serial number with some other customer, but CCAT is having something else in there, which we might have to update. Again, that's the second scenario we can get into that.
+Vinod R. Suryawanshi 6 minutes 22 seconds
+complexity and all that stuff later on. But very first scenario, if everyone is aligned for the inventory, like can we look for last 10 days, 20 days? What should be our threshold for that?
+JH
+John S. Ham
+6 minutes 36 seconds6:36
+John S. Ham 6 minutes 36 seconds
+Yeah, I have an idea there, so...
+VS
+Vinod R. Suryawanshi
+6 minutes 53 seconds6:53
+Vinod R. Suryawanshi 6 minutes 53 seconds
+Mhm.
+JH
+John S. Ham
+6 minutes 54 seconds6:54
+John S. Ham 6 minutes 54 seconds
+excluding all the other variables that we're talking about, but as from a process perspective, that should happen. The unit, once identified for a customer sale, is being updated in Next against that customer record. So that might be one of the scenarios we
+John S. Ham 7 minutes 13 seconds
+we use. Today, we are not informing Lindsay to get that asset into C Cat until the service store has completed the pre-delivery inspection. But there is, there's a time ahead of that where the unit's already in.
+John S. Ham 7 minutes 32 seconds
+the correct account on Next. So Nate, just to confirm, this table we have in front of us, that's our Next equipment MPOP.
+VS
+Vinod R. Suryawanshi
+7 minutes 42 seconds7:42
+Vinod R. Suryawanshi 7 minutes 42 seconds
+Yes.
+
+Nathan E. Jones
+7 minutes 43 seconds7:43
+Nathan E. Jones 7 minutes 43 seconds
+Yes, that is it.
+JH
+John S. Ham
+7 minutes 48 seconds7:48
+John S. Ham 7 minutes 48 seconds
+I don't know, how recent is this data?
+
+Nathan E. Jones
+7 minutes 50 seconds7:50
+Nathan E. Jones 7 minutes 50 seconds
+Um, I can make it descending, yeah.
+VS
+Vinod R. Suryawanshi
+7 minutes 52 seconds7:52
+Vinod R. Suryawanshi 7 minutes 52 seconds
+this morning.
+Vinod R. Suryawanshi 7 minutes 54 seconds
+Can you write order by?
+
+Nathan E. Jones
+7 minutes 58 seconds7:58
+Nathan E. Jones 7 minutes 58 seconds
+Would you modify date or create a date?
+VS
+Vinod R. Suryawanshi
+8 minutes 2 seconds8:02
+Vinod R. Suryawanshi 8 minutes 2 seconds
+I would just say like, uh, modified because both both gets updated, right?
+
+Nathan E. Jones
+8 minutes 4 seconds8:04
+Nathan E. Jones 8 minutes 4 seconds
+Created.
+Nathan E. Jones 8 minutes 9 seconds
+Okay.
+VS
+Vinod R. Suryawanshi
+8 minutes 9 seconds8:09
+Vinod R. Suryawanshi 8 minutes 9 seconds
+Let's see what we have in modified and also write the created.
+
+Nathan E. Jones
+8 minutes 13 seconds8:13
+Nathan E. Jones 8 minutes 13 seconds
+OK, so.
+JH
+John S. Ham
+8 minutes 14 seconds8:14
+John S. Ham 8 minutes 14 seconds
+Here's a, I'm gonna drop the serial number in the chat from today for a PDI that was submitted.
+
+Nathan E. Jones
+8 minutes 15 seconds8:15
+Nathan E. Jones 8 minutes 15 seconds
+Well...
+JH
+John S. Ham
+8 minutes 21 seconds8:21
+John S. Ham 8 minutes 21 seconds
+So, Lindsay wouldn't get that signal because it's still in submitted, so the store is now needs to accept that as a as a as a work order.
+
+Nathan E. Jones
+8 minutes 37 seconds8:37
+Nathan E. Jones 8 minutes 37 seconds
+So...
+VS
+Vinod R. Suryawanshi
+8 minutes 38 seconds8:38
+Vinod R. Suryawanshi 8 minutes 38 seconds
+Let's run line number 142 first.
+
+Nathan E. Jones
+8 minutes 41 seconds8:41
+Nathan E. Jones 8 minutes 41 seconds
+Okay.
+VS
+Vinod R. Suryawanshi
+8 minutes 46 seconds8:46
+Vinod R. Suryawanshi 8 minutes 46 seconds
+OK, it was created. Can we go to the?
+Vinod R. Suryawanshi 8 minutes 50 seconds
+N.
+
+Nathan E. Jones
+8 minutes 52 seconds8:52
+Nathan E. Jones 8 minutes 52 seconds
+One twenty-eight 8.
+VS
+Vinod R. Suryawanshi
+8 minutes 52 seconds8:52
+Vinod R. Suryawanshi 8 minutes 52 seconds
+Created 128 modified 8 for so we'll go by modified date.
+Vinod R. Suryawanshi 8 minutes 57 seconds
+OK, and then.
+
+Nathan E. Jones
+9 minutes 10 seconds9:10
+Nathan E. Jones 9 minutes 10 seconds
+So we have that and then we look at the customer which is already set up.
+VS
+Vinod R. Suryawanshi
+9 minutes 13 seconds9:13
+Vinod R. Suryawanshi 9 minutes 13 seconds
+Customer number.
+JH
+John S. Ham
+9 minutes 14 seconds9:14
+John S. Ham 9 minutes 14 seconds
+Yeah, so that is correct.
+
+Lindsay H. Bruns
+9 minutes 14 seconds9:14
+Lindsay H. Bruns 9 minutes 14 seconds
+Does this say when this was added?
+VS
+Vinod R. Suryawanshi
+9 minutes 20 seconds9:20
+Vinod R. Suryawanshi 9 minutes 20 seconds
+Yes.
+
+Lindsay H. Bruns
+9 minutes 21 seconds9:21
+Lindsay H. Bruns 9 minutes 21 seconds
+What date was this added?
+
+
+John S. Ham
+9 minutes 24 seconds9:24
+John S. Ham 9 minutes 24 seconds
+Looks like early, so that was early, so that was probably brought into inventory.
+VS
+Vinod R. Suryawanshi
+9 minutes 24 seconds9:24
+Vinod R. Suryawanshi 9 minutes 24 seconds
+I think it was.
+
+Lindsay H. Bruns
+9 minutes 29 seconds9:29
+Lindsay H. Bruns 9 minutes 29 seconds
+So this one is not in the CCAT and I do not see a PEDI on this unit. So no.
+VS
+Vinod R. Suryawanshi
+9 minutes 37 seconds9:37
+Vinod R. Suryawanshi 9 minutes 37 seconds
+That's correct, because if...
+JH
+John S. Ham
+9 minutes 38 seconds9:38
+John S. Ham 9 minutes 38 seconds
+It just got, it just got submitted, so I mean, maybe you or Lindsay are indicating like, hey, the store just didn't, or it hit the inventory, but no one PDI'd it yet as a as a unit that we should have PDI'd.
+
+Lindsay H. Bruns
+9 minutes 47 seconds9:47
+Lindsay H. Bruns 9 minutes 47 seconds
+That's what I'm trying to do though. I want those machines, I want them in, as soon as we're getting them, I want them in the CCAT because when I'm getting the PDIs, I want to just be able to make sure that they're subscribed.
+JH
+John S. Ham
+10 minutes 2 seconds10:02
+John S. Ham 10 minutes 2 seconds
+Right, right.
+
+Lindsay H. Bruns
+10 minutes 2 seconds10:02
+Lindsay H. Bruns 10 minutes 2 seconds
+Like I want to be able to go in and make sure that all of these have subscriptions on them and then I just need to be able to maintain if they're being moved to other accounts once they're being moved. Because the large portion of what I'm doing is I'm sitting here and it, you know, this machine, I'm going to get hit with.
+VS
+Vinod R. Suryawanshi
+10 minutes 6 seconds10:06
+Vinod R. Suryawanshi 10 minutes 6 seconds
+Uh-huh.
+
+Lindsay H. Bruns
+10 minutes 23 seconds10:23
+Lindsay H. Bruns 10 minutes 23 seconds
+your submission, the PDI submission on two different dates. And then I'm now spending 5 minutes putting it in there from the PDI. And then the next day I'm spending 5 minutes changing it over, taking a subscription off, waiting for it to fall off, putting it back in. When in reality, if this was already done in January, it's been sitting in Vision Link under our inventory count.
+Lindsay H. Bruns 10 minutes 46 seconds
+come that PDI that I get from you when it's actually delivered to a customer, then I can go in in there and be like, great, this is moved to this customer. We already know it's reporting. We already know it's active. I just have to move the customer's count instead of wasting 20 minutes going back and forth.
+Lindsay H. Bruns 11 minutes 4 seconds
+Between, you know, two different days, getting everything situated for one machine.
+VS
+Vinod R. Suryawanshi
+11 minutes 13 seconds11:13
+Vinod R. Suryawanshi 11 minutes 13 seconds
+Question there, Lindsay, as we are trying to understand the process. So if it comes to inventory.
+Vinod R. Suryawanshi 11 minutes 20 seconds
+If I'm understanding correctly, you want that in CCAT with blank customer?
+
+Lindsay H. Bruns
+11 minutes 27 seconds11:27
+Lindsay H. Bruns 11 minutes 27 seconds
+Well, it wouldn't be a blank customer. It would be our inventory account.
+
+Nathan E. Jones
+11 minutes 32 seconds11:32
+Nathan E. Jones 11 minutes 32 seconds
+Wow, OK.
+
+Vinod R. Suryawanshi
+11 minutes 33 seconds11:33
+Vinod R. Suryawanshi 11 minutes 33 seconds
+But we have blank customer in next. We don't maintain that to a inventory account, which we can assign it to. I don't have any problem with that. The 495 or whatever we have, we can do it. But if that's the recommendation, we are doing it. And then once we...
+Vinod R. Suryawanshi 11 minutes 53 seconds
+Once we get the proper right customer number, you want us to go and change CCAT again in like for the new customer?
+
+Lindsay H. Bruns
+12 minutes 3 seconds12:03
+Lindsay H. Bruns 12 minutes 3 seconds
+Well, that part I'm doing.
+VS
+Vinod R. Suryawanshi
+12 minutes 3 seconds12:03
+Vinod R. Suryawanshi 12 minutes 3 seconds
+Is that the process?
+
+Lindsay H. Bruns
+12 minutes 7 seconds12:07
+Lindsay H. Bruns 12 minutes 7 seconds
+As we create these rules, and yes, that down the line, that would be excellent. But right now, if we could just get the inventory stuff in there that is showing with blank customers, because I'm trying to get everything subscribed and connected.
+Lindsay H. Bruns 12 minutes 26 seconds
+That way, we can make sure that everything is in there, connected, correct, and then all I need to do is move it to a customer whenever it is sold and delivered to a customer. That would literally alleviate.
+
+Nathan E. Jones
+12 minutes 27 seconds12:27
+Nathan E. Jones 12 minutes 27 seconds
+So.
+VS
+Vinod R. Suryawanshi
+12 minutes 39 seconds12:39
+Vinod R. Suryawanshi 12 minutes 39 seconds
+OK, so...
+
+Lindsay H. Bruns
+12 minutes 43 seconds12:43
+Lindsay H. Bruns 12 minutes 43 seconds
+more than 50% of what I am doing.
+VS
+Vinod R. Suryawanshi
+12 minutes 43 seconds12:43
+Vinod R. Suryawanshi 12 minutes 43 seconds
+Luke.
+Vinod R. Suryawanshi 12 minutes 48 seconds
+I totally understand that. So can you give me an example from Max now, which is?
+Vinod R. Suryawanshi 12 minutes 56 seconds
+in inventory and it's not in CCAD.
+Vinod R. Suryawanshi 12 minutes 59 seconds
+And are we aligned that we need to assign it to internal customer INT 00495 or is there some some other?
+
+Lindsay H. Bruns
+13 minutes 8 seconds13:08
+Lindsay H. Bruns 13 minutes 8 seconds
+I'm sure that I have a bunch because I've got 30 emails right now of things that I'm trying to PDI. So, I mean, I'd have to go through and figure out, okay, this.
+VS
+Vinod R. Suryawanshi
+13 minutes 9 seconds13:09
+Vinod R. Suryawanshi 13 minutes 9 seconds
+Like, how, how, how you would do?
+Vinod R. Suryawanshi 13 minutes 13 seconds
+Mmh.
+
+Nathan E. Jones
+13 minutes 20 seconds13:20
+Nathan E. Jones 13 minutes 20 seconds
+Okay.
+JH
+John S. Ham
+13 minutes 27 seconds13:27
+John S. Ham 13 minutes 27 seconds
+That unit, that unit that I have in the chat, that is not in C Cat. I think, Lindsay, you mentioned that already, but yeah.
+
+Lindsay H. Bruns
+13 minutes 32 seconds13:32
+Lindsay H. Bruns 13 minutes 32 seconds
+No, that is not in CCAT, but that's also not in our inventory count. That's not an inventory machine.
+SM
+Sean M. Morgan
+13 minutes 40 seconds13:40
+Sean M. Morgan 13 minutes 40 seconds
+So if I'm understanding this, essentially we would use the creation date as the trigger to.
+Sean M. Morgan 13 minutes 47 seconds
+add it to our inventory account and C Cat and then the modified date would trigger to move it to the right customer once it sold.
+
+Lindsay H. Bruns
+13 minutes 49 seconds13:49
+Lindsay H. Bruns 13 minutes 49 seconds
+OK.
+
+Nathan E. Jones
+13 minutes 55 seconds13:55
+Nathan E. Jones 13 minutes 55 seconds
+Oh, here's...
+VS
+Vinod R. Suryawanshi
+13 minutes 55 seconds13:55
+Vinod R. Suryawanshi 13 minutes 55 seconds
+Yeah, modified date plus like we should be checking out whether it has a customer or not because other things could get modified as well. Sometimes anyone can come in and update anything and that record gets.
+SM
+Sean M. Morgan
+14 minutes 2 seconds14:02
+Sean M. Morgan 14 minutes 2 seconds
+Yeah.
+Sean M. Morgan 14 minutes 7 seconds
+modified with a customer change. Okay.
+
+Lindsay H. Bruns
+14 minutes 9 seconds14:09
+Lindsay H. Bruns 14 minutes 9 seconds
+Okay.
+VS
+Vinod R. Suryawanshi
+14 minutes 10 seconds14:10
+Vinod R. Suryawanshi 14 minutes 10 seconds
+Yeah, yeah.
+
+Lindsay H. Bruns
+14 minutes 11 seconds14:11
+Lindsay H. Bruns 14 minutes 11 seconds
+So I put a motor grader in the chat that I found. I received the PDI on it Wednesday, yesterday. So I don't even know what day it is this week. I'm so screwed up because I'm trying to get caught up in everything that I didn't get to do while I was out. So I got this one yesterday.
+
+Nathan E. Jones
+14 minutes 11 seconds14:11
+Nathan E. Jones 14 minutes 11 seconds
+Oh, here's.
+VS
+Vinod R. Suryawanshi
+14 minutes 16 seconds14:16
+Vinod R. Suryawanshi 14 minutes 16 seconds
+Mhm.
+
+Lindsay H. Bruns
+14 minutes 31 seconds14:31
+Lindsay H. Bruns 14 minutes 31 seconds
+It's showing in, you know, a blank customer in Next. It is not listed in the CCAT.
+Lindsay H. Bruns 14 minutes 39 seconds
+So this is one of the ones that I would be adding manually and then going in and putting a subscription on it. But then, you know, once I get an e-mail from John saying it's been moved to a customer, then I'll go in and move it from a customer.
+
+Nathan E. Jones
+14 minutes 39 seconds14:39
+Nathan E. Jones 14 minutes 39 seconds
+So...
+Nathan E. Jones 14 minutes 54 seconds
+So, okay, with this one, so earlier I put up that whole list where I showed all the ones that don't have customer numbers, and then I had different fleet types agreement statuses, but what if we could we say, let's just look at this big list for a second, this is...
+VS
+Vinod R. Suryawanshi
+14 minutes 54 seconds14:54
+Vinod R. Suryawanshi 14 minutes 54 seconds
+Rob.
+
+Nathan E. Jones
+15 minutes 13 seconds15:13
+Nathan E. Jones 15 minutes 13 seconds
+all of the ones that meet our other requirements plus no customer numbers. So this is all blank customer numbers here. Could we say that if they are blank customers that have the fleet type of type of new and.
+Nathan E. Jones 15 minutes 31 seconds
+Yeah.
+VS
+Vinod R. Suryawanshi
+15 minutes 31 seconds15:31
+Vinod R. Suryawanshi 15 minutes 31 seconds
+New rental lease, used use rental, used lease, re-rent, consignment, asset health for sale, I think in the group. Those are all relates to inventory. If we see any.
+
+Nathan E. Jones
+15 minutes 41 seconds15:41
+Nathan E. Jones 15 minutes 41 seconds
+Okay, yeah, because...
+
+Christopher M. Lloyd
+15 minutes 41 seconds15:41
+Christopher M. Lloyd 15 minutes 41 seconds
+Wait, wait, wait, rerun needs to be excluded. Rerun needs to be like, do not like red alert, do not move anything because those are actually customer owned units that we are acting as a rental company for them. So that those absolutely cannot move. They gotta stay in the original rental customer. And that was one of the.
+VS
+Vinod R. Suryawanshi
+15 minutes 46 seconds15:46
+Vinod R. Suryawanshi 15 minutes 46 seconds
+Okay.
+
+Christopher M. Lloyd
+16 minutes 4 seconds16:04
+Christopher M. Lloyd 16 minutes 4 seconds
+ones I was concerned about because they don't indicate it very well in Max. It's just the other, like you said, it's that fleet type and that's it. So I know they've been giving us trouble in some other areas too.
+
+Nathan E. Jones
+16 minutes 18 seconds16:18
+Nathan E. Jones 16 minutes 18 seconds
+So, in fleet type.
+Nathan E. Jones 16 minutes 21 seconds
+Um...
+Nathan E. Jones 16 minutes 23 seconds
+I guess.
+
+Vinod R. Suryawanshi
+16 minutes 24 seconds16:24
+Vinod R. Suryawanshi 16 minutes 24 seconds
+I just pinged. I think we can discuss this, like what should be the, but we can go through this one example.
+
+Nathan E. Jones
+16 minutes 32 seconds16:32
+Nathan E. Jones 16 minutes 32 seconds
+One that Lindsay put in there, or the one, or did you put up one in there?
+VS
+Vinod R. Suryawanshi
+16 minutes 36 seconds16:36
+Vinod R. Suryawanshi 16 minutes 36 seconds
+Lindsay, I just provided the rules for what is a fleet type. Like what are, sorry, what is the inventory based on the fleet types? So for scenario one.
+
+Nathan E. Jones
+16 minutes 39 seconds16:39
+Nathan E. Jones 16 minutes 39 seconds
+Yeah.
+VS
+Vinod R. Suryawanshi
+16 minutes 48 seconds16:48
+Vinod R. Suryawanshi 16 minutes 48 seconds
+Nathan, we will look into the equipment.
+
+Nathan E. Jones
+16 minutes 49 seconds16:49
+Nathan E. Jones 16 minutes 49 seconds
+Yes, yeah.
+VS
+Vinod R. Suryawanshi
+16 minutes 52 seconds16:52
+Vinod R. Suryawanshi 16 minutes 52 seconds
+In last 10 days.
+Vinod R. Suryawanshi 16 minutes 55 seconds
+Whatever is in this fleet type, which has like new create date and all that, and a blank customer, we will go ahead and...
+Vinod R. Suryawanshi 17 minutes 5 seconds
+with our API, we will go and enter that in CCAT. Now, the question is, Lindsay, what customer number do you put in there in CCAT?
+
+Lindsay H. Bruns
+17 minutes 17 seconds17:17
+Lindsay H. Bruns 17 minutes 17 seconds
+The INT00495.
+VS
+Vinod R. Suryawanshi
+17 minutes 20 seconds17:20
+Vinod R. Suryawanshi 17 minutes 20 seconds
+Okay, so let me ping that in the group.
+Vinod R. Suryawanshi 17 minutes 24 seconds
+INT.
+
+Nathan E. Jones
+17 minutes 24 seconds17:24
+Nathan E. Jones 17 minutes 24 seconds
+And so...
+VS
+Vinod R. Suryawanshi
+17 minutes 26 seconds17:26
+Vinod R. Suryawanshi 17 minutes 26 seconds
+Zero zeros, 4 zeros, right?
+Vinod R. Suryawanshi 17 minutes 32 seconds
+OK, 2 zeros. OK.
+
+Nathan E. Jones
+17 minutes 37 seconds17:37
+Nathan E. Jones 17 minutes 37 seconds
+So it could be anything.
+Nathan E. Jones 17 minutes 42 seconds
+That is in the last 10 days, and then it has.
+Nathan E. Jones 17 minutes 46 seconds
+any of the things that you put in here, new rental lease, used, used, blah, etc. Are there any other things like...
+Nathan E. Jones 17 minutes 54 seconds
+Agreement status label or.
+Nathan E. Jones 17 minutes 59 seconds
+Um...
+Nathan E. Jones 18 minutes
+Let me see. There's not a lot actually, because these are, and physical status, things like that, that we should watch for. Order to be picked in stock to be shipped.
+Nathan E. Jones 18 minutes 12 seconds
+Any of those that would affect inventory? Or are we just going to go with these rules that are in the chat right now? Use those fleet types only and then int 0495 because I can make a special rule by modifying my current function or procedure that could go in and do these.
+Nathan E. Jones 18 minutes 31 seconds
+in a second, in a few seconds, or you send them all to C Cat once we get these rules done. And we could run it every day if we wanted to or every week.
+VS
+Vinod R. Suryawanshi
+18 minutes 39 seconds18:39
+Vinod R. Suryawanshi 18 minutes 39 seconds
+Yeah, yeah, I think we can do every day and we can go back like.
+Vinod R. Suryawanshi 18 minutes 44 seconds
+three days to check whether it's already been there or not. If it is there, we will not do anything. If it is not there, we'll make the entry because if sometimes like Saturday Center comes in or already comes in and job doesn't run automatic or some, you know, system issues. Yeah.
+
+Nathan E. Jones
+18 minutes 58 seconds18:58
+Nathan E. Jones 18 minutes 58 seconds
+It'll check that. Yeah, I don't check at a time to make sure.
+VS
+Vinod R. Suryawanshi
+19 minutes 1 second19:01
+Vinod R. Suryawanshi 19 minutes 1 second
+So yeah, so we'll just look for last three, four days and we'll just say that, okay, these are the one we got in last four days and out of those 190 are already there. Just take care of this 10 and we'll just take care of that 10.
+
+Nathan E. Jones
+19 minutes 19 seconds19:19
+Nathan E. Jones 19 minutes 19 seconds
+Yeah, and we're gonna use modified date, so where, and in the...
+VS
+Vinod R. Suryawanshi
+19 minutes 23 seconds19:23
+Vinod R. Suryawanshi 19 minutes 23 seconds
+Yep.
+
+
+Nathan E. Jones
+19 minutes 25 seconds19:25
+Nathan E. Jones 19 minutes 25 seconds
+Modified date time is greater than or equal to, I think, the 27th.
+VS
+Vinod R. Suryawanshi
+19 minutes 29 seconds19:29
+Vinod R. Suryawanshi 19 minutes 29 seconds
+We can do last 20 days or one month also just to see if something has been missed or not. There's no problem on that.
+
+Nathan E. Jones
+19 minutes 40 seconds19:40
+Nathan E. Jones 19 minutes 40 seconds
+So, you know, one month's worth would be...
+Nathan E. Jones 19 minutes 45 seconds
+Well, I have to add in these other things. So some of these will go away because we didn't, I didn't put in the rental types. But anyway, back to what I was saying. So physical status won't matter.
+VS
+Vinod R. Suryawanshi
+19 minutes 55 seconds19:55
+Vinod R. Suryawanshi 19 minutes 55 seconds
+Devi.
+
+Nathan E. Jones
+19 minutes 59 seconds19:59
+Nathan E. Jones 19 minutes 59 seconds
+Ordered to be.
+
+Lindsay H. Bruns
+20 minutes20:00
+Lindsay H. Bruns 20 minutes
+Nathan, I think what you have is good. I do not quite know what all of the things in next mean. I know that what triggers John's side of things is when it says that it is delivered.
+Lindsay H. Bruns 20 minutes 19 seconds
+So that's the only clear definition of what I have for what is registering his emails to come to me to move them to a customer account out of our inventory. As far as our inventory of these to be picked on job site, those things, I think all of those are fine.
+Lindsay H. Bruns 20 minutes 38 seconds
+be in the inventory. I know the on-job site means that that's to a customer, but you'd have to go through the rental agreement to find out who the customer is. And that's something that I can do manually. So I think with that indicator, to leave that open to everything is okay, and then we can
+Lindsay H. Bruns 20 minutes 58 seconds
+just from there on, you know, maybe revision two or three, once we figure out like, hey, these items really do not need to be moved or these ones, you know, that kind of thing. But I think for right now, what you have will work.
+VS
+Vinod R. Suryawanshi
+21 minutes 4 seconds21:04
+Vinod R. Suryawanshi 21 minutes 4 seconds
+Mhm.
+
+Nathan E. Jones
+21 minutes 15 seconds21:15
+Nathan E. Jones 21 minutes 15 seconds
+Okay, that's wonderful to hear because what I could do is go ahead and make a procedure that can, we can just say, so right now I have one that does all records, checks them in C Cat based on certain criteria.
+
+
+Vinod R. Suryawanshi
+21 minutes 29 seconds21:29
+Vinod R. Suryawanshi 21 minutes 29 seconds
+Before moving there, Nathan, sorry to again bring you one step back. Can you just copy those feed types what I have sent?
+
+Nathan E. Jones
+21 minutes 41 seconds21:41
+Nathan E. Jones 21 minutes 41 seconds
+The ones that you currently have these.
+VS
+Vinod R. Suryawanshi
+21 minutes 43 seconds21:43
+Vinod R. Suryawanshi 21 minutes 43 seconds
+Yeah, in the ping, in the chat I have given.
+
+Nathan E. Jones
+21 minutes 46 seconds21:46
+Nathan E. Jones 21 minutes 46 seconds
+Mhm.
+VS
+Vinod R. Suryawanshi
+21 minutes 46 seconds21:46
+Vinod R. Suryawanshi 21 minutes 46 seconds
+In the chat, can you take those and filter out?
+Vinod R. Suryawanshi 21 minutes 50 seconds
+the records.
+
+Nathan E. Jones
+21 minutes 50 seconds21:50
+Nathan E. Jones 21 minutes 50 seconds
+Yeah, I was going to try, but I wasn't 100% sure if they were specifically spelled the way they were supposed to be and stuff. That's why I popped up that list because I was about to do the same thing.
+VS
+Vinod R. Suryawanshi
+22 minutes22:00
+Vinod R. Suryawanshi 22 minutes
+I think it will.
+
+Nathan E. Jones
+22 minutes 5 seconds22:05
+Nathan E. Jones 22 minutes 5 seconds
+You're probably re-rent, ignore this one. Consignment and held for sale. So yeah, give me one second. It's for fleet type.
+VS
+Vinod R. Suryawanshi
+22 minutes 8 seconds22:08
+Vinod R. Suryawanshi 22 minutes 8 seconds
+Yeah.
+Vinod R. Suryawanshi 22 minutes 21 seconds
+And ignore the modified date time. I just want to see everything.
+Vinod R. Suryawanshi 22 minutes 25 seconds
+for now and then towards the end we can put the or you can put towards the last and comment it out for now.
+
+Nathan E. Jones
+22 minutes 25 seconds22:25
+Nathan E. Jones 22 minutes 25 seconds
+Yeah, okay.
+Nathan E. Jones 22 minutes 37 seconds
+All right, so this should give us a list. Oh wait, I forgot comments. Sorry.
+
+Lindsay H. Bruns
+22 minutes 45 seconds22:45
+Lindsay H. Bruns 22 minutes 45 seconds
+If this does end up being too many, I would just focus on new if that ends up being, you know, a lot.
+
+Nathan E. Jones
+22 minutes 51 seconds22:51
+Nathan E. Jones 22 minutes 51 seconds
+I could do 10. I could do 10.
+VS
+Vinod R. Suryawanshi
+22 minutes 53 seconds22:53
+Vinod R. Suryawanshi 22 minutes 53 seconds
+Yeah, that's what we are trying to, yeah, see.
+
+Nathan E. Jones
+22 minutes 56 seconds22:56
+Nathan E. Jones 22 minutes 56 seconds
+I could do it 10,000 in two 2 1/2 minutes, so...
+
+Vinod R. Suryawanshi
+23 minutes 1 second23:01
+Vinod R. Suryawanshi 23 minutes 1 second
+No, I think, Nathan, it's not about processing 3000. It's about, are these 3000 the right ones? We are building the conference in that first.
+Vinod R. Suryawanshi 23 minutes 12 seconds
+So I think, Lindsay, like there are 3000 entries which we can do now, but based on that, if you think like...
+Vinod R. Suryawanshi 23 minutes 23 seconds
+Hey, don't do this fleet type or don't do this for XYZ reason. We need to capture that so that we will put those guardrails in our procedure.
+Vinod R. Suryawanshi 23 minutes 34 seconds
+before doing this in future. And we will only do for those which, you know, passes those card rails and passes all the rules we defined for the inventory. And.
+Vinod R. Suryawanshi 23 minutes 49 seconds
+There is a two-step process for this now, Nathan. One is when the customer is blank, but the 2nd is we need to also trigger when the customer gets populated to go and update the.
+
+Lindsay H. Bruns
+23 minutes 49 seconds23:49
+Lindsay H. Bruns 23 minutes 49 seconds
+O.
+VS
+Vinod R. Suryawanshi
+24 minutes 5 seconds24:05
+Vinod R. Suryawanshi 24 minutes 5 seconds
+CC it with the right customer. So this would be a two-step.
+Vinod R. Suryawanshi 24 minutes 10 seconds
+Checks for the inventory, yeah, Lindsay.
+
+Lindsay H. Bruns
+24 minutes 13 seconds24:13
+Lindsay H. Bruns 24 minutes 13 seconds
+So, I mean, I know like a lot of like the least ones, those ones we do add to our inventory because they are our inventory machines. And then I do also add, so we don't replace, we also add the least
+Lindsay H. Bruns 24 minutes 32 seconds
+Customer, which is why this gets...
+Lindsay H. Bruns 24 minutes 35 seconds
+very complicated because, you know, like rental machines would have two, they would not only have like R.
+Lindsay H. Bruns 24 minutes 45 seconds
+inventory account on them, but we would also be adding the rental record of who has the rental. So.
+Lindsay H. Bruns 24 minutes 55 seconds
+Ham.
+VS
+Vinod R. Suryawanshi
+24 minutes 56 seconds24:56
+Vinod R. Suryawanshi 24 minutes 56 seconds
+And we are working on that one other initiative with Cat through Snowflake. We are sending like, if we are renting a machine, who that customer is, which customer. So we can get to that information as well. Okay. And.
+
+Lindsay H. Bruns
+25 minutes 6 seconds25:06
+Lindsay H. Bruns 25 minutes 6 seconds
+Right, right. And I already do that.
+Lindsay H. Bruns 25 minutes 10 seconds
+Right, I already do that. I'm just saying, I'm wondering if for this scenario for right now, since we're focusing more on...
+VS
+Vinod R. Suryawanshi
+25 minutes 13 seconds25:13
+Vinod R. Suryawanshi 25 minutes 13 seconds
+Mm-hmm.
+Vinod R. Suryawanshi 25 minutes 19 seconds
+Mmh.
+
+Lindsay H. Bruns
+25 minutes 22 seconds25:22
+Lindsay H. Bruns 25 minutes 22 seconds
+Um...
+VS
+Vinod R. Suryawanshi
+25 minutes 22 seconds25:22
+Vinod R. Suryawanshi 25 minutes 22 seconds
+Sell new soul kind of thing.
+
+Lindsay H. Bruns
+25 minutes 23 seconds25:23
+Lindsay H. Bruns 25 minutes 23 seconds
+You know, new.
+Lindsay H. Bruns 25 minutes 27 seconds
+Machines being added if we just focused on new instead of the rest of the.
+Lindsay H. Bruns 25 minutes 35 seconds
+You know, types.
+
+
+Vinod R. Suryawanshi
+25 minutes 37 seconds25:37
+Vinod R. Suryawanshi 25 minutes 37 seconds
+That's fine.
+Vinod R. Suryawanshi 25 minutes 39 seconds
+And again, it's as we said, like, even if he can help.
+Vinod R. Suryawanshi 25 minutes 44 seconds
+Little bit.
+Vinod R. Suryawanshi 25 minutes 45 seconds
+We can just build that for now and then enhance it future so that we don't do the repetitive tasks. So we have around 718 new.
+Vinod R. Suryawanshi 25 minutes 54 seconds
+where customers are blank. And we'll share this list with you.
+Vinod R. Suryawanshi 25 minutes 59 seconds
+If you want to review that.
+
+Lindsay H. Bruns
+26 minutes 2 seconds26:02
+Lindsay H. Bruns 26 minutes 2 seconds
+Yeah, he put it in the chat. I'm looking at it.
+VS
+Vinod R. Suryawanshi
+26 minutes 5 seconds26:05
+Vinod R. Suryawanshi 26 minutes 5 seconds
+No, that one, yeah, that one is a...
+
+Nathan E. Jones
+26 minutes 6 seconds26:06
+Nathan E. Jones 26 minutes 6 seconds
+Now it's the old one.
+VS
+Vinod R. Suryawanshi
+26 minutes 8 seconds26:08
+Vinod R. Suryawanshi 26 minutes 8 seconds
+That has everything in it.
+
+Lindsay H. Bruns
+26 minutes 9 seconds26:09
+Lindsay H. Bruns 26 minutes 9 seconds
+The one that you just put in?
+
+Nathan E. Jones
+26 minutes 11 seconds26:11
+Nathan E. Jones 26 minutes 11 seconds
+Yeah, this one's the...
+Nathan E. Jones 26 minutes 14 seconds
+New only.
+VS
+Vinod R. Suryawanshi
+26 minutes 14 seconds26:14
+Vinod R. Suryawanshi 26 minutes 14 seconds
+New.
+SM
+Sean M. Morgan
+26 minutes 16 seconds26:16
+Sean M. Morgan 26 minutes 16 seconds
+That's 3 minutes old. That's dated.
+
+Nathan E. Jones
+26 minutes 16 seconds26:16
+Nathan E. Jones 26 minutes 16 seconds
+Yeah.
+Nathan E. Jones 26 minutes 19 seconds
+Ha ha ha.
+
+Lindsay H. Bruns
+26 minutes 21 seconds26:21
+Lindsay H. Bruns 26 minutes 21 seconds
+Alright, I'll close this one and wait for the new one.
+VS
+Vinod R. Suryawanshi
+26 minutes 22 seconds26:22
+Vinod R. Suryawanshi 26 minutes 22 seconds
+E.
+
+Nathan E. Jones
+26 minutes 26 seconds26:26
+Nathan E. Jones 26 minutes 26 seconds
+There we go. So the new one should be posting now.
+VS
+Vinod R. Suryawanshi
+26 minutes 30 seconds26:30
+Vinod R. Suryawanshi 26 minutes 30 seconds
+And the one which you are Lindsay going through, that has like other fleet types. So if you think along with the new, we can use something else. We can do that too. But now the latest one which Nathan shared, it has new only fleet type.
+
+Nathan E. Jones
+26 minutes 48 seconds26:48
+Nathan E. Jones 26 minutes 48 seconds
+And I'll design the procedure so that you can add fleet type as a variable. It'll just be new by default. And then if you want to add new ones, you would just do fleet type equals and then all the different fleet types. And then we could do days, days back or days, days equals 10 or whatever it would be, go back 10 days. And then that way the procedure can be run.
+VS
+Vinod R. Suryawanshi
+27 minutes 3 seconds27:03
+Vinod R. Suryawanshi 27 minutes 3 seconds
+Bindu.
+
+Nathan E. Jones
+27 minutes 8 seconds27:08
+Nathan E. Jones 27 minutes 8 seconds
+by any task to do it, whichever variables we decide on.
+VS
+Vinod R. Suryawanshi
+27 minutes 13 seconds27:13
+Vinod R. Suryawanshi 27 minutes 13 seconds
+Nathan, can you go all the way down here? I just wanted to see like not in results set.
+Vinod R. Suryawanshi 27 minutes 19 seconds
+Which one is the oldest one like and when it was brought in inventory so that we can gauge?
+Vinod R. Suryawanshi 27 minutes 27 seconds
+Wow, this is from 2025.
+Vinod R. Suryawanshi 27 minutes 30 seconds
+And it's and can you check that 2025 weather we have in next? Sorry, CCAT.
+
+Nathan E. Jones
+27 minutes 31 seconds27:31
+Nathan E. Jones 27 minutes 31 seconds
+Yeah.
+Nathan E. Jones 27 minutes 36 seconds
+Yeah.
+
+Lindsay H. Bruns
+27 minutes 37 seconds27:37
+Lindsay H. Bruns 27 minutes 37 seconds
+I think for the first round, you're probably going to find that there are machines that have been sitting in our inventory that have not been PDI'd or missed that are not in the CCAT that we have no record of.
+VS
+Vinod R. Suryawanshi
+27 minutes 48 seconds27:48
+Vinod R. Suryawanshi 27 minutes 48 seconds
+Yeah, it's not there, so we will add those kind of.
+
+Nathan E. Jones
+27 minutes 50 seconds27:50
+Nathan E. Jones 27 minutes 50 seconds
+Yeah, we can look for another one.
+VS
+Vinod R. Suryawanshi
+27 minutes 52 seconds27:52
+Vinod R. Suryawanshi 27 minutes 52 seconds
+Okay.
+Vinod R. Suryawanshi 27 minutes 53 seconds
+No, that's fine. No, I just wanted to make sure like it's not in CCD and all that stuff.
+
+Nathan E. Jones
+27 minutes 59 seconds27:59
+Nathan E. Jones 27 minutes 59 seconds
+Yeah, and the system will also check to make sure that it's not in the SCCAT before it adds it. And I'll look into the customer change because it sounds like that could be really useful where if it's in inventory and has no customer, I just have to think about how to set the rule. But then it changes because if we do that, if we do this every day, it should be easy because we can say,
+Nathan E. Jones 28 minutes 21 seconds
+We'll check each change to the table and we should be able to detect like the minute a customer is added to one that was blank the day before.
+
+Lindsay H. Bruns
+28 minutes 31 seconds28:31
+Lindsay H. Bruns 28 minutes 31 seconds
+Right, I would just need to have a line of sight to that just because I have to go in and manually add all the subscriptions. So if we're having this done and there's going to be like 50, 60 a day that I am doing and changing, it's going to be a lot of work. So I would just need a line of sight to like, A, how many were moving or.
+Lindsay H. Bruns 28 minutes 53 seconds
+You know, I would still need to be getting something to trigger, especially if this is being moved to a customer's account. I need to make sure that that's prioritized over, you know, just sitting here and putting subscriptions on all of these, because that also takes a very large portion of time to do that data portion of it, where you go through and I have to manually...
+
+Nathan E. Jones
+29 minutes 1 second29:01
+Nathan E. Jones 29 minutes 1 second
+Yeah.
+VS
+Vinod R. Suryawanshi
+29 minutes 8 seconds29:08
+Vinod R. Suryawanshi 29 minutes 8 seconds
+Mmh.
+
+Lindsay H. Bruns
+29 minutes 15 seconds29:15
+Lindsay H. Bruns 29 minutes 15 seconds
+There is no automation I can do to put subscriptions on anything.
+
+Nathan E. Jones
+29 minutes 19 seconds29:19
+Nathan E. Jones 29 minutes 19 seconds
+Yeah, I know.
+VS
+Vinod R. Suryawanshi
+29 minutes 20 seconds29:20
+Vinod R. Suryawanshi 29 minutes 20 seconds
+audit, got it. So that if we go and put in all this 780.
+Vinod R. Suryawanshi 29 minutes 27 seconds
+You may miss like the actual customer, which is a high priority thing for you. Got it. So how many do you think, Lindsay, we should do a week?
+
+Lindsay H. Bruns
+29 minutes 39 seconds29:39
+Lindsay H. Bruns 29 minutes 39 seconds
+Well, I mean, I know that this first round is going to be difficult because, like, there's, like you said, almost 800 in this list.
+Lindsay H. Bruns 29 minutes 50 seconds
+I mean, if...
+SM
+Sean M. Morgan
+29 minutes 50 seconds29:50
+Sean M. Morgan 29 minutes 50 seconds
+Is this something like after this, like for this initial lift that potentially somebody else within the EMS team could kind of help provide that extra bandwidth for you, just till we get through this, the initial backlog, and then once it's doing regularly, it'll be smaller amounts?
+
+Lindsay H. Bruns
+30 minutes 8 seconds30:08
+Lindsay H. Bruns 30 minutes 8 seconds
+I think for the initial backlog, if we could try to do this as like, you know, if I know that I'm looking for, because I get anywhere between 20 to 70 emails a day that I'm already handling. So if we say like 50,
+VS
+Vinod R. Suryawanshi
+30 minutes 26 seconds30:26
+Vinod R. Suryawanshi 30 minutes 26 seconds
+Mhm.
+
+Lindsay H. Bruns
+30 minutes 27 seconds30:27
+Lindsay H. Bruns 30 minutes 27 seconds
+maybe like every other day. So if I end up getting behind or something, we should be done with this soon. And then I think from there, whatever it populates or triggers should be manageable.
+VS
+Vinod R. Suryawanshi
+30 minutes 41 seconds30:41
+Vinod R. Suryawanshi 30 minutes 41 seconds
+Okay, how about like for entire next week, we will only do 50 because that would be a first round. And we will do based on the...
+Vinod R. Suryawanshi 30 minutes 55 seconds
+Oldest one.
+Vinod R. Suryawanshi 30 minutes 57 seconds
+So that there is no or the newest one based on what your recommendation is. And then we can.
+
+Lindsay H. Bruns
+30 minutes 59 seconds30:59
+Lindsay H. Bruns 30 minutes 59 seconds
+Well, if you...
+VS
+Vinod R. Suryawanshi
+31 minutes 5 seconds31:05
+Vinod R. Suryawanshi 31 minutes 5 seconds
+Check whether what we are doing is correct or not.
+
+Lindsay H. Bruns
+31 minutes 8 seconds31:08
+Lindsay H. Bruns 31 minutes 8 seconds
+Yes, yeah, I think that's fine. And you could probably even do like 50 Monday and maybe 50 Wednesday. And I can sort through those.
+
+
+Vinod R. Suryawanshi
+31 minutes 11 seconds31:11
+Vinod R. Suryawanshi 31 minutes 11 seconds
+Okay.
+Vinod R. Suryawanshi 31 minutes 15 seconds
+Okay.
+
+Lindsay H. Bruns
+31 minutes 19 seconds31:19
+Lindsay H. Bruns 31 minutes 19 seconds
+Sorry, I clicked on the mute button. I don't know why.
+
+Nathan E. Jones
+31 minutes 21 seconds31:21
+Nathan E. Jones 31 minutes 21 seconds
+What's there?
+Nathan E. Jones 31 minutes 24 seconds
+If they're inventory, would it matter? Can't they just sit there as inventory in the system?
+Nathan E. Jones 31 minutes 30 seconds
+What did I miss?
+VS
+Vinod R. Suryawanshi
+31 minutes 32 seconds31:32
+Vinod R. Suryawanshi 31 minutes 32 seconds
+That's a good question. So even if you do all this 700 and if it stays there.
+
+Lindsay H. Bruns
+31 minutes 33 seconds31:33
+Lindsay H. Bruns 31 minutes 33 seconds
+No, so uploading everything into the CCAT, if it has an active product link box on it, I have to go in and register the product link box.
+
+Nathan E. Jones
+31 minutes 44 seconds31:44
+Nathan E. Jones 31 minutes 44 seconds
+I see what you're saying. Okay, that's what I missed.
+
+Lindsay H. Bruns
+31 minutes 46 seconds31:46
+Lindsay H. Bruns 31 minutes 46 seconds
+So this isn't just a let's dump all of these in there. These will then also populate in my dealer service portal that I have to manage for all of the subscriptions. We get.
+VS
+Vinod R. Suryawanshi
+31 minutes 55 seconds31:55
+Vinod R. Suryawanshi 31 minutes 55 seconds
+Mhm.
+
+Lindsay H. Bruns
+32 minutes 1 second32:01
+Lindsay H. Bruns 32 minutes 1 second
+you know, we get graded on Cat for million things. This is one of those things we get graded on is I have to make sure that all of our machines that we have in there are connected. So part of what I am doing is I'm getting all of these free deliveries that I'm putting in the CCAT and then I'm going in and putting the subscriptions on. That's why I'm saying like, as we're going through this,
+Lindsay H. Bruns 32 minutes 25 seconds
+and changing these from customers and this and that, blah, blah, blah, blah, blah, I have to still go in and check and make sure that the subscriptions moved. I have to make sure the subscription's on there for a customer. I still have to check these things, which is why I think keeping the manual part from what John is giving me is delivered as manual for now.
+
+Nathan E. Jones
+32 minutes 35 seconds32:35
+Nathan E. Jones 32 minutes 35 seconds
+Yeah.
+
+Lindsay H. Bruns
+32 minutes 46 seconds32:46
+Lindsay H. Bruns 32 minutes 46 seconds
+till we get everything situated and know that this is working, because I'm going to have to have that line of sight to make sure that they are being subscribed to customers. And that part I can have help with, but for the majority of these, as inventory, we just put them in our free connect. As they start getting moved into customers, customers are paying for subscriptions.
+
+
+
+Nathan E. Jones
+32 minutes 56 seconds32:56
+Nathan E. Jones 32 minutes 56 seconds
+Yeah, well, maybe...
+
+Lindsay H. Bruns
+33 minutes 9 seconds33:09
+Lindsay H. Bruns 33 minutes 9 seconds
+and they would need to know like where things need to be moved. So that's just why I want to keep it limited to, you know, so many right now to just sit here and put all the free subscriptions on them. And then as things need to move, I can sit here and manually do that, but it's going to lessen my load.
+VS
+Vinod R. Suryawanshi
+33 minutes 13 seconds33:13
+Vinod R. Suryawanshi 33 minutes 13 seconds
+Yeah.
+
+Lindsay H. Bruns
+33 minutes 28 seconds33:28
+Lindsay H. Bruns 33 minutes 28 seconds
+So I'm not looking through and seeing, I can just check, is this already subscribed or do I need to subscribe this?
+
+Nathan E. Jones
+33 minutes 35 seconds33:35
+Nathan E. Jones 33 minutes 35 seconds
+So, do we have to put a so we put a subscription on everything initially, even then, even the new stuff that nobody has yet?
+
+Lindsay H. Bruns
+33 minutes 42 seconds33:42
+Lindsay H. Bruns 33 minutes 42 seconds
+Everything.
+
+Nathan E. Jones
+33 minutes 44 seconds33:44
+Nathan E. Jones 33 minutes 44 seconds
+OK, so, so for instance, if I uploaded these right now, you would have 700 subscriptions that you have to add.
+
+Lindsay H. Bruns
+33 minutes 51 seconds33:51
+Lindsay H. Bruns 33 minutes 51 seconds
+If they have active product link boxes on them that have been hooked up, yes, I would have to add subscriptions to all of those machines.
+
+Nathan E. Jones
+33 minutes 59 seconds33:59
+Nathan E. Jones 33 minutes 59 seconds
+Well, say that's the thing, like if these have no customer yet and they're listed as new, is there anything in the table that we could possibly use that would eliminate?
+Nathan E. Jones 34 minutes 9 seconds
+ones that have a product or whatever that are, you know what I mean? Like these are available, listed, or I don't know what no charge is, but like these are like pure inventory because they're new items that are available to be sold, right?
+
+Christopher M. Lloyd
+34 minutes 26 seconds34:26
+Christopher M. Lloyd 34 minutes 26 seconds
+We could look at that maybe a little bit further to make sure that there's, you know, we're looking just at equipment. The other thing
+VS
+Vinod R. Suryawanshi
+34 minutes 29 seconds34:29
+Vinod R. Suryawanshi 34 minutes 29 seconds
+Yeah.
+
+Christopher M. Lloyd
+34 minutes 35 seconds34:35
+Christopher M. Lloyd 34 minutes 35 seconds
+About it is not only from a, you know, some of the metrics perspective, but the bigger thing is, is that...
+Christopher M. Lloyd 34 minutes 44 seconds
+is making sure that the hardware is working before it gets into the hands of a customer because that's a whole other rabbit whole complete mess that we have to deal with that if you know if a box is not working when it gets out to a customer then it's like.
+Christopher M. Lloyd 35 minutes 3 seconds
+What do we do to fix it? You know, so that's another reason, you know, getting them subscribed.
+
+
+Vinod R. Suryawanshi
+35 minutes 5 seconds35:05
+Vinod R. Suryawanshi 35 minutes 5 seconds
+But that's a, but yeah, that's a manual step, Chris. We are doing it right. Like once it is in CCAT, we are only working till CCAT, but after that, whether box is not working, working that Lindsay and then they assigned the subscription and all that. So that's a step we will not be like.
+
+Nathan E. Jones
+35 minutes 5 seconds35:05
+Nathan E. Jones 35 minutes 5 seconds
+Yeah.
+
+Christopher M. Lloyd
+35 minutes 20 seconds35:20
+Christopher M. Lloyd 35 minutes 20 seconds
+Correct. Yep.
+VS
+Vinod R. Suryawanshi
+35 minutes 25 seconds35:25
+Vinod R. Suryawanshi 35 minutes 25 seconds
+looking into. So I think as per Lindsay, like we will process 50 on Monday and 50 on Wednesday and we will schedule a follow up meeting the following day on that and see like.
+
+Nathan E. Jones
+35 minutes 26 seconds35:26
+Nathan E. Jones 35 minutes 26 seconds
+Yeah.
+
+Lindsay H. Bruns
+35 minutes 28 seconds35:28
+Lindsay H. Bruns 35 minutes 28 seconds
+Yes, correct.
+Lindsay H. Bruns 35 minutes 42 seconds
+Do you want to do it on Thursday or Friday?
+
+Nathan E. Jones
+35 minutes 44 seconds35:44
+Nathan E. Jones 35 minutes 44 seconds
+The meeting.
+VS
+Vinod R. Suryawanshi
+35 minutes 45 seconds35:45
+Vinod R. Suryawanshi 35 minutes 45 seconds
+Defense like I'm fine, you let me know which is a good day.
+Vinod R. Suryawanshi 35 minutes 49 seconds
+For you.
+
+Lindsay H. Bruns
+35 minutes 50 seconds35:50
+Lindsay H. Bruns 35 minutes 50 seconds
+Either would be fine for me. I just don't like, well, if I'm doing Monday and yeah, we can do Thursday. Thursday would be fine.
+VS
+Vinod R. Suryawanshi
+35 minutes 58 seconds35:58
+Vinod R. Suryawanshi 35 minutes 58 seconds
+But I have Thursday, I have Friday is also open pretty. Actually, Thursday is pretty easy. The entire first half is booked for me.
+
+Lindsay H. Bruns
+36 minutes 6 seconds36:06
+Lindsay H. Bruns 36 minutes 6 seconds
+Well, Friday works, Vinod, you pick.
+
+Nathan E. Jones
+36 minutes 6 seconds36:06
+Nathan E. Jones 36 minutes 6 seconds
+So, what I was...
+VS
+Vinod R. Suryawanshi
+36 minutes 8 seconds36:08
+Vinod R. Suryawanshi 36 minutes 8 seconds
+Awesome, I'll pick Friday.
+
+
+Nathan E. Jones
+36 minutes 10 seconds36:10
+Nathan E. Jones 36 minutes 10 seconds
+Would it be easier to do 10 a day instead of 50 over 2 days? So like, because if we do 10, I'm just worried that I'm going to like, you're going to have a million subscriptions or something crazy is going to happen. I was thinking if we did 10.
+
+Lindsay H. Bruns
+36 minutes 21 seconds36:21
+Lindsay H. Bruns 36 minutes 21 seconds
+I already have a million subscriptions, so you're good. Just go for it. Just pull the trigger. I promise it won't hurt.
+
+Nathan E. Jones
+36 minutes 25 seconds36:25
+Nathan E. Jones 36 minutes 25 seconds
+Okay.
+Nathan E. Jones 36 minutes 28 seconds
+Yeah, because I was just thinking like 10 a day, then you have, if something crazy happens on the first two or three days, then we don't have 50 things that we have to fix. We could just 10, 10, 10, and 10, 10 each day basically for a week.
+
+Lindsay H. Bruns
+36 minutes 37 seconds36:37
+Lindsay H. Bruns 36 minutes 37 seconds
+I spent the year.
+VS
+Vinod R. Suryawanshi
+36 minutes 37 seconds36:37
+Vinod R. Suryawanshi 36 minutes 37 seconds
+Okay.
+
+Lindsay H. Bruns
+36 minutes 42 seconds36:42
+Lindsay H. Bruns 36 minutes 42 seconds
+No, so right now I did just clear everything out.
+Lindsay H. Bruns 36 minutes 47 seconds
+So I know that there is nothing in here that requires my attention, which if we start this project, and I know that this is clear, the only things that are populating in here are going to be the ones that you're pushing. So I would be, I'm okay with that. And then I can work through all 50 of them.
+
+Nathan E. Jones
+37 minutes 2 seconds37:02
+Nathan E. Jones 37 minutes 2 seconds
+Yeah, OK.
+VS
+Vinod R. Suryawanshi
+37 minutes 9 seconds37:09
+Vinod R. Suryawanshi 37 minutes 9 seconds
+Mhm.
+
+Nathan E. Jones
+37 minutes 12 seconds37:12
+Nathan E. Jones 37 minutes 12 seconds
+Yeah, OK.
+
+Lindsay H. Bruns
+37 minutes 12 seconds37:12
+Lindsay H. Bruns 37 minutes 12 seconds
+say, no, 50 is a good number. So I think from here we can just, you know, I think that's a great starting point.
+VS
+Vinod R. Suryawanshi
+37 minutes 15 seconds37:15
+Vinod R. Suryawanshi 37 minutes 15 seconds
+Yeah.
+
+Nathan E. Jones
+37 minutes 18 seconds37:18
+Nathan E. Jones 37 minutes 18 seconds
+Man, yeah.
+Nathan E. Jones 37 minutes 21 seconds
+Monday and then if Monday is bad, then Tuesday I can just shut it down. We can go from there. And then John, what did you have to say?
+JH
+John S. Ham
+37 minutes 29 seconds37:29
+John S. Ham 37 minutes 29 seconds
+It's just one thing to consider and might have to figure a way around it, but it will be a barrier. If a unit is associated to a customer account in Next,
+John S. Ham 37 minutes 44 seconds
+but that customer does not have a CCID yet in CCAT, we will not be able to add that cleanly in CCAT until that CCID is created and associated to that customer account.
+
+Nathan E. Jones
+38 minutes38:00
+Nathan E. Jones 38 minutes
+But inventory will be fine, right? Because we'll use the INTO 495.
+JH
+John S. Ham
+38 minutes 5 seconds38:05
+John S. Ham 38 minutes 5 seconds
+Correct.
+
+Nathan E. Jones
+38 minutes 6 seconds38:06
+Nathan E. Jones 38 minutes 6 seconds
+Okay, good.
+VS
+Vinod R. Suryawanshi
+38 minutes 7 seconds38:07
+Vinod R. Suryawanshi 38 minutes 7 seconds
+Yeah, as of now, we are just taking one use case and just work end to end, but I got it. So once this from inventory goes to a customer, and if the CCID is not there, then that would be problematic, you're saying, right?
+
+John S. Ham
+38 minutes 11 seconds38:11
+John S. Ham 38 minutes 11 seconds
+Yeah, yeah, I just want to throw that out there.
+John S. Ham 38 minutes 22 seconds
+Yeah, that's part of why we had to figure a way out to signal Lindsay of the PDIs. And that happens at completion. So we have a little bit of time between completion of the PDI and then the delivery of the unit to resolve those gaps of CCID unit ownership move.
+John S. Ham 38 minutes 42 seconds
+And then Visual Link subscription, but...
+
+Lindsay H. Bruns
+38 minutes 44 seconds38:44
+Lindsay H. Bruns 38 minutes 44 seconds
+Yeah.
+JH
+John S. Ham
+38 minutes 46 seconds38:46
+John S. Ham 38 minutes 46 seconds
+Yeah.
+
+Lindsay H. Bruns
+38 minutes 47 seconds38:47
+Lindsay H. Bruns 38 minutes 47 seconds
+And I've been pretty good with that, and with a, you know, 24-hour period, everything is done and handled. So I think keeping that a manual process is still going to be our best way for now until we work through this section first.
+VS
+Vinod R. Suryawanshi
+39 minutes39:00
+Vinod R. Suryawanshi 39 minutes
+Mmh.
+
+Nathan E. Jones
+39 minutes 3 seconds39:03
+Nathan E. Jones 39 minutes 3 seconds
+Yes.
+VS
+Vinod R. Suryawanshi
+39 minutes 4 seconds39:04
+Vinod R. Suryawanshi 39 minutes 4 seconds
+I agree with that. So we'll finish this one first with the internal 495. And as a next, then we will move like what happens when it moves from inventory to actual like cell. And if we have a customer information where we can go and look for CCID, we do get the.
+Vinod R. Suryawanshi 39 minutes 24 seconds
+Cat direct share of all the customer and CCID. And if you find all that correct, we will go and push those updates as well in CCID. So we don't have to do the manual change for that.
+Vinod R. Suryawanshi 39 minutes 41 seconds
+But again, one step at a time.
+
+Nathan E. Jones
+39 minutes 42 seconds39:42
+Nathan E. Jones 39 minutes 42 seconds
+Yeah.
+JH
+John S. Ham
+39 minutes 42 seconds39:42
+John S. Ham 39 minutes 42 seconds
+Gotcha.
+
+Nathan E. Jones
+39 minutes 44 seconds39:44
+Nathan E. Jones 39 minutes 44 seconds
+I can also have the API or whatever procedure I wrote search for the customer before it does anything and see if the customer exists already in CCAT. But what you're also saying is we won't be able to automatically, for the inventory ones, that once they switch to a customer, we won't be able to automatically switch to that customer unless we're certain that they have a CCID.
+VS
+Vinod R. Suryawanshi
+40 minutes 6 seconds40:06
+Vinod R. Suryawanshi 40 minutes 6 seconds
+That's what I'm hearing.
+
+Nathan E. Jones
+40 minutes 8 seconds40:08
+Nathan E. Jones 40 minutes 8 seconds
+Yeah, okay. Sorry, I just, I don't know why I find it so baffling, but like, it just, this stuff just will not sink into my head as easily as it seems to be with everybody else. But I think I, at least for the inventory part, I have all the rules down and I have you guys as green light. So there will be like a few
+Nathan E. Jones 40 minutes 26 seconds
+Lindsay, this week that pop up, because while I'm developing it, I'll have to run some through to make sure that they work, but it should only be like 5 to 10 or some small number.
+
+Lindsay H. Bruns
+40 minutes 32 seconds40:32
+Lindsay H. Bruns 40 minutes 32 seconds
+You're good.
+Lindsay H. Bruns 40 minutes 37 seconds
+Send me a Teams and say, hey, I pushed them. That'll be fine for me.
+
+Nathan E. Jones
+40 minutes 43 seconds40:43
+Nathan E. Jones 40 minutes 43 seconds
+Okay, great.
+JH
+John S. Ham
+40 minutes 44 seconds40:44
+John S. Ham 40 minutes 44 seconds
+Yeah, and and you know, hopefully that CCID gap will get better. You know, part of the other initiative is when when we're building out that COD and DCN creation process that those can be identified before they that customer owns a unit.
+VS
+Vinod R. Suryawanshi
+40 minutes 51 seconds40:51
+Vinod R. Suryawanshi 40 minutes 51 seconds
+Okay.
+
+Nathan E. Jones
+41 minutes 5 seconds41:05
+Nathan E. Jones 41 minutes 5 seconds
+Do we have any of these rules or is there like a class or a write-up or something that I can read or familiarize myself with?
+
+Lindsay H. Bruns
+41 minutes 13 seconds41:13
+Lindsay H. Bruns 41 minutes 13 seconds
+No, this is years of knowledge.
+VS
+Vinod R. Suryawanshi
+41 minutes 15 seconds41:15
+Vinod R. Suryawanshi 41 minutes 15 seconds
+Ohh.
+SM
+Sean M. Morgan
+41 minutes 15 seconds41:15
+Sean M. Morgan 41 minutes 15 seconds
+Yeah, there's a week-long Cat class, 8 hours a day. They provide lunch, but...
+VS
+Vinod R. Suryawanshi
+41 minutes 17 seconds41:17
+Vinod R. Suryawanshi 41 minutes 17 seconds
+Okay.
+Vinod R. Suryawanshi 41 minutes 21 seconds
+Yeah, yeah. How about like...
+
+Nathan E. Jones
+41 minutes 23 seconds41:23
+Nathan E. Jones 41 minutes 23 seconds
+Okay, just checking, just because I feel like...
+
+Christopher M. Lloyd
+41 minutes 23 seconds41:23
+Christopher M. Lloyd 41 minutes 23 seconds
+The.
+
+Lindsay H. Bruns
+41 minutes 24 seconds41:24
+Lindsay H. Bruns 41 minutes 24 seconds
+They provide lunch.
+Lindsay H. Bruns 41 minutes 26 seconds
+Where's, where's my lunch? Where's my lunch?
+
+Christopher M. Lloyd
+41 minutes 30 seconds41:30
+Christopher M. Lloyd 41 minutes 30 seconds
+So all joking, all joking aside, though, to that point, is one of the things that we need to do is we probably do need to, at least at a high level, start getting some of this in documented. Lindsay and I talked about this not that long ago. I mean, we do need to put some of it. I mean, she's right. This is
+
+
+Vinod R. Suryawanshi
+41 minutes 30 seconds41:30
+Vinod R. Suryawanshi 41 minutes 30 seconds
+H.
+Vinod R. Suryawanshi 41 minutes 43 seconds
+Yeah.
+
+Christopher M. Lloyd
+41 minutes 49 seconds41:49
+Christopher M. Lloyd 41 minutes 49 seconds
+This is, you know, 15 years of learning between, you know, myself, her, John, I mean, you know, different people that came before us. I mean, but we do need to, at least with some of the general ones, the ones that are consistent, you say, this is going to happen pretty much every time. We do need to start putting some documentation together.
+VS
+Vinod R. Suryawanshi
+41 minutes 51 seconds41:51
+Vinod R. Suryawanshi 41 minutes 51 seconds
+Mhm.
+Vinod R. Suryawanshi 42 minutes 4 seconds
+Mhm.
+
+Christopher M. Lloyd
+42 minutes 10 seconds42:10
+Christopher M. Lloyd 42 minutes 10 seconds
+as this continues to grow out, you know, we bring on more people. But you know, Nathan, I honestly, to that point, if you're ever in a situation, you do want to learn a little more on it, I would just say touch base with Lindsay. You know, she can give you some more detail on a more, you know, one-on-one basis. But it's not a
+Christopher M. Lloyd 42 minutes 30 seconds
+simple process. It never has been, it never will be. And I'll be honest with you guys, I mean, this is fantastic that we're this far. I can tell you from 10 years ago, whenever we had a different system, it was twice as difficult with the way the Cat had everything set up. This is a much cleaner process and it's still complicated. So
+
+Nathan E. Jones
+42 minutes 32 seconds42:32
+Nathan E. Jones 42 minutes 32 seconds
+Yeah.
+VS
+Vinod R. Suryawanshi
+42 minutes 51 seconds42:51
+Vinod R. Suryawanshi 42 minutes 51 seconds
+Okay.
+
+Christopher M. Lloyd
+42 minutes 52 seconds42:52
+Christopher M. Lloyd 42 minutes 52 seconds
+No, I mean, this is all with all this work, you guys have done a lot of work. It's fantastic. You know, we definitely appreciate all of it. And it's, you know, it might come off as frustration sometimes, but a lot of it is just because this is such, pardon my friends, a **** show. So we'll get there. I mean, it's definitely, you know, we're heading in the right direction.
+Christopher M. Lloyd 43 minutes 13 seconds
+And you know the thing is, don't worry about Lindsey getting over a wall because she'll just throw stuff at me. Where she sits is about 15 feet from my office. So she'll just throw stuff at me if she's getting behind. So we'll handle it as it comes. So.
+
+Lindsay H. Bruns
+43 minutes 25 seconds43:25
+Lindsay H. Bruns 43 minutes 25 seconds
+No, I'll just be very vocal, that's all.
+
+Nathan E. Jones
+43 minutes 26 seconds43:26
+Nathan E. Jones 43 minutes 26 seconds
+E.
+Nathan E. Jones 43 minutes 28 seconds
+Wow.
+
+Christopher M. Lloyd
+43 minutes 28 seconds43:28
+Christopher M. Lloyd 43 minutes 28 seconds
+Same difference.
+
+Nathan E. Jones
+43 minutes 30 seconds43:30
+Nathan E. Jones 43 minutes 30 seconds
+I constantly, I ask like John has sent me something the other day and like I could tell in his message that it seemed so obvious to him and I just would not sink in. So I had to ask him to send me another e-mail and I'm just like, these poor people, I keep asking them stuff that to you guys just, you know, you just know it. And, but to me, it's like baffling. I don't like, I just.
+
+Christopher M. Lloyd
+43 minutes 38 seconds43:38
+Christopher M. Lloyd 43 minutes 38 seconds
+Yeah.
+Christopher M. Lloyd 43 minutes 49 seconds
+No, it's not sim, it's not simple.
+
+Lindsay H. Bruns
+43 minutes 50 seconds43:50
+Lindsay H. Bruns 43 minutes 50 seconds
+Hey, never, never feel bad for asking questions. That's how you learn. And I promise there are stupid questions, but those stupid questions deserve stupid answers. But they're really, when you're trying to learn something like this, there aren't stupid questions because you forget where you're not like,
+
+Christopher M. Lloyd
+43 minutes 54 seconds43:54
+Christopher M. Lloyd 43 minutes 54 seconds
+Yeah.
+
+Nathan E. Jones
+43 minutes 55 seconds43:55
+Nathan E. Jones 43 minutes 55 seconds
+Yeah.
+
+Lindsay H. Bruns
+44 minutes 12 seconds44:12
+Lindsay H. Bruns 44 minutes 12 seconds
+it's easy for me. And I'm like, this is common sense, but I do it every day. So when you look at it and you're like, but why is that common sense? I can at least explain why. So don't ever feel bad about asking any questions. I promise I will answer them as simplified as
+
+Nathan E. Jones
+44 minutes 17 seconds44:17
+Nathan E. Jones 44 minutes 17 seconds
+Yeah.
+
+Lindsay H. Bruns
+44 minutes 32 seconds44:32
+Lindsay H. Bruns 44 minutes 32 seconds
+possible.
+
+Nathan E. Jones
+44 minutes 33 seconds44:33
+Nathan E. Jones 44 minutes 33 seconds
+Yeah, well, it's, I just don't want to look, I just don't want to feel dumb all the time. So I was like, if I could read ahead and like study some things, I think also too, it's because I'm new, it's just learning the processes. I've learned like 10 different things. So like what you guys can't see is me with my like secret notepad that I type stuff up on while we're talking.
+
+Vinod R. Suryawanshi
+44 minutes 34 seconds44:34
+Vinod R. Suryawanshi 44 minutes 34 seconds
+Mhm.
+
+Nathan E. Jones
+44 minutes 53 seconds44:53
+Nathan E. Jones 44 minutes 53 seconds
+So like every time we had these conversations, I learned a lot of new things. That's why I was like, did you take a class to learn? And I should have figured, you know, you've all been here for like.
+
+Lindsay H. Bruns
+45 minutes45:00
+Lindsay H. Bruns 45 minutes
+I learn something new every day. And I just went to a Cat training the beginning of this week that, you know, yeah, it's something that I've been in every day and something I've done and dealt with. And I 100% can, you know, I learn something new.
+JH
+John S. Ham
+45 minutes 7 seconds45:07
+John S. Ham 45 minutes 7 seconds
+Hey, Jarrett.
+John S. Ham 45 minutes 13 seconds
+Stuck on a call, give me like 10 minutes and I'll ping you.
+John S. Ham 45 minutes 18 seconds
+Alright, thanks.
+
+Lindsay H. Bruns
+45 minutes 21 seconds45:21
+Lindsay H. Bruns 45 minutes 21 seconds
+So.
+VS
+Vinod R. Suryawanshi
+45 minutes 22 seconds45:22
+Vinod R. Suryawanshi 45 minutes 22 seconds
+Nice. Cool. Yep. Thank you.
+
+Nathan E. Jones
+45 minutes 23 seconds45:23
+Nathan E. Jones 45 minutes 23 seconds
+But you guys are always nice, just so you know. Thank you. Anyway, we'll end that.
+VS
+Vinod R. Suryawanshi
+45 minutes 28 seconds45:28
+Vinod R. Suryawanshi 45 minutes 28 seconds
+Yeah, thank you, team.
+
+Lindsay H. Bruns
+45 minutes 28 seconds45:28
+Lindsay H. Bruns 45 minutes 28 seconds
+When I finally meet you face to face, you know, it will be easier, I promise. Until then.
+
+Nathan E. Jones
+45 minutes 31 seconds45:31
+Nathan E. Jones 45 minutes 31 seconds
+Yeah.
+VS
+Vinod R. Suryawanshi
+45 minutes 32 seconds45:32
+Vinod R. Suryawanshi 45 minutes 32 seconds
+E.
+
+Nathan E. Jones
+45 minutes 33 seconds45:33
+Nathan E. Jones 45 minutes 33 seconds
+Thanks, everybody. Thank you, everybody. I'm sure Vinod, you probably have a meeting, I bet.
+VS
+Vinod R. Suryawanshi
+45 minutes 33 seconds45:33
+Vinod R. Suryawanshi 45 minutes 33 seconds
+Cool, cool.
+Vinod R. Suryawanshi 45 minutes 35 seconds
+Yeah.
+Vinod R. Suryawanshi 45 minutes 38 seconds
+Yeah, I need to go. However, one good topic coming out of this meeting is like, if we are documenting as well, Chris, so this scenarios, like what we are doing, why we are doing, if we need like documentation, I think our...
+Vinod R. Suryawanshi 45 minutes 59 seconds
+team or we can work with you to create a documentation towards this asset management as well so that it's you know documented and easy for everyone.
+
+
+Christopher M. Lloyd
+46 minutes 6 seconds46:06
+Christopher M. Lloyd 46 minutes 6 seconds
+Yeah.
+
+Nathan E. Jones
+46 minutes 9 seconds46:09
+Nathan E. Jones 46 minutes 9 seconds
+Yeah, because...
+
+Christopher M. Lloyd
+46 minutes 9 seconds46:09
+Christopher M. Lloyd 46 minutes 9 seconds
+That would be good. Yeah.
+VS
+Vinod R. Suryawanshi
+46 minutes 9 seconds46:09
+Vinod R. Suryawanshi 46 minutes 9 seconds
+Simple case, simple scenarios.
+
+Christopher M. Lloyd
+46 minutes 13 seconds46:13
+Christopher M. Lloyd 46 minutes 13 seconds
+Yeah, I think that would be good. And I think, I know you record, we can transcribe some of that too. I know we've been doing more and more of that. So absolutely. Yep. No, we're getting there one day at a time.
+VS
+Vinod R. Suryawanshi
+46 minutes 15 seconds46:15
+Vinod R. Suryawanshi 46 minutes 15 seconds
+Yeah.
+Vinod R. Suryawanshi 46 minutes 18 seconds
+Yes.
+Vinod R. Suryawanshi 46 minutes 23 seconds
+Awesome. All right. Thank you, team. Thanks.
+
+Nathan E. Jones
+46 minutes 24 seconds46:24
+Nathan E. Jones 46 minutes 24 seconds
+Sorry, sorry for bringing up the documentation, but thank you guys.
+
+Christopher M. Lloyd
+46 minutes 26 seconds46:26
+Christopher M. Lloyd 46 minutes 26 seconds
+Right.
+Christopher M. Lloyd 46 minutes 27 seconds
+You're good. No, no problem. Absolutely.
+SM
+Sean M. Morgan
+46 minutes 29 seconds46:29
+Sean M. Morgan 46 minutes 29 seconds
+Yeah, we appreciate all the help.
+
+Christopher M. Lloyd
+46 minutes 31 seconds46:31
+Christopher M. Lloyd 46 minutes 31 seconds
+Yep, definitely.
+JH
+John S. Ham
+46 minutes 34 seconds46:34
+John S. Ham 46 minutes 34 seconds
+Thank you.
+
+Christopher M. Lloyd
+46 minutes 34 seconds46:34
+Christopher M. Lloyd 46 minutes 34 seconds
+All right, folks. Yep, have a good one.
+SM
+Sean M. Morgan
+46 minutes 35 seconds46:35
+Sean M. Morgan 46 minutes 35 seconds
+Yep, thanks everyone.
+
+
+Nathan E. Jones
+46 minutes 37 seconds46:37
+Nathan E. Jones 46 minutes 37 seconds
+Yeah.
+
+Christopher M. Lloyd
+46 minutes 37 seconds46:37
+Christopher M. Lloyd 46 minutes 37 seconds
+Yep.
