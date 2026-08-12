@@ -47,22 +47,18 @@ BASE_URL = (
 # Use `or default` (not get's default arg) so an empty .env value falls back too.
 TENANT_ID = os.environ.get("CAT_TENANT_ID") or "ceb177bf-013b-49ab-8a9c-4abce32afc1e"
 # Caterpillar may supply a custom token URL; it takes precedence when set.
-TOKEN_URL = (
-    os.environ.get("CAT_TOKEN_URL")
-    or f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
-)
+TOKEN_URL = (os.environ.get("CAT_TOKEN_URL") or f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token")
 
 CLIENT_ID = os.environ.get("CAT_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CAT_CLIENT_SECRET")
+
 # Scope is "<resource-client-id>/.default" for client-credentials against the API.
 SCOPE = os.environ.get("CAT_SCOPE", "")
 
 # Some Cat Digital gateways additionally require an API subscription key header.
 # Optional — only sent when set.
 SUBSCRIPTION_KEY = os.environ.get("CAT_SUBSCRIPTION_KEY")
-SUBSCRIPTION_HEADER = os.environ.get(
-    "CAT_SUBSCRIPTION_HEADER", "x-api-key"
-)
+SUBSCRIPTION_HEADER = os.environ.get("CAT_SUBSCRIPTION_HEADER", "x-api-key")
 
 HTTP_TIMEOUT = float(os.environ.get("CAT_HTTP_TIMEOUT", "30"))
 
@@ -74,11 +70,11 @@ HTTP_TIMEOUT = float(os.environ.get("CAT_HTTP_TIMEOUT", "30"))
 #   CAT_DEFAULT_PARTY_NUMBER — used only when the caller omits party_number.
 # Once Caterpillar upgrades your credentials to your production dealer code,
 # clear CAT_FORCE_PARTY_NUMBER so callers can specify any code they're entitled to.
+
 FORCE_PARTY_NUMBER = os.environ.get("CAT_FORCE_PARTY_NUMBER") or ""
 DEFAULT_PARTY_NUMBER = os.environ.get("CAT_DEFAULT_PARTY_NUMBER") or ""
 
 mcp = FastMCP("cat-asset-management")
-
 
 def _resolve_party(party_number: str) -> str:
     """Resolve the effective partyNumber: forced override > explicit > default."""
@@ -260,7 +256,7 @@ def _asset_params(
 
 
 # --------------------------------------------------------------------------- #
-# Tools                                                                        #
+# Tools                                                                       #
 # --------------------------------------------------------------------------- #
 
 @mcp.tool()
