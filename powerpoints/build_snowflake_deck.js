@@ -319,8 +319,8 @@ function dot(s, x, y, color, size) {
 
   panel(s, 0.6, 6.15, 12.1, 0.9, PANEL2);
   s.addText([
-    { text: "Live since August 10.  ", options: { bold: true, color: GREEN } },
-    { text: "100 machines through this pipe in week one (50 Monday + 50 Wednesday) — capped on purpose: step 7 is a person.", options: { color: INK } },
+    { text: "Live in production.  ", options: { bold: true, color: GREEN } },
+    { text: "100 machines through this pipe in the first week — 50 Monday, 50 Wednesday — capped on purpose: step 7 is a person.", options: { color: INK } },
   ], { x: 0.9, y: 6.32, w: 11.55, h: 0.6, margin: 0, fontFace: F, fontSize: 14 });
 }
 
