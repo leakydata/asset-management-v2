@@ -68,8 +68,8 @@ function dot(s, x, y, color, size) {
     x: 0.9, y: 6.7, w: 8, h: 0.4, margin: 0, fontFace: F, fontSize: 13, color: DIM,
   });
   s.addNotes(
-    "SCRIPT: Good morning. This is about a problem every dealer has: our equipment records and Caterpillar's official ownership registry, CCAT, drift apart. Machines missing, machines on the wrong customer, machines another dealer still claims. What I'll show you is the system we built inside Snowflake, which we already own, that finds every one of those differences, fixes the safe ones automatically, routes the risky ones to people, and keeps permanent proof of everything. " +
-    "CUE: The six dots are the six outcomes a machine can have. They'll come back on slide 5."
+    "SCRIPT: Good morning. This is about a problem every dealer has. Our equipment records and Cat's official ownership registry drift apart over time. Machines Cat has no record of, machines sitting on the wrong customer, machines another dealer still claims. What I want to show you is the system we built inside Snowflake — which we're already paying for — that finds all of those differences, fixes the safe ones on its own, sends the risky ones to a person, and keeps a permanent record of every bit of it. " +
+    "CUE: the six dots are the six things that can happen to a machine. They come back on slide five."
   );
 }
 
@@ -101,8 +101,8 @@ function dot(s, x, y, color, size) {
     { text: "asset ownership records in CCAT. That is exactly what this project manages.", options: { color: INK } },
   ], { x: 0.9, y: 6.28, w: 11.55, h: 0.55, margin: 0, fontFace: F, fontSize: 15 });
   s.addNotes(
-    "SCRIPT: Before the how, the why. Caterpillar grades us on two things that both come down to data quality. Trifecta is their combined score across customer, contact, and equipment: and it is strict: a customer only counts when every leg passes, including one hundred percent asset match on priority assets. Our asset match sits around ninety-three percent, it is the leg our governance team is actively focused on, and today it is maintained by hand. DNA is the alerting side: Caterpillar flags our data issues and grades how well we resolve them. Together that is a quarter of the dealer excellence scorecard riding on whether our ownership records match reality. " +
-    "CUE: land on the banner: both metrics stand on CCAT ownership records: which is exactly what this project manages."
+    "SCRIPT: Before the how, the why. Cat grades us on two things that both come down to data quality. Trifecta is their combined score across customer, contact, and equipment, and it's strict — a customer only counts when every leg passes, including a hundred percent asset match on their priority assets. We're around ninety-three percent on asset match. That's the leg our governance team is focused on, and today it's all done by hand. DNA is the alert side: Cat flags our data problems and grades how well we clear them. Put those together and about a quarter of the dealer excellence scorecard rides on whether our ownership records match reality. " +
+    "CUE: land on the banner. Both of those scores sit on CCAT ownership records, and that's exactly what this project manages."
   );
 }
 
@@ -128,9 +128,9 @@ function dot(s, x, y, color, size) {
     { text: "Every machine this system fixes can flip an entire customer back to valid — the same work, scored twice: Trifecta up, alert queue down.", options: { color: INK } },
   ], { x: 0.9, y: 6.2, w: 11.55, h: 0.65, margin: 0, fontFace: F, fontSize: 14.5, lineSpacing: 19 });
   s.addNotes(
-    "SCRIPT: So how does the asset management work move those needles? Line by line: machines Caterpillar has no record of get added, correctly, with an audit trail: they enter the population on the right customer. Machines sitting on the wrong customer get reassigned: and that is precisely the defect that breaks asset match. Machines other dealers still claim get resolved through reviewed transfers: gaps that no amount of manual data entry could fix from our side. And the biggest shift: what is manual upkeep today becomes a pipeline: detection every night, fixes that audit themselves, and alert causes removed before Caterpillar ever flags them. " +
-    "CUE: the leverage point on the banner: Trifecta counts customers, not machines. One wrong machine fails the whole customer, so one fixed machine can flip an entire customer back to valid. That is why per-machine work moves a customer-level score. " +
-    "TRANSITION: with the why on the table, here is the system."
+    "SCRIPT: So how does this actually move those numbers? Line by line. Machines Cat has no record of get added, correctly, with an audit trail behind them — now they're in the population on the right customer. Machines on the wrong customer get moved, and that's the exact defect that breaks asset match. Machines another dealer still claims go through a reviewed transfer, which is a gap we could never close from our side with data entry. And the biggest change is the last one: what's manual upkeep today turns into a pipeline. Detection every night, fixes that audit themselves, and alert causes gone before Cat ever flags them. " +
+    "CUE: the leverage is on the banner. Trifecta counts customers, not machines. One bad machine fails the whole customer, so fixing one machine can flip that customer back to valid. That's why machine-level work moves a customer-level score. " +
+    "TRANSITION: that's the why. Here's the system."
   );
 }
 
@@ -138,8 +138,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("The whole system on one slide", "the big picture");
   s.addNotes(
-    "SCRIPT: Three parts. DETECT: every night, a read-only process checks machines against Caterpillar's live system and classifies each one. It cannot write anything, so it is zero risk. ACT: when something needs fixing, it goes through purpose-built Snowflake procedures that preview every change before sending it and refuse anything unsafe on their own. PROVE: two permanent tables record everything: what we did, and what the data looked like at every point in time. " +
-    "CUE: Land on the bottom banner: the same sweep that finds problems verifies our fixes. The system never grades its own homework."
+    "SCRIPT: Three parts. Detect — every night a read-only process checks machines against Cat's live system and sorts each one. It can't write anything, so there's no risk in it. Act — when something needs fixing it goes through procedures we built for that one job. They show you the change before they send it, and they refuse anything outside their lane on their own. Prove — two permanent tables that record what we did, and what the data looked like at every point. " +
+    "CUE: land on the bottom banner. The same sweep that finds the problems is what confirms the fixes. It never grades its own homework."
   );
   const cards = [
     { t: "DETECT", c: BLUE, body: "A nightly, read-only sweep checks each machine against Caterpillar's live API and classifies it. It never writes anything to Caterpillar." },
@@ -163,9 +163,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("The nightly sweep: CCAT_DETECT_DISCREPANCIES", "detect");
   s.addNotes(
-    "SCRIPT: The sweep asks Caterpillar one question per machine: what do you have for this serial? Then it compares the answer to our records field by field. The clever part is what it does NOT do: it remembers every machine it has verified and skips anything that has not changed, so we are not hammering Caterpillar's API with repeat questions. A machine only gets re-checked when there is a reason. " +
-    "NUMBERS: under a second per machine; five thousand a night is about seventy-five minutes. Full active fleet coverage builds over a few weeks and then maintains itself. " +
-    "IF ASKED: it runs on a warehouse we already pay for; the marginal cost is effectively zero."
+    "SCRIPT: The sweep asks Cat one question per machine — what do you have for this serial? Then it compares the answer to our records, field by field. The useful part is what it doesn't do. It remembers every machine it's already checked and skips anything that hasn't changed, so we're not hammering Cat's API asking the same question over and over. A machine only gets looked at again when there's a reason. " +
+    "NUMBERS: under a second per machine. Five thousand a night is about seventy-five minutes. Coverage of the active fleet builds over a few weeks and then keeps itself up. " +
+    "IF ASKED: it runs on a warehouse we're already paying for, so the extra cost is basically nothing."
   );
   panel(s, 0.6, 1.7, 7.6, 4.9);
   s.addText([
@@ -188,7 +188,7 @@ function dot(s, x, y, color, size) {
 {
   const s = base("What the sweep writes: queues, state, and memory", "detect");
   s.addNotes(
-    "SCRIPT: Think of these as the to-do lists the sweep maintains. MISSING is the pipeline for adds and transfers: machines Caterpillar has nothing for under our dealer code. NON_MATCHING is machines we hold where a detail differs. ERRORS is deliberately separate: if a lookup fails, we record the failure, never a false conclusion. A failed check is never mistaken for a missing machine. And CHECK_STATE is the memory: one row per machine, its verdict, and when we last looked. That memory is what keeps the nightly sweep cheap and what powers the dashboard on the next slide."
+    "SCRIPT: Think of these as the to-do lists the sweep keeps. Missing is the queue for adds and transfers — machines Cat has nothing for under our dealer code. Non-matching is machines we do hold, where some detail is off. Errors is separate on purpose: if a lookup fails, we write down that it failed, not a conclusion. A failed check never gets mistaken for a missing machine. And check-state is the memory — one row per machine, what we decided, and when we last looked. That memory is what keeps the nightly run cheap, and it's what drives the dashboard on the next slide."
   );
   const cells = [
     { t: "CCAT_MISSING", c: BLUE, body: "Machines with no record under our dealer code — the add and transfer pipeline. Keeps the other dealers' records for triage." },
@@ -210,8 +210,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Every machine gets a phase, an action, and a why", "classify");
   s.addNotes(
-    "SCRIPT: The colors are ordered by blast radius: who else can see what we do. Green through orange, nobody outside the company is affected, which is why those can be automated with volume caps. Red is the only lane other dealers can see, and that is exactly the lane where a person reviews every single item. Gray is worth a word: some model names will always differ because Caterpillar's version is the official one, so we report those and deliberately do nothing. That is why the goal is the right customer on every machine, not a cosmetic one hundred percent match. " +
-    "CUE: The dashboard query on the right is live in Snowflake, filterable by phase, exportable to Excel."
+    "SCRIPT: The colors go in order of who else can see what we do. Green through orange, nobody outside this company is affected, which is why those can run automatically with caps on the volume. Red is the only lane other dealers can see, and that's exactly where a person looks at every single one. Gray deserves a word. Some model names will always disagree because Cat's version is the official one, so we report those and deliberately leave them alone. That's why the goal is the right customer on every machine, not a cosmetic hundred percent match. " +
+    "CUE: the dashboard on the right is live in Snowflake. Filter it by phase, export it to Excel."
   );
   const rows = [
     { c: GREEN, t: "Done", body: "Record is right. Nothing to do." },
@@ -239,9 +239,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("The decision key, animated", "classify");
   s.addNotes(
-    "SCRIPT: Rather than walk you through the rules, let three real machines show you. INTRO LINE: This is eighty-three seconds; the narrator does the work. " +
-    "CUE: Click the video, let it play fully, do not talk over it. It covers: a new excavator landing in the safe add bucket, a dozer with an old rental record elsewhere landing in the quiet add bucket, and a machine another dealer actively owns landing in reviewed transfer. " +
-    "AFTER: The serials in that video are real machines from our fleet; the excavator was actually added to CCAT through this system last week."
+    "SCRIPT: Instead of walking you through the rules, I'll let three real machines show you. INTRO LINE: it's eighty-three seconds, and the narration does the work. " +
+    "CUE: click it, let it run all the way through, don't talk over it. It covers a new excavator landing in the safe-add bucket, a dozer with an old rental record somewhere else landing in the quiet-add bucket, and a machine another dealer actively owns going to reviewed transfer. " +
+    "AFTER: those are real serials out of our fleet. The excavator actually went into CCAT through this system last week."
   );
   const poster = fs.readFileSync("video_poster.png").toString("base64");
   s.addMedia({
@@ -261,9 +261,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Acting: every write goes through an audited procedure", "act");
   s.addNotes(
-    "SCRIPT: When we act, there is exactly one sanctioned door: purpose-built procedures, one per action type. You give them a serial number; they pull everything else themselves, search Caterpillar live, and refuse anything outside their lane: the record already exists, another dealer owns it, it is an attachment with a made-up serial, or Caterpillar already rejected that serial once. By default they are in preview mode: they show exactly what would be sent and send nothing. Executing is a deliberate second step. " +
-    "CUE payload rule: this came from our own data review with Vinod and Michele: Caterpillar's model names are the ones their systems recognize, so we never overwrite them with ours. " +
-    "CUE raw tools: the low-level API tools still exist for diagnostics, but nobody will ever be granted them: only the audited wrappers."
+    "SCRIPT: When we actually change something there's one door, and it's these procedures — one for each kind of action. You hand it a serial number and it pulls everything else itself, searches Cat live, and refuses anything outside its lane. Record already exists, another dealer owns it, it's an attachment with a made-up serial, or Cat already rejected that serial once. They start in preview mode: they show you exactly what would go out, and send nothing. Actually running it is a separate, deliberate step. " +
+    "CUE payload rule: this one came out of the data review with Vinod and Michele. Cat's model names are the ones their systems recognize, so we never write ours over the top of them. " +
+    "CUE raw tools: the low-level API procedures are still there for troubleshooting, but nobody's getting access to those. People get the audited wrappers, that's it."
   );
   panel(s, 0.6, 1.7, 6.0, 4.9);
   s.addText("CCAT_ADD_ASSET  ·  CCAT_ADD_INVENTORY", { x: 0.9, y: 1.95, w: 5.3, h: 0.4, margin: 0, fontFace: F, fontSize: 16, bold: true, color: BLUE });
@@ -291,8 +291,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Phase one flow: inventory adds (live)", "act · flow");
   s.addNotes(
-    "SCRIPT: This is the pipeline that is running today, end to end. NAXT data lands each morning; a daily scan picks qualifying inventory machines, oldest first. Before any API call, the skip lists drop everything we already know about: prior adds, machines already in CCAT, machines another dealer blocks: those cost nothing. Each remaining machine gets one live search, and every answer is saved to history whether we act or not. The dry run previews the batch; execution adds each machine under our inventory account with a full audit row; failures are logged once and never retried blind. Then the one manual step: Lindsay's subscription. The same sweep that finds problems confirms each machine lands as DONE_INVENTORY. " +
-    "CUE: week one through this pipe: 50 Monday plus 50 Wednesday, capped on purpose to protect the manual subscription step."
+    "SCRIPT: Here's the pipeline that's running today, end to end. NAXT data lands every morning. A scan picks out the inventory machines that qualify, oldest first. Before we call Cat at all, we drop everything we already know about — machines we added before, machines already in CCAT, machines another dealer has locked up. Those cost us nothing to skip. Whatever's left gets one search each, and we save every answer whether we act on it or not. The dry run lets me eyeball the batch first. Then the adds go under our inventory account, each one with a full audit row behind it. If one fails, it's logged once and we never blindly retry it. Then the one manual step, which is Lindsay doing the subscription. And the same sweep that finds the problems comes back around and confirms each machine landed. " +
+    "CUE: week one was fifty Monday and fifty Wednesday. That cap is there on purpose, to protect the manual step."
   );
   const node = (x, y, c, t, body) => {
     panel(s, x, y, 2.75, 1.55);
@@ -328,8 +328,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Phase two flow: sold machine → its buyer (designed)", "act · flow");
   s.addNotes(
-    "SCRIPT: Phase two is scoped and the detection half already runs: the moment a customer number appears on an inventory machine in NAXT, the dashboard flags it: forty-one machines are sitting on that list right now, each one currently a manual move for Lindsay. The new piece since the August 6 meeting: Caterpillar's customer master is shared directly into our Snowflake, so the CCID question that blocked automation: does this buyer exist properly on Cat's side: is now answerable BEFORE we act. Buyer resolves: automated, audited move; the old inventory record expires itself. Buyer missing: it routes to the Customer Admin Tool queue instead of failing mid-flight. " +
-    "CUE: until this is built and approved, the manual path stays: PDI email, Lindsay moves it within about a day. The flow replaces exactly that."
+    "SCRIPT: Phase two is scoped, and the detection half already runs. The minute a customer number shows up on an inventory machine in NAXT, it lands on the dashboard. There are a hundred eighty sitting there right now, and every one of them is a manual move for Lindsay today. What's new since the August sixth meeting is that Cat's customer master is shared straight into our Snowflake. So the question that was blocking us — does this buyer actually exist properly on Cat's side — we can answer that before we touch anything. If the buyer checks out, the move is automatic and audited, and the old inventory record expires on its own. If they don't, it goes on a list for the Customer Admin Tool instead of blowing up halfway through. " +
+    "CUE: until this is built and approved nothing changes — PDI email, Lindsay moves it within about a day. This replaces that one step."
   );
   const node = (x, y, w, h, c, t, body) => {
     panel(s, x, y, w, h);
@@ -339,7 +339,7 @@ function dot(s, x, y, color, size) {
   const arrowR = (x, y) => s.addShape("rightArrow", { x, y, w: 0.32, h: 0.26, fill: { color: DIM }, line: { type: "none" } });
 
   node(0.6,  2.6, 2.7, 1.7, BLUE, "1 · Machine sells", "A customer number appears on an inventory machine in NAXT");
-  node(3.75, 2.6, 2.7, 1.7, YEL,  "2 · Dashboard flags it", "P3_INV_TO_CUSTOMER — caught by the daily sweep. 41 machines on this list today");
+  node(3.75, 2.6, 2.7, 1.7, YEL,  "2 · Dashboard flags it", "P3_INV_TO_CUSTOMER — caught by the daily sweep. 180 machines on this list today");
   node(6.9,  2.6, 2.7, 1.7, TEAL, "3 · CCID check", "Cat's customer master, shared into Snowflake, answers: does the buyer resolve to a CCID?");
   arrowR(3.42, 3.32); arrowR(6.57, 3.32);
 
@@ -362,9 +362,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("CCAT_AUDIT: what we did, forever", "prove");
   s.addNotes(
-    "SCRIPT: Every action, executed or failed, writes one audit row: what we did, to which machine, the customer before and after, the exact payload we sent, Caterpillar's full response, and their tracking ID, which means Cat support can trace any call we ever made. It also stores a snapshot of what Caterpillar had immediately before we acted, so if anything ever needs unwinding, we know exactly what to restore. " +
-    "CUE right panel: append-only is not a policy we promise to follow; it is enforced by database permissions. The tooling can add rows and read rows. It physically cannot edit or delete them. " +
-    "IF ASKED who and when: every row carries user, timestamp, and shift date: that is where per-shift reporting comes from."
+    "SCRIPT: Every action writes one row, whether it worked or failed. What we did, which machine, the customer before and after, the exact payload we sent, Cat's full response, and their tracking ID — which means Cat support can trace any call we've ever made. It also saves a snapshot of what Cat had right before we touched it, so if we ever have to unwind something, we know exactly what to put back. " +
+    "CUE right panel: append-only isn't a policy we promise to follow. It's enforced by permissions. The tooling can add rows and read rows. It physically can't edit or delete them. " +
+    "IF ASKED who and when: every row carries the user, the timestamp, and the shift date. That's where the per-shift reporting comes from."
   );
   panel(s, 0.6, 1.7, 7.7, 4.9);
   s.addText("Every executed or failed action writes one row:", { x: 0.95, y: 2.0, w: 6.9, h: 0.4, margin: 0, fontFace: F, fontSize: 15, bold: true, color: INK });
@@ -387,9 +387,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("CCAT_HISTORY: what the data was, at every point", "prove");
   s.addNotes(
-    "SCRIPT: History answers a different question: not what did we do, but what did the data look like, at every point, no matter who changed it. Every time we look at a machine, we fingerprint Caterpillar's full answer. If the fingerprint matches the last one, we store nothing. If it changed, we store the complete snapshot. So a machine checked fifty times with no change costs one row: history only grows when reality changes. " +
-    "CUE: This costs zero extra API calls: it is built entirely from answers the sweep was already fetching and throwing away. " +
-    "NICE DETAIL if time: even no records at all counts as a version, so a machine appearing in or vanishing from CCAT leaves a trail."
+    "SCRIPT: History answers a different question. Not what did we do, but what did the data look like at any given point, no matter who changed it. Every time we look at a machine we fingerprint Cat's whole answer. Same fingerprint as last time, we store nothing. Different, we save the full snapshot. So a machine we check fifty times with no changes costs us one row. It only grows when something actually changed. " +
+    "CUE: this costs zero extra API calls. It's built entirely out of answers the sweep was already getting and throwing away. " +
+    "NICE DETAIL if time: no records at all counts as a version too, so a machine showing up in CCAT — or disappearing from it — leaves a trail."
   );
   panel(s, 0.6, 1.7, 7.7, 4.9);
   s.addText([
@@ -411,9 +411,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Two tables, one powerful difference", "prove");
   s.addNotes(
-    "SCRIPT: Here is why having both matters. Audit is what we did. History is what the data was. Subtract one from the other and you get something we have never had before: external changes. If history shows a machine's record changed and there is no audit row from us around that time, then Caterpillar's systems, another dealer, or someone in a portal changed it: and now we see it instead of discovering it months later. " +
-    "CUE: pause on the banner: this is the class of change that used to be completely invisible to us. " +
-    "IF ASKED for an example: another dealer filing a transfer request against one of our machines shows up this way within a day."
+    "SCRIPT: Here's why having both matters. Audit is what we did. History is what the data was. Subtract one from the other and you get something we've never had: changes nobody here made. If history shows a machine's record changed and there's no audit row from us anywhere near that time, then Cat's systems, another dealer, or somebody in a portal did it. And now we see it, instead of finding out months later. " +
+    "CUE: pause on the banner. This is the kind of change that used to be completely invisible to us. " +
+    "IF ASKED for an example: another dealer filing a transfer against one of our machines shows up this way within a day."
   );
   panel(s, 0.6, 1.75, 5.9, 3.3);
   s.addText("AUDIT", { x: 0.9, y: 2.05, w: 5.2, h: 0.45, margin: 0, fontFace: F, fontSize: 20, bold: true, color: YEL });
@@ -436,9 +436,9 @@ function dot(s, x, y, color, size) {
 {
   const s = base("The operating rhythm", "run it");
   s.addNotes(
-    "SCRIPT: Day to day it looks like this. Nightly, the sweep runs by itself: read-only, no supervision needed. Weekly, the safe piles get worked in capped batches: adds and quiet fixes, the work nobody else can see. And every shift, about ten reviewed decisions: the transfers and judgment calls: each one audited as it happens. " +
-    "CUE metrics: the headline number is deliberately not the match rate: it is the customer assignment rate, the percentage of machines sitting on the correct customer in Caterpillar's system: because that is the outcome the business asked for. Everything else is supporting detail. " +
-    "ASK if appropriate: the one approval this slide needs is scheduling the nightly sweep as an automated task."
+    "SCRIPT: Day to day it looks like this. At night the sweep runs on its own — read-only, nobody watching it. Weekly we work the safe piles in capped batches, the adds and quiet fixes nobody outside the company can see. And every shift, about ten reviewed decisions: the transfers and the judgment calls, each one audited as it happens. " +
+    "CUE metrics: the headline number is deliberately not the match rate. It's the customer assignment rate — what percentage of machines are sitting on the right customer in Cat's system — because that's the outcome the business asked for. Everything else is supporting detail. " +
+    "ASK if appropriate: the one approval I need off this slide is scheduling the nightly sweep as an automated task."
   );
   const cols = [
     { t: "Nightly", c: BLUE, body: "The sweep checks its batch, refreshes verdicts, and grows coverage. Read-only, automatic." },
@@ -464,8 +464,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("The rules that keep it safe", "guardrails");
   s.addNotes(
-    "SCRIPT: I will not read all six: three matter most. No bulk claims, ever: a blanket push would fire formal transfer requests at real dealers across the network and can silently overwrite our own records: the system is built so that shortcut is impossible, not just discouraged. Shared customers are excluded automatically: when another dealer serves the same national account, the machine routes to a conversation, never a claim. And production awareness: Caterpillar has no test environment, so every write is treated as real, previewed first, and logged. " +
-    "CUE: these guardrails travel with the tools themselves: they apply no matter who eventually gets access."
+    "SCRIPT: I won't read all six. Three of them matter most. No bulk claims, ever — a blanket push would fire formal transfer requests at real dealers across the network, and it can quietly overwrite our own records. The system is built so that shortcut isn't possible, not just discouraged. Shared customers get excluded automatically: when another dealer serves the same national account, that machine goes to a conversation, never a claim. And production awareness — Cat has no test environment, so every write gets treated as real, because it is. Previewed first, logged after. " +
+    "CUE: these guardrails live in the tools themselves, so they hold no matter who ends up with access."
   );
   const rules = [
     { t: "Dry-run first, always", body: "Every write shows its exact payload and sends nothing until deliberately executed.", c: GREEN },
@@ -489,8 +489,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Where it stands", "status");
   s.addNotes(
-    "SCRIPT: Being straight about status. Everything on the left is not a plan: it is running. The sweep has checked thousands of machines. Real equipment has been added to Caterpillar's production system through the audited procedures, with the audit rows to show for it. The right column is scheduling and scale, not invention: the nightly task is a small script; the batch runner and the remaining wrappers reuse patterns already proven; access roles are written and waiting on rollout approval. " +
-    "CUE: the honest framing is: the engineering risk is behind us: what remains is operational rollout."
+    "SCRIPT: Straight talk on where this stands. Everything on the left isn't a plan, it's running. The sweep has checked thousands of machines. Real equipment has gone into Cat's production system through the audited procedures, and there are audit rows to prove it. The right column is scheduling and scale, not inventing anything new. The nightly task is a small script. The batch runner and the rest of the wrappers reuse patterns we've already proven. The access roles are written and waiting on approval to roll out. " +
+    "CUE: the honest version is that the engineering risk is behind us. What's left is operational."
   );
   panel(s, 0.6, 1.75, 5.9, 4.9);
   s.addText("Working today", { x: 0.9, y: 2.05, w: 5.2, h: 0.45, margin: 0, fontFace: F, fontSize: 19, bold: true, color: GREEN });
@@ -526,8 +526,8 @@ function dot(s, x, y, color, size) {
     x: 0.9, y: 6.5, w: 11.5, h: 0.4, margin: 0, fontFace: F, fontSize: 13, color: DIM,
   });
   s.addNotes(
-    "SCRIPT: One sentence to remember: the system sorts every machine; people decide only the ones that need judgment. That is the whole design: automation where it is safe, human judgment where it matters, and a permanent record of both. Happy to take questions: and if you want the detail behind any slide, the rollout plan document and the SQL reference carry all of it. " +
-    "CLOSE: the decisions I need from this room are the four in the rollout plan: approve the phased order, the nightly job, the pilot batches, and the review staffing."
+    "SCRIPT: One sentence to take away: the system sorts every machine, and people only decide the ones that need judgment. That's the whole design — automation where it's safe, a person where it matters, and a permanent record of both. Happy to take questions, and if you want the detail behind any slide, the rollout plan and the SQL reference have all of it. " +
+    "CLOSE: the four decisions I need from this room are in the rollout plan — approve the phased order, the nightly job, the pilot batches, and the review staffing."
   );
 }
 
