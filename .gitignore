@@ -7,6 +7,10 @@ local.settings.json
 # Caterpillar Confidential source documents — do not publish (esp. to a public repo)
 data/
 
+# Claude Code — local agent config, skills, settings
+.claude/
+CLAUDE.local.md
+
 # Python
 __pycache__/
 *.pyc
