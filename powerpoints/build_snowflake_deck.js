@@ -287,6 +287,77 @@ function dot(s, x, y, color, size) {
   });
 }
 
+// ---------------------------------------------- 7b · phase one flow diagram
+{
+  const s = base("Phase one flow: inventory adds (live)", "act · flow");
+  s.addNotes(
+    "SCRIPT: This is the pipeline that is running today, end to end. NAXT data lands each morning; a daily scan picks qualifying inventory machines, oldest first. Before any API call, the skip lists drop everything we already know about: prior adds, machines already in CCAT, machines another dealer blocks: those cost nothing. Each remaining machine gets one live search, and every answer is saved to history whether we act or not. The dry run previews the batch; execution adds each machine under our inventory account with a full audit row; failures are logged once and never retried blind. Then the one manual step: Lindsay's subscription. The same sweep that finds problems confirms each machine lands as DONE_INVENTORY. " +
+    "CUE: week one through this pipe: 50 Monday plus 50 Wednesday, capped on purpose to protect the manual subscription step."
+  );
+  const node = (x, y, c, t, body) => {
+    panel(s, x, y, 2.75, 1.55);
+    s.addText(t, { x: x + 0.14, y: y + 0.1, w: 2.47, h: 0.5, margin: 0, fontFace: F, fontSize: 12.5, bold: true, color: c, lineSpacing: 14 });
+    s.addText(body, { x: x + 0.14, y: y + 0.6, w: 2.47, h: 0.9, margin: 0, fontFace: F, fontSize: 10, color: INK, lineSpacing: 13 });
+  };
+  const arrowR = (x, y) => s.addShape("rightArrow", { x, y, w: 0.32, h: 0.26, fill: { color: DIM }, line: { type: "none" } });
+  const arrowL = (x, y) => s.addShape("leftArrow", { x, y, w: 0.32, h: 0.26, fill: { color: DIM }, line: { type: "none" } });
+
+  // row 1 (left to right)
+  node(0.6,  1.75, BLUE, "1 · NAXT refresh", "Golden equipment data lands in Snowflake each morning");
+  node(3.75, 1.75, BLUE, "2 · Candidate scan", "Blank customer · Cat make · active · New · no attachments — oldest first by modified date");
+  node(6.9,  1.75, TEAL, "3 · Free skips", "Already added, already in CCAT, or dealer-blocked — dropped from history at zero API cost");
+  node(10.05,1.75, TEAL, "4 · Live CCAT search", "One API search per machine; every answer saved to history");
+  arrowR(3.42, 2.4); arrowR(6.57, 2.4); arrowR(9.72, 2.4);
+  s.addShape("downArrow", { x: 11.28, y: 3.42, w: 0.28, h: 0.76, fill: { color: DIM }, line: { type: "none" } });
+
+  // row 2 (right to left)
+  node(10.05, 4.3, YEL,    "5 · Dry-run review", "The would_add list previewed — nothing sent yet");
+  node(6.9,   4.3, GREEN,  "6 · Add to INT00495", "Executed with audit row + Cat tracking ID; failures logged once, auto-skipped after");
+  node(3.75,  4.3, ORANGE, "7 · Subscription", "Lindsay registers Product Link in the dealer portal — the manual step that sets the pace");
+  node(0.6,   4.3, GREEN,  "8 · Sweep verifies", "Machine lands DONE_INVENTORY on the dashboard — loop closed");
+  arrowL(9.72, 4.95); arrowL(6.57, 4.95); arrowL(3.42, 4.95);
+
+  panel(s, 0.6, 6.15, 12.1, 0.9, PANEL2);
+  s.addText([
+    { text: "Live since August 10.  ", options: { bold: true, color: GREEN } },
+    { text: "100 machines through this pipe in week one (50 Monday + 50 Wednesday) — capped on purpose: step 7 is a person.", options: { color: INK } },
+  ], { x: 0.9, y: 6.32, w: 11.55, h: 0.6, margin: 0, fontFace: F, fontSize: 14 });
+}
+
+// ---------------------------------------------- 7c · phase two flow diagram
+{
+  const s = base("Phase two flow: sold machine → its buyer (designed)", "act · flow");
+  s.addNotes(
+    "SCRIPT: Phase two is scoped and the detection half already runs: the moment a customer number appears on an inventory machine in NAXT, the dashboard flags it: forty-one machines are sitting on that list right now, each one currently a manual move for Lindsay. The new piece since the August 6 meeting: Caterpillar's customer master is shared directly into our Snowflake, so the CCID question that blocked automation: does this buyer exist properly on Cat's side: is now answerable BEFORE we act. Buyer resolves: automated, audited move; the old inventory record expires itself. Buyer missing: it routes to the Customer Admin Tool queue instead of failing mid-flight. " +
+    "CUE: until this is built and approved, the manual path stays: PDI email, Lindsay moves it within about a day. The flow replaces exactly that."
+  );
+  const node = (x, y, w, h, c, t, body) => {
+    panel(s, x, y, w, h);
+    s.addText(t, { x: x + 0.16, y: y + 0.12, w: w - 0.32, h: 0.55, margin: 0, fontFace: F, fontSize: 13, bold: true, color: c, lineSpacing: 15 });
+    s.addText(body, { x: x + 0.16, y: y + 0.68, w: w - 0.32, h: h - 0.8, margin: 0, fontFace: F, fontSize: 10.5, color: INK, lineSpacing: 14 });
+  };
+  const arrowR = (x, y) => s.addShape("rightArrow", { x, y, w: 0.32, h: 0.26, fill: { color: DIM }, line: { type: "none" } });
+
+  node(0.6,  2.6, 2.7, 1.7, BLUE, "1 · Machine sells", "A customer number appears on an inventory machine in NAXT");
+  node(3.75, 2.6, 2.7, 1.7, YEL,  "2 · Dashboard flags it", "P3_INV_TO_CUSTOMER — caught by the daily sweep. 41 machines on this list today");
+  node(6.9,  2.6, 2.7, 1.7, TEAL, "3 · CCID check", "Cat's customer master, shared into Snowflake, answers: does the buyer resolve to a CCID?");
+  arrowR(3.42, 3.32); arrowR(6.57, 3.32);
+
+  s.addShape("line", { x: 9.68, y: 2.72, w: 0.5, h: 0.62, flipV: true, line: { color: GREEN, width: 2.25, endArrowType: "triangle" } });
+  s.addShape("line", { x: 9.68, y: 3.55, w: 0.5, h: 1.5, line: { color: ORANGE, width: 2.25, endArrowType: "triangle" } });
+  s.addText("CCID exists", { x: 9.42, y: 2.28, w: 1.3, h: 0.3, margin: 0, fontFace: F, fontSize: 10, bold: true, color: GREEN });
+  s.addText("no CCID", { x: 9.5, y: 4.45, w: 1.1, h: 0.3, margin: 0, fontFace: F, fontSize: 10, bold: true, color: ORANGE });
+
+  node(10.25, 1.8, 2.5, 2.05, GREEN, "4a · Automated move", "Reassign INT00495 → the buyer's account. Old record auto-expires. One audit row, one API call.");
+  node(10.25, 4.35, 2.5, 2.05, ORANGE, "4b · Human queue", "Customer Admin Tool creates the CCID first — then the move retries. No mid-flight failures.");
+
+  panel(s, 0.6, 6.55, 9.3, 0.75, PANEL2);
+  s.addText([
+    { text: "Until built & approved:  ", options: { bold: true, color: YEL } },
+    { text: "PDI email → Lindsay moves the machine by hand (~24 h). This flow replaces exactly that step.", options: { color: INK } },
+  ], { x: 0.85, y: 6.68, w: 8.9, h: 0.5, margin: 0, fontFace: F, fontSize: 12.5 });
+}
+
 // --------------------------------------------------------------- 8 · audit
 {
   const s = base("CCAT_AUDIT: what we did, forever", "prove");
