@@ -65,7 +65,7 @@ function dot(s, x, y, color, size) {
     x: 0.9, y: 6.7, w: 8, h: 0.4, margin: 0, fontFace: F, fontSize: 13, color: DIM,
   });
   s.addNotes(
-    "SCRIPT: Two things to cover today and they're connected. First, the inventory automation we agreed on back on the sixth is running. We put a hundred machines through it last week and I'll walk you through how it works. Second is something we ran into while working the mismatch list: we figured out how to tell whether a machine is actually on the wrong customer, using Cat's own data. That turned out to matter more than I expected, and it's what unblocks phase two. " +
+    "SCRIPT: Two things to cover today and they're connected. First, the inventory automation we agreed on back on the sixth is running. We ran a hundred machines through it this week, fifty Monday and fifty Wednesday, and I'll walk you through how it works. Second is something we hit while working the mismatch list: we figured out how to tell whether a machine is actually on the wrong customer, using Cat's own data. That turned out to matter more than I expected, and it's what unblocks phase two. " +
     "CUE: both of them land on the same scorecard, so that's where I'll start."
   );
 }
@@ -97,8 +97,8 @@ function dot(s, x, y, color, size) {
     { text: "Both stand on CCAT ownership records — exactly what this work manages.", options: { color: INK } },
   ], { x: 0.9, y: 6.28, w: 11.55, h: 0.55, margin: 0, fontFace: F, fontSize: 14.5 });
   s.addNotes(
-    "SCRIPT: Quick word on why this matters upstairs. Trifecta is Cat's data quality score and it's strict — a customer only counts if every leg passes, including a hundred percent asset match on their priority assets. So one bad machine fails that whole customer. We're sitting around ninety-three percent on asset match and it's all maintained by hand today. Look at the CCID leg too, ninety-two point seven — that's the same CCID I'll be talking about in the second half. DNA is the other side of it: Cat flags our data problems and grades how fast we clear them, and a lot of those asset alerts come back to ownership records being wrong. " +
-    "CUE: the banner is the point — inventory adds grow the pool that gets matched, customer fixes repair the match rate itself. Same records, two different scores."
+    "SCRIPT: Quick word on why this matters upstairs. Trifecta is Cat's data quality score and it's strict. A customer only counts if every leg passes, including a hundred percent asset match on their priority assets. So one bad machine fails that whole customer. We're sitting around ninety-three percent on asset match and it's all maintained by hand today. Look at the CCID leg too, ninety-two point seven. That's the same CCID I'll be talking about in the second half. DNA is the other side of it: Cat flags our data problems and grades how fast we clear them, and a lot of those asset alerts come back to ownership records being wrong. " +
+    "CUE: the banner is the point. Inventory adds grow the pool that gets matched, customer fixes repair the match rate itself. Same records, two different scores."
   );
 }
 
@@ -122,8 +122,8 @@ function dot(s, x, y, color, size) {
     x: 0.6, y: 6.55, w: 12.1, h: 0.5, margin: 0, fontFace: F, fontSize: 12.5, color: DIM, italic: true,
   });
   s.addNotes(
-    "SCRIPT: Why inventory first, out of everything we could have started with? Because it's the one case with no judgment call in it. Customer's blank in NAXT, there's exactly one account it goes to, so there's nothing to get wrong about who owns it. That turns out to be the hard part everywhere else — you'll see that in a few slides. It's also where the manual work piles up. Lindsay said more than half her day is this same loop, over and over. And the backlog is real: around seven hundred machines Cat has never seen, some of them sitting there since last year. " +
-    "CUE: read the goal line out loud. In CCAT, subscribed, and reporting before anybody needs it — and one move left to do when it sells. That last part is phase two."
+    "SCRIPT: Why inventory first, out of everything we could have started with? Because it's the one case with no judgment call in it. Customer's blank in NAXT, there's exactly one account it goes to, so there's nothing to get wrong about who owns it. That turns out to be the hard part everywhere else, and you'll see that in a few slides. It's also where the manual work piles up. Lindsay said more than half her day is this same loop, over and over. And the backlog is real: around seven hundred machines Cat has never seen, some of them sitting there since last year. " +
+    "CUE: read the goal line out loud. In CCAT, subscribed, and reporting before anybody needs it, and one move left to do when it sells. That last part is phase two."
   );
 }
 
@@ -131,8 +131,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Phase one flow: inventory adds (live)", "phase one · flow");
   s.addNotes(
-    "SCRIPT: Here's the whole thing end to end. NAXT data lands every morning. A scan picks out the machines that qualify, oldest first. Before we call Cat at all, we drop everything we already know about — machines we added before, machines already in CCAT, machines another dealer has locked up. Those cost us nothing to skip. Whatever's left gets one search each, and we save every answer whether we act on it or not. Then a dry run so I can eyeball the list before anything goes out. Then the adds themselves, each one under our inventory account with a full audit row behind it. If one fails, it's logged once and we never blindly retry it. Step seven is Lindsay doing the subscription. And then the sweep comes back around and confirms the machine landed where it should. " +
-    "CUE: the fifty-a-day cap is there because of step seven. The computer was never the bottleneck."
+    "SCRIPT: Here's the whole thing end to end. NAXT data lands every morning. A scan picks out the machines that qualify, oldest first. Before we call Cat at all, we drop everything we already know about. Machines we added before, machines already in CCAT, machines another dealer has locked up. Those cost us nothing to skip. Whatever's left gets one search each, and we save every answer whether we act on it or not. Then a dry run so I can eyeball the list before anything goes out. Then the adds themselves, each one under our inventory account with a full audit row behind it. If one fails, it's logged once and we never blindly retry it. Step seven is Lindsay doing the subscription. And then the sweep comes back around and confirms the machine landed where it should. " +
+    "CUE: the fifty-at-a-time cap is there because of step seven. The computer was never the bottleneck."
   );
   const node = (x, y, c, t, body) => {
     panel(s, x, y, 2.75, 1.55);
@@ -157,8 +157,8 @@ function dot(s, x, y, color, size) {
 
   panel(s, 0.6, 6.15, 12.1, 0.9, PANEL2);
   s.addText([
-    { text: "Week one:  ", options: { bold: true, color: GREEN } },
-    { text: "100 machines through this pipe (50 Monday + 50 Wednesday), 39 subscriptions registered, zero surprises — capped on purpose: step 7 is a person.", options: { color: INK } },
+    { text: "First week:  ", options: { bold: true, color: GREEN } },
+    { text: "100 machines through this pipe — 50 Monday, 50 Wednesday — 39 subscriptions registered, zero surprises. Capped on purpose: step 7 is a person.", options: { color: INK } },
   ], { x: 0.9, y: 6.32, w: 11.55, h: 0.6, margin: 0, fontFace: F, fontSize: 14 });
 }
 
@@ -188,7 +188,7 @@ function dot(s, x, y, color, size) {
     { text: "Caterpillar's CCID — the customer identity Trifecta itself grades — is the ground truth of “who.”", options: { color: INK } },
   ], { x: 0.9, y: 6.44, w: 11.55, h: 0.5, margin: 0, fontFace: F, fontSize: 14.5 });
   s.addNotes(
-    "SCRIPT: With inventory running, we went after the wrong-customer pile. Right now that's about thirteen hundred machines where our customer number and Cat's don't match. Obvious move is to go fix all of them. Here's why that would've been wrong for hundreds of them — Amerikohl. Two completely different customer numbers, and Cat says they're the same company. Customer numbers are just accounts, and a customer picks up extras over the years — a second branch, an old number from a conversion, an account at another dealer. What actually identifies the customer is the CCID. And notice, that's the same CCID Trifecta grades us on. " +
+    "SCRIPT: With inventory running, we went after the wrong-customer pile. Right now that's about thirteen hundred machines where our customer number and Cat's don't match. Obvious move is to go fix all of them. Here's why that would've been wrong for hundreds of them. Amerikohl. Two completely different customer numbers, and Cat says they're the same company. Customer numbers are just accounts, and a customer picks up extras over the years. A second branch, an old number from a conversion, an account at another dealer. What actually identifies the customer is the CCID. And notice, that's the same CCID Trifecta grades us on. " +
     "CUE: land the banner. The customer number is not the customer. Everything after this comes out of that one sentence."
   );
 }
@@ -219,7 +219,7 @@ function dot(s, x, y, color, size) {
     { text: "every sweep, lookup, and Cat refresh widens the free layers. ~100 API calls resolved the entire backlog.", options: { color: INK } },
   ], { x: 0.9, y: 6.6, w: 11.55, h: 0.42, margin: 0, fontFace: F, fontSize: 13.5 });
   s.addNotes(
-    "SCRIPT: Two things made this work. First we made a call: multiple customer numbers under one customer are fine. Ours, several of ours, another dealer's — doesn't matter. The only test that counts is whether the CCID matches. Same CCID, nothing to fix. Different CCID, it's really wrong. And every so often Cat's own systems disagree with each other, usually after they've merged customers on their end — those we set aside for a person to look at. We don't let the automation guess. Second is where the answers come from, and this one still bugs me a little. Every response we'd ever saved from Cat already had the CCID sitting in it. We just weren't reading that field. So we got it back to day one, for free. On top of that, we keep every answer we look up, and Cat shares their customer master right into our Snowflake. Calling the API is the last thing we try now, not the first. " +
+    "SCRIPT: Two things made this work. First we made a call: multiple customer numbers under one customer are fine. Ours, several of ours, another dealer's. Doesn't matter. The only test that counts is whether the CCID matches. Same CCID, nothing to fix. Different CCID, it's really wrong. And every so often Cat's own systems disagree with each other, usually after they've merged customers on their end. Those we set aside for a person to look at. We don't let the automation guess. Second is where the answers come from, and this one still bugs me a little. Every response we'd ever saved from Cat already had the CCID sitting in it. We just weren't reading that field. So we got it back to day one, for free. On top of that, we keep every answer we look up, and Cat shares their customer master right into our Snowflake. Calling the API is the last thing we try now, not the first. " +
     "CUE: the whole backlog cost about a hundred calls to clear. Asking the same question again is free."
   );
 }
@@ -246,8 +246,8 @@ function dot(s, x, y, color, size) {
     { text: "And the 723 that are real are proven machine by machine, not suspected. Each fix can flip a whole customer back to Trifecta-valid.", options: { color: INK } },
   ], { x: 0.9, y: 6.53, w: 11.55, h: 0.48, margin: 0, fontFace: F, fontSize: 14 });
   s.addNotes(
-    "SCRIPT: So here's what the CCID test did to those thirteen hundred. Seven hundred twenty-three are genuinely on the wrong customer. That list is proven now, one machine at a time, off Cat's own data — it's ready to work whenever you tell me to go. Five hundred twenty were the Amerikohl thing, same customer with a different account number. Those are closed for good, and without the CCID check every one of them was a wrong reassignment waiting to happen. Eighty-four we still can't answer — mostly customers Cat's own master doesn't know about, plus a few where Cat contradicts itself. That eighty-four is the CCID gap everybody's been talking about, except now it's a number instead of a worry. Last row's worth a mention too: this pool more than quadrupled in a week as the sweep covered more of the fleet, and the test just scaled with it. " +
-    "CUE: the banner. Five hundred twenty we never have to touch, seven hundred twenty-three we can prove. And remember one bad machine fails its whole customer on Trifecta — so these are customer-level fixes, not machine-level."
+    "SCRIPT: So here's what the CCID test did to those thirteen hundred. Seven hundred twenty-three are genuinely on the wrong customer. That list is proven now, one machine at a time, off Cat's own data, and it's ready to work whenever you tell me to go. Five hundred twenty were the Amerikohl thing, same customer with a different account number. Those are closed for good, and without the CCID check every one of them was a wrong reassignment waiting to happen. Eighty-four we still can't answer. Mostly customers Cat's own master doesn't know about, plus a few where Cat contradicts itself. That eighty-four is the CCID gap everybody's been talking about, except now it's a number instead of a worry. Last row's worth a mention too: this pool more than quadrupled in a week as the sweep covered more of the fleet, and the test just scaled with it. " +
+    "CUE: the banner. Five hundred twenty we never have to touch, seven hundred twenty-three we can prove. And remember one bad machine fails its whole customer on Trifecta, so these are customer-level fixes, not machine-level."
   );
 }
 
@@ -255,8 +255,8 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Phase two flow: sold machine → its buyer (designed)", "what's next · flow");
   s.addNotes(
-    "SCRIPT: This is where the CCID work pays off past just cleanup — it unblocks phase two. The detection half already runs. The minute a customer shows up on an inventory machine in NAXT, it lands on the dashboard. There are a hundred eighty sitting there right now, and every one of those is a manual move for Lindsay today. What stopped us on the sixth was John's question — does the buyer even have a CCID? We can answer that in Snowflake now, before we touch anything, off Cat's customer master. If the buyer checks out, the move is automatic and audited, and Cat expires the old inventory record on its own. If they don't, it goes on a list for the Customer Admin Tool instead of blowing up halfway through. " +
-    "CUE: until this is built and approved nothing changes — PDI email, Lindsay, about a day. This replaces that one step."
+    "SCRIPT: This is where the CCID work pays off past just cleanup. It unblocks phase two. The detection half already runs. The minute a customer shows up on an inventory machine in NAXT, it lands on the dashboard. There are a hundred eighty sitting there right now, and every one of those is a manual move for Lindsay today. What stopped us on the sixth was John's question. Does the buyer even have a CCID? We can answer that in Snowflake now, before we touch anything, off Cat's customer master. If the buyer checks out, the move is automatic and audited, and Cat expires the old inventory record on its own. If they don't, it goes on a list for the Customer Admin Tool instead of blowing up halfway through. " +
+    "CUE: until this is built and approved nothing changes. PDI email, Lindsay, about a day. This replaces that one step."
   );
   const node = (x, y, w, h, c, t, body) => {
     panel(s, x, y, w, h);
@@ -305,8 +305,8 @@ function dot(s, x, y, color, size) {
     x: 0.6, y: 6.5, w: 12.1, h: 0.5, margin: 0, fontFace: F, fontSize: 16, bold: true, color: YEL, align: "center",
   });
   s.addNotes(
-    "SCRIPT: Four things to land on. One, the inventory runs keep going, fifty and fifty. At that pace the backlog's gone in about seven weeks, quicker if Lindsay ever gets help on the subscriptions. Two, and this is the real ask: let me start working the reassignment list. Seven hundred twenty-three machines, all proven, and I'd run it exactly like inventory — dry run first, slow pace, everything audited. Three, no decision needed here, just so you know: the CCID gap is a list of eighty-four now, not a mystery. That's Customer Admin Tool work. Four, give me the go-ahead to design phase two. Everything it needs already exists and a hundred eighty machines are waiting on it. " +
-    "CUE: end on the line at the bottom — the system sorts every machine, people decide only the ones that need judgment."
+    "SCRIPT: Four things to land on. One, the inventory runs keep going, fifty and fifty. At that pace the backlog's gone in about seven weeks, quicker if Lindsay ever gets help on the subscriptions. Two, and this is the real ask: let me start working the reassignment list. Seven hundred twenty-three machines, all proven, and I'd run it exactly like inventory. Dry run first, slow pace, everything audited. Three, no decision needed here, just so you know: the CCID gap is a list of eighty-four now, not a mystery. That's Customer Admin Tool work. Four, give me the go-ahead to design phase two. Everything it needs already exists and a hundred eighty machines are waiting on it. " +
+    "CUE: end on the line at the bottom. The system sorts every machine, people decide only the ones that need judgment."
   );
 }
 
