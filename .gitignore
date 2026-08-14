@@ -11,6 +11,20 @@ data/
 .claude/
 CLAUDE.local.md
 
+# Node dependencies — restore with: cd powerpoints && npm install
+node_modules/
+
+# Generated decks — rebuild from powerpoints/build_*.js (source is tracked)
+powerpoints/*.pptx
+powerpoints/*.pdf
+
+# Manim intermediate render cache — regenerated on every render.
+# NOTE: decision_key.py, audio/, check*.png and final.mp4 stay tracked —
+# build_snowflake_deck.js embeds ../manim/final.mp4, so ignoring it would
+# make the main deck unbuildable from a fresh clone.
+manim/media/
+manim/__pycache__/
+
 # Python
 __pycache__/
 *.pyc
