@@ -56,7 +56,7 @@ function dot(s, x, y, color, size) {
     x: 0.9, y: 2.15, w: 11.5, h: 1.0, margin: 0,
     fontFace: F, fontSize: 42, bold: true, color: INK,
   });
-  s.addText("Phase one of CCAT automation is live — and the customer-identity work that makes phase two possible", {
+  s.addText("Phase one of CCAT automation is live, plus the customer-identity work that makes phase two possible", {
     x: 0.9, y: 3.2, w: 11.0, h: 0.6, margin: 0,
     fontFace: F, fontSize: 20, color: DIM,
   });
@@ -79,22 +79,22 @@ function dot(s, x, y, color, size) {
     x: 0.9, y: 2.42, w: 5.3, h: 1.15, margin: 0, fontFace: F, fontSize: 13.5, color: INK, lineSpacing: 18,
   });
   s.addText("92.8%", { x: 0.9, y: 3.7, w: 2.4, h: 0.7, margin: 0, fontFace: F, fontSize: 40, bold: true, color: ORANGE });
-  s.addText("asset match (2025 baseline) — maintained by hand today. The CCID leg sits at 92.7% — the same customer identity this project now works with directly.", {
+  s.addText("asset match (2025 baseline), maintained by hand today. The CCID leg sits at 92.7%, the same customer identity this project now works with directly.", {
     x: 3.3, y: 3.72, w: 2.95, h: 1.4, margin: 0, fontFace: F, fontSize: 12, color: DIM, lineSpacing: 15 });
   s.addText("Worth 15% of the dealer excellence scorecard", { x: 0.9, y: 5.25, w: 5.3, h: 0.4, margin: 0, fontFace: F, fontSize: 13.5, bold: true, color: INK });
   panel(s, 6.8, 1.7, 5.9, 4.15);
-  s.addText("DNA — DATA NOTIFICATION ALERTS", { x: 7.1, y: 1.95, w: 5.2, h: 0.4, margin: 0, fontFace: F, fontSize: 18, bold: true, color: TEAL });
+  s.addText("DNA · DATA NOTIFICATION ALERTS", { x: 7.1, y: 1.95, w: 5.2, h: 0.4, margin: 0, fontFace: F, fontSize: 18, bold: true, color: TEAL });
   s.addText("Caterpillar flags our prioritized data issues and grades how well we resolve them. Many asset alerts trace to the same root cause: ownership records that do not match reality.", {
     x: 7.1, y: 2.42, w: 5.3, h: 1.3, margin: 0, fontFace: F, fontSize: 13.5, color: INK, lineSpacing: 18,
   });
   s.addText("10%", { x: 7.1, y: 3.85, w: 2.0, h: 0.7, margin: 0, fontFace: F, fontSize: 40, bold: true, color: TEAL });
-  s.addText("of the scorecard rides on DNA resolution — prevention at the source beats resolving alerts after they fire", {
+  s.addText("of the scorecard rides on DNA resolution. Prevention at the source beats resolving alerts after they fire", {
     x: 9.2, y: 3.87, w: 3.05, h: 1.2, margin: 0, fontFace: F, fontSize: 12.5, color: DIM, lineSpacing: 16 });
   panel(s, 0.6, 6.1, 12.1, 0.85, PANEL2);
   s.addText([
     { text: "Inventory adds grow the matched population.  ", options: { bold: true, color: GREEN } },
     { text: "Customer fixes repair the asset-match leg.  ", options: { bold: true, color: ORANGE } },
-    { text: "Both stand on CCAT ownership records — exactly what this work manages.", options: { color: INK } },
+    { text: "Both stand on CCAT ownership records, exactly what this work manages.", options: { color: INK } },
   ], { x: 0.9, y: 6.28, w: 11.55, h: 0.55, margin: 0, fontFace: F, fontSize: 14.5 });
   s.addNotes(
     "SCRIPT: Quick word on why this matters upstairs. Trifecta is Cat's data quality score and it's strict. A customer only counts if every leg passes, including a hundred percent asset match on their priority assets. So one bad machine fails that whole customer. We're sitting around ninety-three percent on asset match and it's all maintained by hand today. Look at the CCID leg too, ninety-two point seven. That's the same CCID I'll be talking about in the second half. DNA is the other side of it: Cat flags our data problems and grades how fast we clear them, and a lot of those asset alerts come back to ownership records being wrong. " +
@@ -107,8 +107,8 @@ function dot(s, x, y, color, size) {
   const s = base("Why inventory came first", "phase one");
   const rows = [
     { c: GREEN, t: "It is the cleanest case", body: "An inventory machine has a blank customer in NAXT and belongs under exactly one well-known account (INT00495). There is no customer identity to get wrong." },
-    { c: BLUE, t: "It is where the pain is", body: "More than half of Lindsay's churn: PDI email arrives, key the machine in by hand, subscribe it, move it when it sells — twenty minutes and two sittings per machine, 20–70 emails a day." },
-    { c: ORANGE, t: "The backlog was real", body: "~718 New machines sat in inventory with no CCAT record, some since 2025 — invisible to Caterpillar and to the scorecard the whole time." },
+    { c: BLUE, t: "It is where the pain is", body: "More than half of Lindsay's churn: PDI email arrives, key the machine in by hand, subscribe it, move it when it sells. Twenty minutes and two sittings per machine, 20 to 70 emails a day." },
+    { c: ORANGE, t: "The backlog was real", body: "~718 New machines sat in inventory with no CCAT record, some since 2025, invisible to Caterpillar and to the scorecard the whole time." },
     { c: TEAL, t: "The goal in one line", body: "Every machine already in CCAT, subscribed and reporting, by the time anyone needs it. When it sells, the only remaining work is one customer move." },
   ];
   rows.forEach((r, i) => {
@@ -143,22 +143,22 @@ function dot(s, x, y, color, size) {
   const arrowL = (x, y) => s.addShape("leftArrow", { x, y, w: 0.32, h: 0.26, fill: { color: DIM }, line: { type: "none" } });
 
   node(0.6,  1.75, BLUE, "1 · NAXT refresh", "Golden equipment data lands in Snowflake each morning");
-  node(3.75, 1.75, BLUE, "2 · Candidate scan", "Blank customer · Cat make · active · New · no attachments — oldest first by modified date");
-  node(6.9,  1.75, TEAL, "3 · Free skips", "Already added, already in CCAT, or dealer-blocked — dropped from history at zero API cost");
+  node(3.75, 1.75, BLUE, "2 · Candidate scan", "Blank customer · Cat make · active · New · no attachments. Oldest first by modified date");
+  node(6.9,  1.75, TEAL, "3 · Free skips", "Already added, already in CCAT, or dealer-blocked. Dropped from history at zero API cost");
   node(10.05,1.75, TEAL, "4 · Live CCAT search", "One API search per machine; every answer saved to history");
   arrowR(3.42, 2.4); arrowR(6.57, 2.4); arrowR(9.72, 2.4);
   s.addShape("downArrow", { x: 11.28, y: 3.42, w: 0.28, h: 0.76, fill: { color: DIM }, line: { type: "none" } });
 
-  node(10.05, 4.3, YEL,    "5 · Dry-run review", "The would_add list previewed — nothing sent yet");
+  node(10.05, 4.3, YEL,    "5 · Dry-run review", "The would_add list previewed. Nothing sent yet");
   node(6.9,   4.3, GREEN,  "6 · Add to INT00495", "Executed with audit row + Cat tracking ID; failures logged once, auto-skipped after");
-  node(3.75,  4.3, ORANGE, "7 · Subscription", "Lindsay registers Product Link in the dealer portal — the manual step that sets the pace");
-  node(0.6,   4.3, GREEN,  "8 · Sweep verifies", "Machine lands DONE_INVENTORY on the dashboard — loop closed");
+  node(3.75,  4.3, ORANGE, "7 · Subscription", "Lindsay registers Product Link in the dealer portal. The manual step that sets the pace");
+  node(0.6,   4.3, GREEN,  "8 · Sweep verifies", "Machine lands DONE_INVENTORY on the dashboard. Loop closed");
   arrowL(9.72, 4.95); arrowL(6.57, 4.95); arrowL(3.42, 4.95);
 
   panel(s, 0.6, 6.15, 12.1, 0.9, PANEL2);
   s.addText([
     { text: "First week:  ", options: { bold: true, color: GREEN } },
-    { text: "100 machines through this pipe — 50 Monday, 50 Wednesday — 39 subscriptions registered, zero surprises. Capped on purpose: step 7 is a person.", options: { color: INK } },
+    { text: "100 machines through this pipe: 50 Monday, 50 Wednesday. 39 subscriptions registered, zero surprises. Capped on purpose: step 7 is a person.", options: { color: INK } },
   ], { x: 0.9, y: 6.32, w: 11.55, h: 0.6, margin: 0, fontFace: F, fontSize: 14 });
 }
 
@@ -171,7 +171,7 @@ function dot(s, x, y, color, size) {
   s.addText("machines where the customer number on our CCAT record differs from the customer number in NAXT.", {
     x: 3.85, y: 2.55, w: 2.45, h: 1.3, margin: 0, fontFace: F, fontSize: 13, color: INK, lineSpacing: 17,
   });
-  s.addText("Reassigning all 1,327 would be the obvious move — and for hundreds of them, it would be wrong.", {
+  s.addText("Reassigning all 1,327 would be the obvious move, and for hundreds of them it would be wrong.", {
     x: 0.9, y: 4.1, w: 5.3, h: 1.6, margin: 0, fontFace: F, fontSize: 14.5, bold: true, color: YEL, lineSpacing: 20,
   });
   panel(s, 6.8, 1.7, 5.9, 4.4);
@@ -180,12 +180,12 @@ function dot(s, x, y, color, size) {
     { text: "C00025828   →  AMERIKOHL MINING INC", options: { color: INK, breakLine: true, paraSpaceAfter: 4 } },
     { text: "C0B094893   →  AMERIKOHL MINING INC", options: { color: INK, breakLine: true, paraSpaceAfter: 10 } },
     { text: "Two different customer numbers. One real customer.", options: { bold: true, color: YEL, breakLine: true, paraSpaceAfter: 10 } },
-    { text: "A customer number (DCN) is an account — and one customer picks up several over the years: a second branch account, a legacy number, an account at another dealer entirely.", options: { color: INK, breakLine: true } },
+    { text: "A customer number (DCN) is an account, and one customer picks up several over the years: a second branch account, a legacy number, an account at another dealer entirely.", options: { color: INK, breakLine: true } },
   ], { x: 7.1, y: 2.45, w: 5.3, h: 3.4, margin: 0, fontFace: F, fontSize: 13, lineSpacing: 17 });
   panel(s, 0.6, 6.3, 12.1, 0.75, PANEL2);
   s.addText([
     { text: "The account number is not the customer.  ", options: { bold: true, color: YEL } },
-    { text: "Caterpillar's CCID — the customer identity Trifecta itself grades — is the ground truth of “who.”", options: { color: INK } },
+    { text: "Caterpillar's CCID, the customer identity Trifecta itself grades, is the ground truth of “who.”", options: { color: INK } },
   ], { x: 0.9, y: 6.44, w: 11.55, h: 0.5, margin: 0, fontFace: F, fontSize: 14.5 });
   s.addNotes(
     "SCRIPT: With inventory running, we went after the wrong-customer pile. Right now that's about thirteen hundred machines where our customer number and Cat's don't match. Obvious move is to go fix all of them. Here's why that would've been wrong for hundreds of them. Amerikohl. Two completely different customer numbers, and Cat says they're the same company. Customer numbers are just accounts, and a customer picks up extras over the years. A second branch, an old number from a conversion, an account at another dealer. What actually identifies the customer is the CCID. And notice, that's the same CCID Trifecta grades us on. " +
@@ -199,7 +199,7 @@ function dot(s, x, y, color, size) {
   panel(s, 0.6, 1.7, 5.9, 4.6);
   s.addText("The policy (Aug 11)", { x: 0.9, y: 1.95, w: 5.2, h: 0.4, margin: 0, fontFace: F, fontSize: 17, bold: true, color: YEL });
   s.addText([
-    { text: "Multiple account numbers per customer are allowed — ours, multiples of ours, other dealers'.", options: { color: INK, breakLine: true, paraSpaceAfter: 8 } },
+    { text: "Multiple account numbers per customer are allowed: ours, multiples of ours, other dealers'.", options: { color: INK, breakLine: true, paraSpaceAfter: 8 } },
     { text: "CCID equality is the ONLY customer-correctness test.", options: { bold: true, color: INK, breakLine: true, paraSpaceAfter: 8 } },
     { text: "Same CCID, different account → nothing to fix.", options: { color: GREEN, breakLine: true, paraSpaceAfter: 4 } },
     { text: "Different CCID → truly the wrong customer.", options: { color: RED, breakLine: true, paraSpaceAfter: 4 } },
@@ -208,10 +208,10 @@ function dot(s, x, y, color, size) {
   panel(s, 6.8, 1.7, 5.9, 4.6);
   s.addText("Four sources, cheapest first", { x: 7.1, y: 1.95, w: 5.2, h: 0.4, margin: 0, fontFace: F, fontSize: 17, bold: true, color: TEAL });
   s.addText([
-    { text: "1 · Our observation history — every Cat API answer we ever stored already carried the CCID. Free, retroactive.", options: { color: INK, breakLine: true, paraSpaceAfter: 7 } },
-    { text: "2 · The crosswalk table — every answer any lookup ever produced, kept forever. One API call becomes permanent knowledge.", options: { color: INK, breakLine: true, paraSpaceAfter: 7 } },
-    { text: "3 · Cat's customer master, shared into Snowflake — resolves customers who own zero equipment. Refreshed by Cat, not by us.", options: { color: INK, breakLine: true, paraSpaceAfter: 7 } },
-    { text: "4 · The Cat API — last resort, for genuinely new customers only.", options: { color: INK, breakLine: true } },
+    { text: "1 · Our observation history. Every Cat API answer we ever stored already carried the CCID. Free, retroactive.", options: { color: INK, breakLine: true, paraSpaceAfter: 7 } },
+    { text: "2 · The crosswalk table. Every answer any lookup ever produced, kept forever. One API call becomes permanent knowledge.", options: { color: INK, breakLine: true, paraSpaceAfter: 7 } },
+    { text: "3 · Cat's customer master, shared into Snowflake. Resolves customers who own zero equipment. Refreshed by Cat, not by us.", options: { color: INK, breakLine: true, paraSpaceAfter: 7 } },
+    { text: "4 · The Cat API. Last resort, for genuinely new customers only.", options: { color: INK, breakLine: true } },
   ], { x: 7.1, y: 2.45, w: 5.3, h: 3.7, margin: 0, fontFace: F, fontSize: 13, lineSpacing: 17 });
   panel(s, 0.6, 6.5, 12.1, 0.6, PANEL2);
   s.addText([
@@ -226,12 +226,12 @@ function dot(s, x, y, color, size) {
 
 // ------------------------------------------------- 7 · the verdict numbers
 {
-  const s = base("1,327 “wrong customers” — what they really are", "customer identity");
+  const s = base("1,327 “wrong customers”: what they really are", "customer identity");
   const rows = [
-    { c: RED,    n: "723", t: "Truly wrong customer", body: "CCIDs genuinely differ — a validated, CCID-proven reassignment worklist, awaiting this group's go-ahead" },
-    { c: GREEN,  n: "520", t: "Same customer, different account", body: "CCID matches — the AMERIKOHL pattern. Correct by policy. No action, forever." },
-    { c: ORANGE, n: "84",  t: "Genuinely unresolved", body: "Customers unknown to Cat's own customer master — the real CCID gap, now countable — plus a handful where Cat's systems disagree; quarantined for humans" },
-    { c: BLUE,   n: "4.5×", t: "The pool grew with coverage", body: "294 machines when the CCID test first ran (Aug 11) → 1,327 as the sweep widened across the fleet — same test, same discipline, at scale" },
+    { c: RED,    n: "723", t: "Truly wrong customer", body: "CCIDs genuinely differ. A validated, CCID-proven reassignment worklist, awaiting this group's go-ahead" },
+    { c: GREEN,  n: "520", t: "Same customer, different account", body: "CCID matches. The AMERIKOHL pattern. Correct by policy. No action, forever." },
+    { c: ORANGE, n: "84",  t: "Genuinely unresolved", body: "Customers unknown to Cat's own customer master, the real CCID gap and now countable, plus a handful where Cat's systems disagree; quarantined for humans" },
+    { c: BLUE,   n: "4.5×", t: "The pool grew with coverage", body: "294 machines when the CCID test first ran (Aug 11) → 1,327 as the sweep widened across the fleet. Same test, same discipline, at scale" },
   ];
   rows.forEach((r, i) => {
     const y = 1.75 + i * 1.14;
@@ -266,7 +266,7 @@ function dot(s, x, y, color, size) {
   const arrowR = (x, y) => s.addShape("rightArrow", { x, y, w: 0.32, h: 0.26, fill: { color: DIM }, line: { type: "none" } });
 
   node(0.6,  2.6, 2.7, 1.7, BLUE, "1 · Machine sells", "A customer number appears on an inventory machine in NAXT");
-  node(3.75, 2.6, 2.7, 1.7, YEL,  "2 · Dashboard flags it", "P3_INV_TO_CUSTOMER — caught by the daily sweep. 180 machines on this list today");
+  node(3.75, 2.6, 2.7, 1.7, YEL,  "2 · Dashboard flags it", "P3_INV_TO_CUSTOMER, caught by the daily sweep. 180 machines on this list today");
   node(6.9,  2.6, 2.7, 1.7, TEAL, "3 · CCID check", "Cat's customer master, shared into Snowflake, answers: does the buyer resolve to a CCID?");
   arrowR(3.42, 3.32); arrowR(6.57, 3.32);
 
@@ -276,7 +276,7 @@ function dot(s, x, y, color, size) {
   s.addText("no CCID", { x: 9.5, y: 4.45, w: 1.1, h: 0.3, margin: 0, fontFace: F, fontSize: 10, bold: true, color: ORANGE });
 
   node(10.25, 1.8, 2.5, 2.05, GREEN, "4a · Automated move", "Reassign INT00495 → the buyer's account. Old record auto-expires. One audit row, one API call.");
-  node(10.25, 4.35, 2.5, 2.05, ORANGE, "4b · Human queue", "Customer Admin Tool creates the CCID first — then the move retries. No mid-flight failures.");
+  node(10.25, 4.35, 2.5, 2.05, ORANGE, "4b · Human queue", "Customer Admin Tool creates the CCID first, then the move retries. No mid-flight failures.");
 
   panel(s, 0.6, 6.55, 9.3, 0.75, PANEL2);
   s.addText([
@@ -289,10 +289,10 @@ function dot(s, x, y, color, size) {
 {
   const s = base("Where this leaves us", "decisions");
   const rows = [
-    { c: GREEN, t: "Keep the inventory cadence", body: "50 Monday + 50 Wednesday continues; the ~718 backlog clears in roughly 7 weeks at this pace — or faster if subscription bandwidth allows" },
-    { c: RED, t: "Approve the reassignment lane", body: "723 CCID-proven wrong-customer machines, ready to work through the audited procedure — dry-run first, reviewed pace, same discipline as inventory" },
-    { c: ORANGE, t: "The CCID gap is now a list, not a mystery", body: "84 machines whose customers are unknown to Cat's own master — named and counted; Customer Admin Tool work, and the exact customers phase two would stumble on" },
-    { c: BLUE, t: "Green-light phase two design", body: "Detection runs, the CCID check exists, 180 machines are waiting — the build replaces a manual step Lindsay does today" },
+    { c: GREEN, t: "Keep the inventory cadence", body: "50 Monday + 50 Wednesday continues; the ~718 backlog clears in roughly 7 weeks at this pace, or faster if subscription bandwidth allows" },
+    { c: RED, t: "Approve the reassignment lane", body: "723 CCID-proven wrong-customer machines, ready to work through the audited procedure. Dry-run first, reviewed pace, same discipline as inventory" },
+    { c: ORANGE, t: "The CCID gap is now a list, not a mystery", body: "84 machines whose customers are unknown to Cat's own master, named and counted. Customer Admin Tool work, and the exact customers phase two would stumble on" },
+    { c: BLUE, t: "Green-light phase two design", body: "Detection runs, the CCID check exists, 180 machines are waiting. The build replaces a manual step Lindsay does today" },
   ];
   rows.forEach((r, i) => {
     const y = 1.75 + i * 1.14;
