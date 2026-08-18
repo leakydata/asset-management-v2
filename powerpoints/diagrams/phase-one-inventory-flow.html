@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase One: Adding Inventory to CCAT</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f5f5;
+    --paper-2:#ececec;
+    --ink:#0f1b2a;
+    --muted:#4f5d75;
+    --soft:#7a8399;
+    --rule:rgba(15,27,42,0.12);
+    --accent:#ffc72c;
+    --accent-ink:#8a6a00;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    padding:2.5rem 2rem 1.5rem;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Geist',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1280px;margin:0 auto;}
+  .eyebrow{
+    font-family:'Geist Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 0.5rem;
+  }
+  h1{
+    font-family:'Instrument Serif',Georgia,serif;
+    font-weight:400;
+    font-size:2.25rem;
+    line-height:1.1;
+    margin:0 0 0.4rem;
+  }
+  .sub{
+    font-size:14px;
+    color:var(--muted);
+    margin:0 0 1.75rem;
+    max-width:64ch;
+  }
+  svg{width:100%;height:auto;display:block;}
+  footer{
+    margin-top:1.5rem;
+    padding-top:0.75rem;
+    border-top:1px solid var(--rule);
+    font-family:'Geist Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    color:var(--soft);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">CCAT Reconciliation · Data Flow</p>
+  <h1>Phase One: Adding Inventory to CCAT</h1>
+  <p class="sub">How a machine sitting in NAXT with no customer assigned becomes a registered record on Caterpillar's inventory account, and who touches it along the way.</p>
+
+<svg viewBox="0 0 1280 720" role="img" aria-labelledby="phase-one-inventory-flow-title phase-one-inventory-flow-desc" xmlns="http://www.w3.org/2000/svg">
+  <title id="phase-one-inventory-flow-title">Phase One: Adding Inventory to CCAT</title>
+  <desc id="phase-one-inventory-flow-desc">Role-scoped data flow across four lanes. NAXT lands daily equipment data; Snowflake scans for unassigned Cat machines, drops known cases through four skip lists at no API cost, and sends the remainder to Caterpillar in audited batches; Caterpillar registers each machine to inventory account INT00495; Snowflake records every call in the append-only audit and history tables; EMS adds the subscription by hand, which sets the pace of the whole pipeline.</desc>
+
+  <defs>
+    <marker id="arr-muted" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#4f5d75"/>
+    </marker>
+    <marker id="arr-accent" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#e0a800"/>
+    </marker>
+    <marker id="arr-link" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#2e5aa8"/>
+    </marker>
+  </defs>
+
+  <!-- ===== background ===== -->
+  <rect width="1280" height="720" fill="#f5f5f5"/>
+  <!-- single lane tint: the platform lane, where most of the work happens -->
+  <rect x="176" y="192" width="1104" height="136" fill="rgba(15,27,42,0.022)"/>
+
+  <!-- lane dividers -->
+  <line x1="0" y1="56" x2="1280" y2="56" stroke="rgba(15,27,42,0.12)" stroke-width="0.8"/>
+  <line x1="0" y1="192" x2="1280" y2="192" stroke="rgba(15,27,42,0.12)" stroke-width="0.8"/>
+  <line x1="0" y1="328" x2="1280" y2="328" stroke="rgba(15,27,42,0.12)" stroke-width="0.8"/>
+  <line x1="0" y1="464" x2="1280" y2="464" stroke="rgba(15,27,42,0.12)" stroke-width="0.8"/>
+  <line x1="0" y1="600" x2="1280" y2="600" stroke="rgba(15,27,42,0.12)" stroke-width="0.8"/>
+  <!-- label column border -->
+  <line x1="176" y1="56" x2="176" y2="600" stroke="rgba(15,27,42,0.12)" stroke-width="0.8"/>
+
+  <!-- ===== header strip: step chips ===== -->
+  <!-- 01 LAND -->
+  <rect x="240" y="12" width="48" height="20" rx="10" fill="rgba(15,27,42,0.10)"/>
+  <text x="264" y="27" fill="#0f1b2a" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">01</text>
+  <text x="264" y="48" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.10em">LAND</text>
+  <!-- 02 SELECT -->
+  <rect x="416" y="12" width="48" height="20" rx="10" fill="rgba(15,27,42,0.10)"/>
+  <text x="440" y="27" fill="#0f1b2a" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">02</text>
+  <text x="440" y="48" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.10em">SELECT</text>
+  <!-- 03 FILTER -->
+  <rect x="592" y="12" width="48" height="20" rx="10" fill="rgba(15,27,42,0.10)"/>
+  <text x="616" y="27" fill="#0f1b2a" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">03</text>
+  <text x="616" y="48" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.10em">FILTER</text>
+  <!-- 04 SEND — focal -->
+  <rect x="768" y="12" width="48" height="20" rx="10" fill="#ffc72c"/>
+  <text x="792" y="27" fill="#0f1b2a" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">04</text>
+  <text x="792" y="48" fill="#8a6a00" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.10em">SEND</text>
+  <!-- 05 RECORD -->
+  <rect x="944" y="12" width="48" height="20" rx="10" fill="rgba(15,27,42,0.10)"/>
+  <text x="968" y="27" fill="#0f1b2a" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">05</text>
+  <text x="968" y="48" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.10em">RECORD</text>
+  <!-- 06 SUBSCRIBE -->
+  <rect x="1120" y="12" width="48" height="20" rx="10" fill="rgba(15,27,42,0.10)"/>
+  <text x="1144" y="27" fill="#0f1b2a" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">06</text>
+  <text x="1144" y="48" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.10em">SUBSCRIBE</text>
+
+  <!-- ===== lane labels ===== -->
+  <text x="88" y="120" fill="#7a8399" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">SOURCE</text>
+  <text x="88" y="136" fill="#4f5d75" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">NAXT</text>
+
+  <text x="88" y="256" fill="#7a8399" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">PLATFORM</text>
+  <text x="88" y="272" fill="#4f5d75" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">SNOWFLAKE</text>
+
+  <text x="88" y="392" fill="#7a8399" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">VENDOR</text>
+  <text x="88" y="408" fill="#4f5d75" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">CATERPILLAR</text>
+
+  <text x="88" y="528" fill="#7a8399" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">OPERATIONS</text>
+  <text x="88" y="544" fill="#4f5d75" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.14em">EMS</text>
+
+  <!-- ===== arrows (drawn before boxes) ===== -->
+  <!-- A: NAXT/LAND -> Snowflake/SELECT -->
+  <path d="M 332 124 H 432 Q 440 124 440 132 V 208" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arr-muted)"/>
+  <!-- B: SELECT -> FILTER (same lane) -->
+  <line x1="508" y1="260" x2="544" y2="260" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arr-muted)"/>
+  <!-- C: FILTER -> SEND (same lane) -->
+  <line x1="684" y1="260" x2="720" y2="260" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arr-muted)"/>
+  <!-- D: FOCAL — Snowflake writes into Caterpillar -->
+  <line x1="792" y1="308" x2="792" y2="344" stroke="#e0a800" stroke-width="2" marker-end="url(#arr-accent)"/>
+  <!-- E: Caterpillar response -> audit trail -->
+  <path d="M 860 396 H 960 Q 968 396 968 388 V 312" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arr-muted)"/>
+  <!-- F: recorded -> EMS subscription -->
+  <path d="M 1036 260 H 1136 Q 1144 260 1144 268 V 480" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arr-link)"/>
+
+  <!-- focal arrow label: to the RIGHT of the vertical segment, 10px gap -->
+  <rect x="802" y="319" width="84" height="16" rx="2" fill="#f5f5f5"/>
+  <text x="844" y="331" fill="#8a6a00" font-size="12" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.06em">ADD TO CCAT</text>
+
+  <!-- ===== nodes ===== -->
+
+  <!-- NAXT / LAND -->
+  <rect x="196" y="76" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="196" y="76" width="136" height="96" rx="6" fill="#ffffff" stroke="rgba(15,27,42,0.25)" stroke-width="1"/>
+  <rect x="204" y="84" width="32" height="14" rx="3" fill="rgba(15,27,42,0.10)"/>
+  <text x="220" y="94" fill="#4f5d75" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">NXT</text>
+  <text x="264" y="120" fill="#0f1b2a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">NAXT Data</text>
+  <text x="264" y="136" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">daily load</text>
+  <text x="264" y="150" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">EQUIPMENT_NAXT_VW</text>
+  <rect x="284" y="154" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="296" y="163" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+
+  <!-- SNOWFLAKE / SELECT -->
+  <rect x="372" y="212" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="372" y="212" width="136" height="96" rx="6" fill="#ffffff" stroke="rgba(15,27,42,0.25)" stroke-width="1"/>
+  <rect x="380" y="220" width="32" height="14" rx="3" fill="rgba(15,27,42,0.10)"/>
+  <text x="396" y="230" fill="#4f5d75" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">SNO</text>
+  <text x="440" y="256" fill="#0f1b2a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">Candidates</text>
+  <text x="440" y="272" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">no customer yet</text>
+  <text x="440" y="286" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">OLDEST FIRST</text>
+  <rect x="380" y="290" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="392" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+  <rect x="476" y="290" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="488" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+
+  <!-- SNOWFLAKE / FILTER — slate-blue concern colour: cost-control gate -->
+  <rect x="548" y="212" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="548" y="212" width="136" height="96" rx="6" fill="rgba(90,125,154,0.07)" stroke="rgba(90,125,154,0.45)" stroke-width="1"/>
+  <rect x="556" y="220" width="32" height="14" rx="3" fill="rgba(90,125,154,0.20)"/>
+  <text x="572" y="230" fill="#5a7d9a" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">SNO</text>
+  <text x="616" y="256" fill="#5a7d9a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">Skip Lists</text>
+  <text x="616" y="272" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">four skip rules</text>
+  <text x="616" y="286" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">ZERO API COST</text>
+  <rect x="556" y="290" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="568" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+  <rect x="652" y="290" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="664" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+
+  <!-- SNOWFLAKE / SEND -->
+  <rect x="724" y="212" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="724" y="212" width="136" height="96" rx="6" fill="#ffffff" stroke="rgba(15,27,42,0.25)" stroke-width="1"/>
+  <rect x="732" y="220" width="32" height="14" rx="3" fill="rgba(15,27,42,0.10)"/>
+  <text x="748" y="230" fill="#4f5d75" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">SNO</text>
+  <text x="792" y="256" fill="#0f1b2a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">Batch Add</text>
+  <text x="792" y="272" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">dry run first</text>
+  <text x="792" y="286" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">50 PER RUN</text>
+  <rect x="732" y="290" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="744" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+  <rect x="828" y="290" width="24" height="12" rx="3" fill="#6e6479"/>
+  <text x="840" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">WB</text>
+
+  <!-- CATERPILLAR / SEND — FOCAL -->
+  <rect x="724" y="348" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="724" y="348" width="136" height="96" rx="6" fill="rgba(255,199,44,0.20)" stroke="#e0a800" stroke-width="1.6"/>
+  <rect x="732" y="356" width="32" height="14" rx="3" fill="#ffc72c"/>
+  <text x="748" y="366" fill="#0f1b2a" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">CAT</text>
+  <text x="792" y="392" fill="#0f1b2a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">CCAT</text>
+  <text x="792" y="408" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">machine added</text>
+  <text x="792" y="422" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">DCN INT00495</text>
+  <rect x="732" y="426" width="24" height="12" rx="3" fill="#6e6479"/>
+  <text x="744" y="435" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">WB</text>
+  <rect x="828" y="426" width="24" height="12" rx="3" fill="#6e6479"/>
+  <text x="840" y="435" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">WB</text>
+
+  <!-- SNOWFLAKE / RECORD -->
+  <rect x="900" y="212" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="900" y="212" width="136" height="96" rx="6" fill="#ffffff" stroke="rgba(15,27,42,0.25)" stroke-width="1"/>
+  <rect x="908" y="220" width="32" height="14" rx="3" fill="rgba(15,27,42,0.10)"/>
+  <text x="924" y="230" fill="#4f5d75" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">SNO</text>
+  <text x="968" y="256" fill="#0f1b2a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">Audit Trail</text>
+  <text x="968" y="272" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">every call kept</text>
+  <text x="968" y="286" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">CCAT_AUDIT · HISTORY</text>
+  <rect x="908" y="290" width="24" height="12" rx="3" fill="#6e6479"/>
+  <text x="920" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">WB</text>
+  <rect x="1004" y="290" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="1016" y="299" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+
+  <!-- EMS / SUBSCRIBE -->
+  <rect x="1076" y="484" width="136" height="96" rx="6" fill="#f5f5f5"/>
+  <rect x="1076" y="484" width="136" height="96" rx="6" fill="rgba(79,93,117,0.08)" stroke="#7a8399" stroke-width="1"/>
+  <rect x="1084" y="492" width="32" height="14" rx="3" fill="rgba(15,27,42,0.10)"/>
+  <text x="1100" y="502" fill="#4f5d75" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle" letter-spacing="0.08em">EMS</text>
+  <text x="1144" y="528" fill="#0f1b2a" font-size="16" font-weight="600" font-family="'Geist',sans-serif" text-anchor="middle">Subscribe</text>
+  <text x="1144" y="544" fill="#4f5d75" font-size="12" font-family="'Geist Mono',monospace" text-anchor="middle">per machine</text>
+  <text x="1144" y="558" fill="#7a8399" font-size="8" font-family="'Geist Mono',monospace" text-anchor="middle">MANUAL STEP</text>
+  <rect x="1084" y="562" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="1096" y="571" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+  <rect x="1180" y="562" width="24" height="12" rx="3" fill="#4a7c59"/>
+  <text x="1192" y="571" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">LS</text>
+
+  <!-- ===== legend strip ===== -->
+  <text x="32" y="640" fill="#7a8399" font-size="10" font-family="'Geist Mono',monospace" letter-spacing="0.14em">DATA TYPE</text>
+  <rect x="176" y="630" width="24" height="12" rx="3" fill="#b8915a"/>
+  <text x="188" y="639" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">TB</text>
+  <text x="208" y="640" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">Snowflake table</text>
+  <rect x="360" y="630" width="24" height="12" rx="3" fill="#6e6479"/>
+  <text x="372" y="639" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">WB</text>
+  <text x="392" y="640" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">Cat API payload</text>
+  <rect x="548" y="630" width="24" height="12" rx="3" fill="#4a7c59"/>
+  <text x="560" y="639" fill="#ffffff" font-size="8" font-weight="600" font-family="'Geist Mono',monospace" text-anchor="middle">LS</text>
+  <text x="580" y="640" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">live subscription</text>
+  <text x="760" y="640" fill="#7a8399" font-size="10" font-family="'Geist Mono',monospace">left chip = input · right chip = output</text>
+
+  <text x="32" y="672" fill="#7a8399" font-size="10" font-family="'Geist Mono',monospace" letter-spacing="0.14em">CONCERN</text>
+  <rect x="176" y="662" width="16" height="12" rx="2" fill="rgba(255,199,44,0.20)" stroke="#e0a800" stroke-width="1.2"/>
+  <text x="200" y="672" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">Focal: the write into Caterpillar's system</text>
+  <rect x="548" y="662" width="16" height="12" rx="2" fill="rgba(90,125,154,0.07)" stroke="rgba(90,125,154,0.45)" stroke-width="1.2"/>
+  <text x="572" y="672" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">Cost control: drops known cases before any API call</text>
+
+  <text x="32" y="704" fill="#7a8399" font-size="10" font-family="'Geist Mono',monospace" letter-spacing="0.14em">FLOW</text>
+  <line x1="176" y1="700" x2="212" y2="700" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arr-muted)"/>
+  <text x="224" y="704" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">internal handoff</text>
+  <line x1="380" y1="700" x2="416" y2="700" stroke="#e0a800" stroke-width="2" marker-end="url(#arr-accent)"/>
+  <text x="428" y="704" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">audited write to Cat</text>
+  <line x1="620" y1="700" x2="656" y2="700" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arr-link)"/>
+  <text x="668" y="704" fill="#4f5d75" font-size="12" font-family="'Geist',sans-serif">handoff to EMS</text>
+</svg>
+
+  <footer>CCAT Reconciliation · Phase One · Cleveland Brothers B150 · read-only source, audited writes</footer>
+</div>
+</body>
+</html>
