@@ -77,6 +77,11 @@ Right-click the form ▸ View Code, then paste everything below the line.
 ================================================================================
 Option Explicit
 
+' Set to False once the layout is right. Module-level declarations have to sit
+' up here in the declarations section - VBA will not see a Const declared
+' between two procedures.
+Private Const DIAG As Boolean = True
+
 ' One entry per ownership record; each item is the array RecordValues returns.
 Private mRows As Collection
 
@@ -270,11 +275,6 @@ Private Sub LayoutControls()
 
     If DIAG Then ReportLayout FW, rightEdge
 End Sub
-
-' Set to False once the layout is right. This reports what the code ASKED for
-' against what each control actually reports back, which is the only way to
-' tell whether an assignment is being ignored rather than mis-calculated.
-Private Const DIAG As Boolean = True
 
 Private Sub ReportLayout(ByVal FW As Long, ByVal rightEdge As Long)
     Dim m As String
