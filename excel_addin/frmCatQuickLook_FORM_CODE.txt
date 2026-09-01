@@ -141,23 +141,37 @@ End Function
 ' them". Wherever you dragged them, they end up here. A new UserForm defaults
 ' to roughly 240x180, which is why an unsized one looks tiny.
 '
+' THE ORDER MATTERS. The form is sized FIRST, before a single control is
+' touched. MSForms will not let a control be bigger than the client area it
+' sits in - the request is silently clamped, no error, which is exactly why
+' the two lists kept coming back 354 wide when they were asked for 460 while
+' the form was still its provisional size. Size the room, then the furniture.
+'
+' After that it is plain arithmetic. CLIENT_W and CLIENT_H are the only two
+' numbers to change; every position and size below is added to or subtracted
+' from them, so the layout stays consistent whatever you set them to.
+'
 ' Do NOT put the controls in a Frame - see ControlsNotOnForm above. If you want
 ' headings between the lists, add two Labels named lblRecords and lblFields and
 ' they get positioned and captioned automatically. Leave them out and the form
 ' closes the gap.
 Private Sub LayoutControls()
-    Const PAD As Long = 8
-    Const BTN As Long = 26
-    Const LBL As Long = 13
+    '--- the room -------------------------------------------------------------
+    Const CLIENT_W As Long = 500     ' usable width inside the border
+    Const CLIENT_H As Long = 470     ' usable height below the title bar
+
+    '--- the furniture --------------------------------------------------------
+    Const PAD    As Long = 8         ' margin all the way round
+    Const GAP    As Long = 6         ' between stacked controls
+    Const ROW_H  As Long = 22        ' serial box and Look Up
+    Const BTN_H  As Long = 26        ' Copy and Paste
+    Const LBL_H  As Long = 13        ' the two headings
+    Const REC_H  As Long = 74        ' records list - about 5 rows
+    Const LOOK_W As Long = 92        ' Look Up
+    Const COPY_W As Long = 110       ' Copy Row
 
     Const UI_SIZE   As Single = 11   ' the serial box
     Const LIST_SIZE As Single = 9    ' the two lists
-    Dim ROW As Long: ROW = UI_SIZE + 11
-
-    ' What we would LIKE. Treated as a request, not a guarantee.
-    Const W_WANT     As Long = 460
-    Const REC_H_WANT As Long = 72
-    Const FLD_H_WANT As Long = 300
 
     txtSerial.Font.Name = "Consolas"
     txtSerial.Font.Size = UI_SIZE
@@ -172,119 +186,113 @@ Private Sub LayoutControls()
     btnPaste.Caption = "Paste at Selection"
 
     '--------------------------------------------------------------------------
-    ' 1. ASK the lists for the size we want, then MEASURE what they became.
+    ' 1. THE FORM, FIRST AND EXACTLY.
     '
-    ' The two ListBoxes have been refusing to resize - Left and Top apply,
-    ' Width and Height silently do not. Rather than keep fighting that, the
-    ' form is built around whatever the lists actually are. If they take the
-    ' request, everything is 460 wide; if they don't, every other control and
-    ' the form itself shrink to match them. Either way the rows line up and
-    ' the columns fit inside the list, which is what actually matters.
+    ' Width/Height are the OUTER size; InsideWidth/InsideHeight are the client
+    ' area. The difference is the border and title bar, and it is not knowable
+    ' until the form has been given a size - so ask once, measure the
+    ' difference, then ask again with it added. InsideWidth is CLIENT_W after
+    ' this, to the point, on any Windows theme.
     '--------------------------------------------------------------------------
-    Place lstRecords, PAD, 0, W_WANT, REC_H_WANT
-    Place lstFields, PAD, 0, W_WANT, FLD_H_WANT
-
-    Dim FW As Long
-    FW = lstRecords.Width
-    If lstFields.Width < FW Then FW = lstFields.Width
-    If FW < 200 Then FW = 200                    ' sanity floor
-
-    ' Make the two lists agree with each other on that width.
-    Place lstRecords, PAD, 0, FW, lstRecords.Height
-    Place lstFields, PAD, 0, FW, lstFields.Height
-
-    Dim recH As Long: recH = lstRecords.Height
-    Dim fldH As Long: fldH = lstFields.Height
+    Me.Width = CLIENT_W
+    Me.Height = CLIENT_H
+    Me.Width = CLIENT_W + (Me.Width - Me.InsideWidth)
+    Me.Height = CLIENT_H + (Me.Height - Me.InsideHeight)
 
     '--------------------------------------------------------------------------
-    ' 2. Size the form from the MEASURED content and the MEASURED chrome.
+    ' 2. One content width, used by every row, so all four share a right edge.
     '--------------------------------------------------------------------------
-    Dim labels As Long
-    labels = LabelSpace("lblRecords", LBL) + LabelSpace("lblFields", LBL)
-
-    Dim contentH As Long
-    contentH = PAD + ROW + PAD + labels + recH + PAD + fldH + PAD + BTN + PAD
-
-    Me.Width = FW + (PAD * 2) + 20               ' provisional
-    Me.Height = contentH + 40
-    Dim chromeW As Long: chromeW = Me.Width - Me.InsideWidth
-    Dim chromeH As Long: chromeH = Me.Height - Me.InsideHeight
-    Me.Width = FW + (PAD * 2) + chromeW
-    Me.Height = contentH + chromeH
+    Dim CW As Long
+    CW = CLIENT_W - (PAD * 2)                     ' 500 - 16 = 484
 
     '--------------------------------------------------------------------------
-    ' 3. Everything else is laid out to FW, so all four rows share a right edge.
+    ' 3. Down from the top.
     '--------------------------------------------------------------------------
-    Dim y As Long: y = PAD
-    Dim lookW As Long: lookW = 92
-    If lookW > FW - 120 Then lookW = FW - 120    ' keep the serial box usable
+    Dim y As Long
+    y = PAD                                       ' 8
 
-    Place txtSerial, PAD, y, FW - lookW - PAD, ROW
-    Place btnLookup, PAD + (FW - lookW - PAD) + PAD, y, lookW, ROW
-    y = y + ROW + PAD
+    Place txtSerial, PAD, y, CW - LOOK_W - GAP, ROW_H
+    Place btnLookup, PAD + CW - LOOK_W, y, LOOK_W, ROW_H
+    y = y + ROW_H + (GAP * 2)                     ' 8 + 22 + 12 = 42
 
-    y = y + LabelSpace("lblRecords", LBL)
-    Place lstRecords, PAD, y, FW, recH
-    y = y + recH + PAD
+    ' PlaceLabel returns the space it used, or 0 when you never added the
+    ' label - so the gap closes by itself either way.
+    y = y + PlaceLabel("lblRecords", RecordHeader(LIST_SIZE, CW), _
+                       PAD, y, CW, LBL_H, "Consolas", LIST_SIZE)
+    Place lstRecords, PAD, y, CW, REC_H           ' 57 .. 131
+    y = y + REC_H + GAP
 
-    y = y + PlaceLabel("lblFields", "Record detail", PAD, y, FW, LBL)
-    Place lstFields, PAD, y, FW, fldH
-    y = y + fldH + PAD
-
-    Dim copyW As Long: copyW = 110
-    If copyW > FW \ 3 Then copyW = FW \ 3
-    Place btnCopy, PAD, y, copyW, BTN
-    Place btnPaste, PAD + copyW + PAD, y, FW - copyW - PAD, BTN
+    y = y + PlaceLabel("lblFields", "Record detail", PAD, y, CW, LBL_H)
 
     '--------------------------------------------------------------------------
-    ' 4. Columns scaled to the list's REAL width, so nothing is ever clipped.
+    ' 4. Up from the bottom. The field list then takes everything in between,
+    '    so changing CLIENT_H only ever grows or shrinks that one list.
     '--------------------------------------------------------------------------
-    lstRecords.ColumnWidths = RecordColumnWidths(lstRecords.Width)
+    Dim yBtn As Long
+    yBtn = CLIENT_H - PAD - BTN_H                 ' 470 - 8 - 26 = 436
+
+    Place btnCopy, PAD, yBtn, COPY_W, BTN_H
+    Place btnPaste, PAD + COPY_W + GAP, yBtn, CW - COPY_W - GAP, BTN_H
+
+    Dim fldH As Long
+    fldH = (yBtn - GAP) - y                       ' 430 - 152 = 278, ~23 rows
+    If fldH < 60 Then fldH = 60                   ' never collapse to nothing
+    Place lstFields, PAD, y, CW, fldH
+
+    '--------------------------------------------------------------------------
+    ' 5. Columns, scaled to CW - which is now a known number, not a measured
+    '    one. The one belt-and-braces line: if a list somehow still didn't take
+    '    the width, scale to what it actually got, so it shows every column
+    '    rather than clipping DLR off the right.
+    '--------------------------------------------------------------------------
+    Dim recW As Long
+    recW = CW
+    If lstRecords.Width < recW Then recW = lstRecords.Width
+
+    lstRecords.ColumnWidths = RecordColumnWidths(recW)
+    If recW <> CW Then
+        PlaceLabel "lblRecords", RecordHeader(LIST_SIZE, recW), _
+                   PAD, lstRecords.Top - (LBL_H + 2), recW, LBL_H, _
+                   "Consolas", LIST_SIZE
+    End If
+
     lstFields.ColumnWidths = CStr(Int(lstFields.Width * 0.32)) & " pt;" & _
                              CStr(Int(lstFields.Width * 0.55)) & " pt"
 
-    PlaceLabel "lblRecords", RecordHeader(LIST_SIZE, lstRecords.Width), _
-               PAD, lstRecords.Top - (LBL + 2), FW, LBL, _
-               "Consolas", LIST_SIZE
-
-    If DIAG Then ReportLayout FW, PAD + FW
+    If DIAG Then ReportLayout CLIENT_W, CLIENT_H, PAD + CW
 End Sub
 
-' Immediate window (Ctrl+G in the VBE), not a MsgBox - you can select and
-' copy from it.
-Private Sub ReportLayout(ByVal FW As Long, ByVal rightEdge As Long)
-    Debug.Print String$(50, "-")
-    Debug.Print "form   Width=" & Me.Width & "  InsideWidth=" & Me.InsideWidth
-    Debug.Print "       Height=" & Me.Height & "  InsideHeight=" & Me.InsideHeight
-    Debug.Print "FW=" & FW & "   rightEdge asked for=" & rightEdge
+' Immediate window (Ctrl+G in the VBE), not a MsgBox - you can select and copy
+' from it. What to look for: "Inside" matches "asked for", and the "right"
+' column reads the same number on all six controls.
+Private Sub ReportLayout(ByVal clientW As Long, ByVal clientH As Long, _
+                         ByVal rightEdge As Long)
+    Debug.Print String$(52, "-")
+    Debug.Print "asked for client  " & clientW & " x " & clientH
+    Debug.Print "got Inside        " & Me.InsideWidth & " x " & Me.InsideHeight
+    Debug.Print "form outer        " & Me.Width & " x " & Me.Height
+    Debug.Print "every row should end at " & rightEdge
     Debug.Print
     Debug.Print "control        Left  Width  right   Top  Height"
-    Debug.Print String$(50, "-")
-    Debug.Print Row("txtSerial", txtSerial);
-    Debug.Print Row("btnLookup", btnLookup);
-    Debug.Print Row("lstRecords", lstRecords);
-    Debug.Print Row("lstFields", lstFields);
-    Debug.Print Row("btnCopy", btnCopy);
-    Debug.Print Row("btnPaste", btnPaste);
+    Debug.Print String$(52, "-")
+    Debug.Print CtlRow("txtSerial", txtSerial);
+    Debug.Print CtlRow("btnLookup", btnLookup);
+    Debug.Print CtlRow("lstRecords", lstRecords);
+    Debug.Print CtlRow("lstFields", lstFields);
+    Debug.Print CtlRow("btnCopy", btnCopy);
+    Debug.Print CtlRow("btnPaste", btnPaste);
 End Sub
 
-Private Function Row(ByVal nm As String, ByVal c As Object) As String
-    Row = Left$(nm & Space$(15), 15) & _
-          Right$(Space$(4) & CStr(CLng(c.Left)), 5) & _
-          Right$(Space$(6) & CStr(CLng(c.Width)), 7) & _
-          Right$(Space$(6) & CStr(CLng(c.Left + c.Width)), 7) & _
-          Right$(Space$(5) & CStr(CLng(c.Top)), 6) & _
-          Right$(Space$(6) & CStr(CLng(c.Height)), 8) & vbCrLf
-End Function
-
-' Vertical space an optional label will take, or 0 if it isn't on the form.
-' Needed up front so the form can be sized before anything is positioned.
-Private Function LabelSpace(ByVal nm As String, ByVal h As Long) As Long
-    Dim c As Object
-    On Error Resume Next
-    Set c = Me.Controls(nm)
-    On Error GoTo 0
-    If Not c Is Nothing Then LabelSpace = h + 2
+' Not called Row: LayoutControls used to declare a local of that name, and a
+' local and a module function sharing an identifier is a trap worth not
+' setting again.
+Private Function CtlRow(ByVal nm As String, ByVal c As Object) As String
+    CtlRow = Left$(nm & Space$(15), 15) & _
+             Right$(Space$(4) & CStr(CLng(c.Left)), 5) & _
+             Right$(Space$(6) & CStr(CLng(c.Width)), 7) & _
+             Right$(Space$(6) & CStr(CLng(c.Left + c.Width)), 7) & _
+             Right$(Space$(5) & CStr(CLng(c.Top)), 6) & _
+             Right$(Space$(6) & CStr(CLng(c.Height)), 8) & vbCrLf
 End Function
 
 ' Positions an OPTIONAL label and returns the vertical space it used, or 0 if
@@ -309,10 +317,10 @@ End Function
 
 ' Positions AND sizes a control in one call.
 '
-' Assigning .Width and .Height individually was silently doing nothing on the
-' two ListBoxes - no error, the value simply did not stick, while .Left and
-' .Top on the same control worked. .Move sets all four through a single call
-' and is the documented way to reposition an MSForms control.
+' .Move sets Left, Top, Width and Height through a single call and is the
+' documented way to reposition an MSForms control. It still cannot make a
+' control bigger than the client area it sits in - that gets clamped with no
+' error - so LayoutControls sizes the form before it calls this at all.
 '
 ' AutoSize is tried first because a TextBox, Label or CommandButton with it on
 ' resizes to its contents and ignores an explicit size. ListBox has no such
