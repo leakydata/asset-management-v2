@@ -52,7 +52,11 @@ Public Sub CatCheckOwnership_Ribbon(control As IRibbonControl)
 End Sub
 
 Public Sub CatBatchLookup_Ribbon(control As IRibbonControl)
-    CatBatchLookup
+    ' Module-qualified deliberately: the module CatBatchLookup also contains a
+    ' Sub CatBatchLookup, and in a compile-time reference the MODULE name wins -
+    ' "Expected variable or procedure, not module". Calling it through a shape's
+    ' OnAction string never hit this because that resolves at run time.
+    CatBatchLookup.CatBatchLookup
 End Sub
 
 Public Sub CatBatchLookupDCN_Ribbon(control As IRibbonControl)
@@ -93,6 +97,21 @@ End Sub
 Public Sub CatSettings()
     Dim url As String, key As String, party As String
 
+    ' InputBox is application-modal: while it is open Excel refuses every click
+    ' on the grid and just dings, so you cannot go and copy a value mid-prompt.
+    ' Application.InputBox with Type:=8 is the exception - the range picker is
+    ' built to let you select cells while it is showing. Offer that first, since
+    ' these values usually already live on a sheet (an old Config sheet, say).
+    If MsgBox("Import the settings from a worksheet range?" & vbCrLf & vbCrLf & _
+              "Yes - point at a two-column range: labels ProxyUrl / FunctionKey /" & vbCrLf & _
+              "      PartyNumber on the left, values on the right." & vbCrLf & vbCrLf & _
+              "No  - type or paste each value into a prompt (copy it BEFORE you" & vbCrLf & _
+              "      start, you cannot reach the sheet once a prompt is open).", _
+              vbQuestion + vbYesNo, "Cat Asset Tools - Settings") = vbYes Then
+        If ImportSettingsFromRange() Then Exit Sub
+        ' cancelled the picker - fall through to the prompts
+    End If
+
     url = InputBox( _
         "Proxy URL" & vbCrLf & vbCrLf & _
         "e.g. https://<app>.azurewebsites.net/api", _
@@ -119,10 +138,59 @@ Public Sub CatSettings()
     If StrPtr(party) = 0 Then Exit Sub
     SaveSetting REG_APP, REG_SECTION, "PartyNumber", Trim$(party)
 
-    MsgBox "Settings saved for " & Environ$("USERNAME") & "." & vbCrLf & vbCrLf & _
+    ReportSettings "Settings saved for " & Environ$("USERNAME") & "."
+End Sub
+
+' Reads ProxyUrl / FunctionKey / PartyNumber from a two-column selection.
+' Returns True if anything was imported.
+Private Function ImportSettingsFromRange() As Boolean
+    Dim rng As Range
+    On Error Resume Next
+    Set rng = Application.InputBox( _
+        Prompt:="Select the two-column settings range" & vbCrLf & _
+                "(label on the left, value on the right):", _
+        Title:="Cat Asset Tools - Import Settings", Type:=8)
+    On Error GoTo 0
+    If rng Is Nothing Then Exit Function                  ' cancelled
+
+    ' Selecting a whole column would otherwise be a million cells
+    Set rng = Application.Intersect(rng, rng.Worksheet.UsedRange)
+    If rng Is Nothing Then
+        MsgBox "That selection has no data.", vbExclamation, "Cat Asset Tools"
+        Exit Function
+    End If
+
+    Dim cell As Range, lbl As String, v As String, n As Long
+    For Each cell In rng.Columns(1).Cells
+        lbl = LCase$(Replace(Trim$(CStr(cell.Value)), " ", ""))
+        v = Trim$(CStr(cell.Offset(0, 1).Value))
+        Select Case lbl
+            Case "proxyurl"
+                SaveSetting REG_APP, REG_SECTION, "ProxyUrl", v: n = n + 1
+            Case "functionkey"
+                SaveSetting REG_APP, REG_SECTION, "FunctionKey", v: n = n + 1
+            Case "partynumber"
+                SaveSetting REG_APP, REG_SECTION, "PartyNumber", v: n = n + 1
+        End Select
+    Next cell
+
+    If n = 0 Then
+        MsgBox "No recognised labels in that range." & vbCrLf & vbCrLf & _
+               "Expected ProxyUrl, FunctionKey or PartyNumber in the left column.", _
+               vbExclamation, "Cat Asset Tools"
+        Exit Function
+    End If
+
+    ImportSettingsFromRange = True
+    ReportSettings n & " setting(s) imported for " & Environ$("USERNAME") & "."
+End Function
+
+' Shared confirmation - never echoes the key itself, only whether it is set.
+Private Sub ReportSettings(ByVal headline As String)
+    MsgBox headline & vbCrLf & vbCrLf & _
            "Proxy URL : " & GetSetting(REG_APP, REG_SECTION, "ProxyUrl", "(none)") & vbCrLf & _
-           "Key        : " & IIf(Len(GetSetting(REG_APP, REG_SECTION, "FunctionKey", "")) > 0, _
-                                 "set", "NOT SET"), _
+           "Key       : " & IIf(Len(GetSetting(REG_APP, REG_SECTION, "FunctionKey", "")) > 0, _
+                                "set", "NOT SET"), _
            vbInformation, "Cat Asset Tools"
 End Sub
 

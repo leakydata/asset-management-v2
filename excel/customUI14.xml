@@ -1,7 +1,11 @@
 <customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="CatRibbonOnLoad">
   <ribbon>
     <tabs>
-      <tab id="CatTab" label="Cat Assets" insertAfterMso="TabHome" keytip="K">
+      <!-- No insertAfterMso/insertBeforeMso: a custom tab with no positioning
+           attribute lands after all the built-in tabs. To pin it somewhere
+           specific instead, add insertAfterMso="TabHome" (or TabView,
+           TabData, TabDeveloper ...) back onto this element. -->
+      <tab id="CatTab" label="Cat Assets" keytip="K">
 
         <group id="CatGrpLookup" label="Lookup">
           <button id="CatBtnCheck" size="large"

@@ -96,6 +96,11 @@ sensitive travels with the file.
   Add-ins dialog. If you merely *open* the `.xlam`, Excel writes the full path
   into the formula.
 - **Blank button icon** means an `imageMso` name is wrong. Cosmetic; swap it.
+- **"Expected variable or procedure, not module"** — the module
+  `CatBatchLookup` also contains a `Sub CatBatchLookup`, and in a compile-time
+  reference the module name wins. `CatRibbon` calls it module-qualified as
+  `CatBatchLookup.CatBatchLookup`. The shape `OnAction` path never hit this
+  because a macro-name string resolves at run time, not compile time.
 - **"User-defined type not defined"** on compile means the Office object
   library reference is missing — change `IRibbonControl` / `IRibbonUI` to
   `Object` in `CatRibbon`, or add the reference.

@@ -198,7 +198,8 @@ End Function
 Public Function CatProxyCall(ByVal method As String, ByVal route As String, _
         ByVal query As String, ByVal jsonBody As String, ByRef statusOut As Long) As String
     Dim baseUrl As String: baseUrl = Cfg("ProxyUrl")
-    If Len(baseUrl) = 0 Then Err.Raise vbObjectError + 10, , "Config!ProxyUrl is empty."
+    If Len(baseUrl) = 0 Then Err.Raise vbObjectError + 10, , _
+        "No proxy URL set. Click Cat Assets > Settings and enter it (once per user)."
     If Right$(baseUrl, 1) = "/" Then baseUrl = Left$(baseUrl, Len(baseUrl) - 1)
 
     Dim url As String: url = baseUrl & "/" & route
@@ -210,7 +211,9 @@ Public Function CatProxyCall(ByVal method As String, ByVal route As String, _
     http.SetTimeouts 5000, 10000, 10000, 30000   ' resolve, connect, send, receive (ms)
 
     Dim key As String: key = Cfg("FunctionKey")
-    If Len(key) > 0 Then http.SetRequestHeader "x-functions-key", key
+    If Len(key) = 0 Then Err.Raise vbObjectError + 11, , _
+        "No function key set. Click Cat Assets > Settings and enter it (once per user)."
+    http.SetRequestHeader "x-functions-key", key
     http.SetRequestHeader "Accept", "application/json"
     If UCase$(method) = "POST" Then http.SetRequestHeader "Content-Type", "application/json"
 
