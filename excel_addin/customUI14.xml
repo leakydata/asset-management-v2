@@ -8,6 +8,12 @@
       <tab id="CatTab" label="Cat Assets" keytip="K">
 
         <group id="CatGrpLookup" label="Lookup">
+          <button id="CatBtnQuickLook" size="large"
+                  label="Quick Look"
+                  imageMso="ZoomCurrent75" keytip="Q"
+                  onAction="CatQuickLook_Ribbon"
+                  screentip="Look up one serial in a floating window"
+                  supertip="Read-only. Shows every field for every ownership record on one serial, without spawning a sheet. The window floats, so you can keep clicking cells - Paste at Selection drops the row into the cell you have selected, as many columns as that sheet wants."/>
           <button id="CatBtnBatchSerial" size="large"
                   label="Lookup by Serial"
                   imageMso="FindDialog" keytip="S"
@@ -33,19 +39,19 @@
                     imageMso="FileSave"
                     onAction="CatBuildAddUpdateSheet_Ribbon"
                     screentip="Build the Cat Add-Update sheet"
-                    supertip="Columns: Serial, Make Code, Model, Model Year, DCN, Ownership Type, then the optional fields. The first six are in batch-lookup column order so they paste straight across."/>
+                    supertip="Columns: Serial, Make Code, DCN, Ownership Type, Model, Model Year, then the optional fields, then Dealer Make Code. Those first six are lookup columns B:G - drag-select and paste."/>
             <button id="CatBtnBuildExpire"
                     label="Expire Sheet"
                     imageMso="Delete"
                     onAction="CatBuildExpireSheet_Ribbon"
                     screentip="Build the Cat Expire sheet"
-                    supertip="Columns: Serial, Make Code, DCN, Dealer Make Code. Expire REMOVES ownership records - always Validate before you Run."/>
+                    supertip="Columns: Serial, Make Code, DCN, then Dealer Make Code. The first three are lookup columns B:D - drag-select and paste. Expire REMOVES ownership records; always Validate before you Run."/>
             <button id="CatBtnBuildTransfer"
                     label="Transfer Sheet"
                     imageMso="AcceptInvitation"
                     onAction="CatBuildTransferSheet_Ribbon"
                     screentip="Build the Cat Transfer sheet"
-                    supertip="Columns: Serial, Make Code, Dealer Make Code, Status, Reason. Status is APPROVED or REJECTED; a reason is required to reject."/>
+                    supertip="Columns: Serial, Make Code, Status, Reason, then Dealer Make Code. The first two are lookup columns B:C. Status is APPROVED or REJECTED; a reason is required to reject. Filter a lookup on OwnershipRequestType = RECEIVED to find the ones waiting on you."/>
           </menu>
         </group>
 

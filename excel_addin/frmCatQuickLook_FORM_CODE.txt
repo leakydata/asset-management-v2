@@ -1,0 +1,243 @@
+================================================================================
+frmCatQuickLook — build it once, then paste the code below
+================================================================================
+
+A UserForm is a .frm plus a binary .frx companion, so it can't be handed over
+as importable text the way a .bas can. Building it by hand takes a couple of
+minutes and only happens once.
+
+--------------------------------------------------------------------------------
+1. CREATE THE FORM
+--------------------------------------------------------------------------------
+
+In the VBE:  Insert ▸ UserForm
+
+In the Properties window (F4), set:
+
+    (Name)      frmCatQuickLook
+    Caption     Cat Quick Look
+    Width       380
+    Height      440
+
+--------------------------------------------------------------------------------
+2. DROP ON SIX CONTROLS
+--------------------------------------------------------------------------------
+
+Names must match exactly — the code is wired to them. Sizes and positions are
+only a suggestion; drag them wherever looks right. Nothing else needs setting,
+the code configures the list columns itself.
+
+    Control          (Name)          Caption / notes
+    ---------------------------------------------------------------------
+    TextBox          txtSerial       — top left, wide
+    CommandButton    btnLookup       "Look Up"        — right of the textbox
+    ListBox          lstRecords      — under those, short (3-4 rows tall).
+                                       One line per ownership record.
+    ListBox          lstFields       — the big one, fills the middle.
+                                       Field / value pairs.
+    CommandButton    btnCopy         "Copy Row"       — bottom left
+    CommandButton    btnPaste        "Paste at Selection"  — bottom, wide
+
+Rough layout:
+
+    ┌─ Cat Quick Look ─────────────────────────────┐
+    │ [txtSerial................]  [ btnLookup ]   │
+    │ ┌─ lstRecords ─────────────────────────────┐ │
+    │ │ C01913004  DUSHORE SEWER  [OWNED/ACTIVE] │ │
+    │ │ C10001501  DUSHORE BOROUGH [OWNED/ACTIVE]│ │
+    │ └──────────────────────────────────────────┘ │
+    │ ┌─ lstFields ──────────────────────────────┐ │
+    │ │ SerialNumber      KR416089               │ │
+    │ │ MakeCode          CAT                    │ │
+    │ │ DCN               C01913004              │ │
+    │ │ OwnershipType     OWNED                  │ │
+    │ │ ...                                      │ │
+    │ └──────────────────────────────────────────┘ │
+    │ [ btnCopy ]   [ btnPaste                   ] │
+    └──────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+3. PASTE THE CODE
+--------------------------------------------------------------------------------
+
+Right-click the form ▸ View Code, then paste everything below the line.
+(Do NOT put this in a normal module — it belongs to the form.)
+
+================================================================================
+Option Explicit
+
+' One entry per ownership record; each item is the array RecordValues returns.
+Private mRows As Collection
+
+'==============================================================================
+' Setup
+'==============================================================================
+Private Sub UserForm_Initialize()
+    lstRecords.ColumnCount = 1
+
+    ' Configured here rather than in the designer so building the form by hand
+    ' stays a matter of dropping controls and naming them.
+    lstFields.ColumnCount = 2
+    lstFields.ColumnWidths = "120 pt;210 pt"
+
+    ' Enter in the serial box triggers Look Up.
+    btnLookup.Default = True
+
+    ResetDisplay
+End Sub
+
+' Called by CatQuickLook before Show, so selecting a cell that holds a serial
+' and clicking the button pre-fills it.
+Public Sub SeedSerial(ByVal s As String)
+    txtSerial.Text = s
+End Sub
+
+Private Sub UserForm_Activate()
+    txtSerial.SetFocus
+    If Len(txtSerial.Text) > 0 Then txtSerial.SelStart = 0: txtSerial.SelLength = Len(txtSerial.Text)
+End Sub
+
+'==============================================================================
+' Look up
+'==============================================================================
+Private Sub btnLookup_Click()
+    Dim serial As String
+    serial = CleanId(txtSerial.Text)
+    If Len(serial) = 0 Then
+        Me.Caption = "Cat Quick Look - enter a serial number"
+        Exit Sub
+    End If
+
+    ResetDisplay
+    Me.Caption = "Cat Quick Look - looking up " & serial & " ..."
+    DoEvents
+
+    Dim txt As String
+    On Error GoTo Fail
+    Application.Cursor = xlWait
+    txt = CatSearch(serial, "")          ' raises on a non-200
+    Application.Cursor = xlDefault
+    On Error GoTo 0
+
+    Dim recs As Object
+    Set recs = OwnershipRecords(txt)
+    If recs Is Nothing Then
+        Me.Caption = "Cat Quick Look - unexpected response"
+        Exit Sub
+    End If
+    If recs.Count = 0 Then
+        ' The call succeeded and returned nothing - that is a real answer, not
+        ' a failure, and worth saying differently.
+        Me.Caption = "Cat Quick Look - " & serial & " is NOT in CCAT"
+        Exit Sub
+    End If
+
+    Set mRows = New Collection
+    Dim i As Long, v As Variant
+    For i = 1 To recs.Count
+        v = RecordValues(recs(i))
+        mRows.Add v
+        ' DCN, DCN name, [type / status], dealer - enough to tell records apart
+        lstRecords.AddItem CStr(v(2)) & "   " & CStr(v(11)) & _
+                           "   [" & CStr(v(3)) & " / " & CStr(v(6)) & "]   " & CStr(v(14))
+    Next i
+
+    Me.Caption = "Cat Quick Look - " & recs.Count & " record(s) for " & serial
+    lstRecords.ListIndex = 0             ' fires lstRecords_Click -> ShowRecord
+    Exit Sub
+
+Fail:
+    Application.Cursor = xlDefault
+    Me.Caption = "Cat Quick Look - FAILED: " & Err.Description
+End Sub
+
+Private Sub lstRecords_Click()
+    ShowRecord
+End Sub
+
+Private Sub ShowRecord()
+    lstFields.Clear
+    If mRows Is Nothing Then Exit Sub
+    If lstRecords.ListIndex < 0 Then Exit Sub
+
+    Dim v As Variant: v = mRows(lstRecords.ListIndex + 1)
+    Dim h As Variant: h = HeaderArray()
+
+    Dim i As Long
+    For i = LBound(h) To UBound(h)
+        lstFields.AddItem CStr(h(i))
+        lstFields.List(lstFields.ListCount - 1, 1) = CStr(v(i))
+    Next i
+End Sub
+
+Private Sub ResetDisplay()
+    Set mRows = Nothing
+    lstRecords.Clear
+    lstFields.Clear
+End Sub
+
+'==============================================================================
+' Copy / paste
+'==============================================================================
+
+' Whole record as two tab-separated lines (headers, then values) - drops into
+' Excel, an email or a ticket unchanged.
+Private Sub btnCopy_Click()
+    Dim v As Variant
+    If Not Selected(v) Then Exit Sub
+
+    Dim h As Variant: h = HeaderArray()
+    Dim s As String, i As Long
+    For i = LBound(h) To UBound(h)
+        s = s & CStr(h(i)) & IIf(i < UBound(h), vbTab, "")
+    Next i
+    s = s & vbCrLf
+    For i = LBound(v) To UBound(v)
+        s = s & CStr(v(i)) & IIf(i < UBound(v), vbTab, "")
+    Next i
+
+    ' MSForms.DataObject is available because this project has a UserForm.
+    Dim d As Object
+    Set d = New MSForms.DataObject
+    d.SetText s
+    d.PutInClipboard
+
+    Me.Caption = "Cat Quick Look - copied all " & (UBound(h) + 1) & " columns"
+End Sub
+
+' Writes into whatever cell is selected RIGHT NOW - resolved at click time, so
+' it is never stale no matter how much you clicked around while this was open.
+Private Sub btnPaste_Click()
+    Dim v As Variant
+    If Not Selected(v) Then Exit Sub
+
+    Dim c As Range
+    On Error Resume Next
+    Set c = Application.ActiveCell
+    On Error GoTo 0
+    If c Is Nothing Then
+        Me.Caption = "Cat Quick Look - select a cell in a workbook first"
+        Exit Sub
+    End If
+
+    Dim n As Long
+    n = QuickLookPasteWidth(c.Worksheet)
+    QuickLookPasteAt c, v, n
+
+    Me.Caption = "Cat Quick Look - pasted " & n & " cols to " & _
+                 c.Worksheet.Name & "!" & c.Address(0, 0)
+End Sub
+
+' Hands back the selected record, or reports why it can't.
+Private Function Selected(ByRef v As Variant) As Boolean
+    If mRows Is Nothing Then
+        Me.Caption = "Cat Quick Look - look up a serial first"
+        Exit Function
+    End If
+    If lstRecords.ListIndex < 0 Then
+        Me.Caption = "Cat Quick Look - pick a record from the list first"
+        Exit Function
+    End If
+    v = mRows(lstRecords.ListIndex + 1)
+    Selected = True
+End Function

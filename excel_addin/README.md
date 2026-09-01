@@ -9,14 +9,17 @@ is no separate form.
 > `../excel/` is the older workbook build with the `Actions` form sheet. The two
 > have diverged; this folder is the one being developed.
 
-## The four modules
+## The pieces
 
-| Module | Holds |
+| File | Holds |
 |---|---|
 | `CatAssetLookup.bas` | proxy client, `=CatLookupSerial` / `=CatLookupDCN`, shared helpers, `TargetBook()` |
 | `CatBatchLookup.bas` | batch lookup by serial and by DCN |
 | `CatBatchOps.bas` | the three operation sheets — build, validate, run |
+| `CatQuickLook.bas` | single-serial floating lookup |
 | `CatRibbon.bas` | ribbon callbacks, per-user settings |
+| `frmCatQuickLook_FORM_CODE.txt` | the Quick Look UserForm — **built by hand once**, see below |
+| `customUI14.xml` | the ribbon tab |
 
 `CatBatchOps` replaces both the old `CatActions` (the named-cell form) and
 `CatBatchActions` (add/update only). Expire and Transfer became batch-capable
@@ -92,6 +95,34 @@ would otherwise look like an Add-Update sheet and Run would fire writes for
 every row. Its `QuerySerial` / `QueryDCN` column is the tell, and those sheets
 are refused outright.
 
+## Quick Look
+
+One serial, a floating window, no sheet. Batch lookup already handles a single
+serial but spends a whole sheet doing it — ten checks left you with ten
+results sheets.
+
+Select a cell holding a serial and click **Quick Look** and it pre-fills;
+otherwise type one and press Enter. Every ownership record for that serial
+appears in the top list (your DUSHORE example gives two — same CCID, two
+DCNs), and picking one shows all 22 fields as field/value.
+
+The window is **modeless** — it floats, so you can keep clicking cells while
+it's open. That's what makes the two buttons work:
+
+- **Copy Row** puts the whole record on the clipboard as two tab-separated
+  lines, headers then values. Drops into Excel, an email or a ticket.
+- **Paste at Selection** writes into whatever cell is selected *at the moment
+  you click*, so it's never stale. It pastes **contextually** — 2 columns on
+  `Cat Transfer`, 3 on `Cat Expire`, 6 on `Cat Add-Update`, all 22 anywhere
+  else. Same nesting as the drag-select blocks.
+
+So: sit on `Cat Add-Update` row 5, look a serial up, click Paste, and the six
+required fields land at A5. For one-off rows that beats the drag-select.
+
+Pasted cells are forced to text format — a serial like `00123`, or a DCN that
+looks numeric, would otherwise be silently converted to a number and stop
+matching CCAT.
+
 ## Validation rules
 
 Every operation requires a Serial and exactly one of Make Code / Dealer Make
@@ -114,8 +145,11 @@ overwrite what CCAT already holds.
 
 ## Build it
 
-1. Blank workbook → import the four `.bas` files plus `JsonConverter.bas`
+1. Blank workbook → import the five `.bas` files plus `JsonConverter.bas`
    (VBA-JSON) → add the **Microsoft Scripting Runtime** reference.
+   Then build the Quick Look form — `frmCatQuickLook_FORM_CODE.txt` has the
+   six control names and the code to paste. Skip it and everything else still
+   works; only the Quick Look button will error.
 2. Delete any `Config` sheet — settings live in the registry now, and you don't
    want a key inside the file.
 3. **File ▸ Save As ▸ Excel Add-In (`.xlam`)**, named `CatAssetTools.xlam`.
