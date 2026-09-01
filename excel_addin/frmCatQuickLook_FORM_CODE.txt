@@ -187,6 +187,8 @@ Private Sub LayoutControls()
 
     Me.Caption = "Cat Quick Look"
     btnLookup.Caption = "Look Up"
+    If DIAG Then ProbeList "lstRecords", lstRecords
+    If DIAG Then ProbeList "lstFields", lstFields
     btnCopy.Caption = "Copy Row"
     btnPaste.Caption = "Paste at Selection"
 
@@ -266,6 +268,49 @@ Private Sub LayoutControls()
 
     If DIAG Then ReportLayout CLIENT_W, CLIENT_H, PAD + CW
 End Sub
+
+' One-off diagnostic. Assigns the size three different ways and reads it back
+' after each, reporting any error rather than swallowing it. Whichever line
+' fails to move the number is the answer - and "start" shows what the control
+' was saved as in the designer, which is the number to compare 354 against.
+Private Sub ProbeList(ByVal nm As String, ByVal c As Object)
+    Debug.Print String$(52, "=")
+    Debug.Print nm & " is a " & TypeName(c)
+    Debug.Print "  start          " & Fmt(c.Width) & " x " & Fmt(c.Height)
+
+    On Error Resume Next
+
+    Err.Clear
+    c.Width = 484
+    Debug.Print "  .Width = 484   -> " & Fmt(c.Width) & ErrTail
+
+    Err.Clear
+    c.Height = 200
+    Debug.Print "  .Height = 200  -> " & Fmt(c.Height) & ErrTail
+
+    Err.Clear
+    c.Move 8, 50, 484, 200
+    Debug.Print "  .Move 484,200  -> " & Fmt(c.Width) & " x " & Fmt(c.Height) & ErrTail
+
+    Err.Clear
+    Debug.Print "  IntegralHeight=" & c.IntegralHeight & _
+                "  ColumnHeads=" & c.ColumnHeads & _
+                "  ColumnCount=" & c.ColumnCount
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+Private Function Fmt(ByVal v As Variant) As String
+    On Error Resume Next
+    Fmt = CStr(CLng(v))
+End Function
+
+' Empty when the assignment went through, otherwise the error it raised.
+Private Function ErrTail() As String
+    If Err.Number <> 0 Then
+        ErrTail = "   *** ERROR " & Err.Number & ": " & Err.Description
+    End If
+End Function
 
 ' Immediate window (Ctrl+G in the VBE), not a MsgBox - you can select and copy
 ' from it. What to look for: "Inside" matches "asked for", and the "right"
