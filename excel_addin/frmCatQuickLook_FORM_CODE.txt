@@ -12,31 +12,30 @@ minutes and only happens once.
 
 In the VBE:  Insert ▸ UserForm
 
-In the Properties window (F4), set:
+In the Properties window (F4) set ONE property:
 
     (Name)      frmCatQuickLook
-    Caption     Cat Quick Look
-    Width       380
-    Height      440
+
+Nothing else. Size, caption and button text are all set by the code — a fresh
+UserForm defaults to about 240x180, which looks tiny, and the code fixes that
+on open.
 
 --------------------------------------------------------------------------------
 2. DROP ON SIX CONTROLS
 --------------------------------------------------------------------------------
 
-Names must match exactly — the code is wired to them. Sizes and positions are
-only a suggestion; drag them wherever looks right. Nothing else needs setting,
-the code configures the list columns itself.
+Names must match exactly — the code is wired to them. **Position and size do
+not matter at all** — drop them anywhere, the code lays them out on open. You
+don't need to set captions either.
 
-    Control          (Name)          Caption / notes
-    ---------------------------------------------------------------------
-    TextBox          txtSerial       — top left, wide
-    CommandButton    btnLookup       "Look Up"        — right of the textbox
-    ListBox          lstRecords      — under those, short (3-4 rows tall).
-                                       One line per ownership record.
-    ListBox          lstFields       — the big one, fills the middle.
-                                       Field / value pairs.
-    CommandButton    btnCopy         "Copy Row"       — bottom left
-    CommandButton    btnPaste        "Paste at Selection"  — bottom, wide
+    Control          (Name)
+    ------------------------------------
+    TextBox          txtSerial
+    CommandButton    btnLookup
+    ListBox          lstRecords
+    ListBox          lstFields
+    CommandButton    btnCopy
+    CommandButton    btnPaste
 
 Rough layout:
 
@@ -73,17 +72,69 @@ Private mRows As Collection
 ' Setup
 '==============================================================================
 Private Sub UserForm_Initialize()
-    lstRecords.ColumnCount = 1
+    LayoutControls
 
-    ' Configured here rather than in the designer so building the form by hand
-    ' stays a matter of dropping controls and naming them.
+    lstRecords.ColumnCount = 1
     lstFields.ColumnCount = 2
-    lstFields.ColumnWidths = "120 pt;210 pt"
 
     ' Enter in the serial box triggers Look Up.
     btnLookup.Default = True
 
     ResetDisplay
+End Sub
+
+' Everything about the form's appearance is set here rather than in the
+' designer, so building it by hand is only ever "drop six controls and name
+' them". Wherever you dragged them, they end up here. A new UserForm defaults
+' to roughly 240x180, which is why an unsized one looks tiny.
+Private Sub LayoutControls()
+    Const PAD As Long = 8
+    Const ROW As Long = 20
+    Const BTN As Long = 26
+    Const W   As Long = 400          ' usable width inside the border
+
+    Me.Caption = "Cat Quick Look"
+
+    btnLookup.Caption = "Look Up"
+    btnCopy.Caption = "Copy Row"
+    btnPaste.Caption = "Paste at Selection"
+
+    txtSerial.Left = PAD
+    txtSerial.Top = PAD
+    txtSerial.Width = W - 100
+    txtSerial.Height = ROW
+
+    btnLookup.Left = PAD + txtSerial.Width + PAD
+    btnLookup.Top = PAD
+    btnLookup.Width = 92 - PAD
+    btnLookup.Height = ROW
+
+    lstRecords.Left = PAD
+    lstRecords.Top = txtSerial.Top + ROW + PAD
+    lstRecords.Width = W
+    lstRecords.Height = 56
+
+    lstFields.Left = PAD
+    lstFields.Top = lstRecords.Top + lstRecords.Height + PAD
+    lstFields.Width = W
+    lstFields.Height = 300
+    ' Proportional, so the value column still fits if you widen the form later.
+    lstFields.ColumnWidths = CStr(Int(W * 0.35)) & " pt;" & CStr(Int(W * 0.6)) & " pt"
+
+    btnCopy.Left = PAD
+    btnCopy.Top = lstFields.Top + lstFields.Height + PAD
+    btnCopy.Width = 110
+    btnCopy.Height = BTN
+
+    btnPaste.Left = btnCopy.Left + btnCopy.Width + PAD
+    btnPaste.Top = btnCopy.Top
+    btnPaste.Width = W - btnCopy.Width - PAD
+    btnPaste.Height = BTN
+
+    ' Size the form to the content rather than guessing - the extra allows for
+    ' the window border and the title bar.
+    Me.Width = W + (PAD * 2) + 6
+    Me.Height = btnPaste.Top + BTN + PAD + 26
 End Sub
 
 ' Called by CatQuickLook before Show, so selecting a cell that holds a serial
