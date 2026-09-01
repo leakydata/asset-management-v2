@@ -144,7 +144,9 @@ Private Sub LayoutControls()
     Const PAD As Long = 8
     Const BTN As Long = 26
     Const LBL As Long = 13
-    Const W   As Long = 400          ' usable width inside the border
+    ' Every full-width control spans PAD .. PAD + W, so the serial row, both
+    ' lists and the button row share one right edge.
+    Const W   As Long = 460          ' usable width inside the border
 
     ' MSForms has no "fit the text to the box" - AutoSize resizes the BOX to
     ' the text, which is the wrong way round. You set Font.Size and make the
@@ -181,7 +183,7 @@ Private Sub LayoutControls()
 
     btnLookup.Left = PAD + txtSerial.Width + PAD
     btnLookup.Top = y
-    btnLookup.Width = 92 - PAD
+    btnLookup.Width = (PAD + W) - btnLookup.Left    ' flush with the right edge
     btnLookup.Height = ROW
     y = y + ROW + PAD
 
@@ -202,8 +204,10 @@ Private Sub LayoutControls()
     lstFields.Top = y
     lstFields.Width = W
     lstFields.Height = 300
-    ' Proportional, so the value column still fits if you widen the form later.
-    lstFields.ColumnWidths = CStr(Int(W * 0.35)) & " pt;" & CStr(Int(W * 0.6)) & " pt"
+    ' Proportional, and deliberately short of the full width - the totals have
+    ' to clear the vertical scrollbar, or the list grows a horizontal one too
+    ' and clips the last column.
+    lstFields.ColumnWidths = CStr(Int(W * 0.32)) & " pt;" & CStr(Int(W * 0.55)) & " pt"
     y = y + lstFields.Height + PAD
 
     btnCopy.Left = PAD
@@ -400,7 +404,7 @@ End Sub
 ' enough records to need scrolling.
 Private Function RecordColumns() As Variant
     '            DCN  name type status sub dealer
-    RecordColumns = Array(68, 130, 55, 50, 30, 33)
+    RecordColumns = Array(68, 155, 58, 52, 30, 38)
 End Function
 
 Private Function RecordColumnWidths() As String
