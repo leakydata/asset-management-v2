@@ -8,66 +8,60 @@
       <tab id="CatTab" label="Cat Assets" keytip="K">
 
         <group id="CatGrpLookup" label="Lookup">
-          <button id="CatBtnCheck" size="large"
-                  label="Check Ownership"
-                  imageMso="FindDialog" keytip="C"
-                  onAction="CatCheckOwnership_Ribbon"
-                  screentip="Check who owns a serial"
-                  supertip="Read-only. Fill the Serial cell on the Actions sheet, then click. Summarizes every ownership record for that serial."/>
-          <button id="CatBtnBatchSerial"
-                  label="Batch Lookup by Serial"
-                  imageMso="Refresh" keytip="S"
+          <button id="CatBtnBatchSerial" size="large"
+                  label="Lookup by Serial"
+                  imageMso="FindDialog" keytip="S"
                   onAction="CatBatchLookup_Ribbon"
                   screentip="Look up a column of serial numbers"
-                  supertip="Prompts you to select a column of serials, then writes an Asset Lookup Results sheet. Failed rows are shaded red - those are unknown, not empty."/>
-          <button id="CatBtnBatchDcn"
-                  label="Batch Lookup by DCN"
+                  supertip="Read-only. Select a column of serials - one is fine - and it writes an Asset Lookup Results sheet. Failed rows are shaded red: those are unknown, not empty. The results columns paste straight into the operation sheets."/>
+          <button id="CatBtnBatchDcn" size="large"
+                  label="Lookup by DCN"
                   imageMso="Refresh" keytip="D"
                   onAction="CatBatchLookupDCN_Ribbon"
                   screentip="Look up a column of DCNs"
-                  supertip="Same as batch serial lookup, filtered by Dealer Customer Number. One DCN usually owns many assets, so expect several rows per input."/>
+                  supertip="Read-only. Same as serial lookup, filtered by Dealer Customer Number. One DCN usually owns many assets, so expect several rows per input value."/>
         </group>
 
-        <group id="CatGrpActions" label="Single Asset">
-          <button id="CatBtnAddUpdate" size="large"
-                  label="Add / Update"
-                  imageMso="FileSave" keytip="A"
-                  onAction="CatAddOwnership_Ribbon"
-                  screentip="Add or update one ownership record"
-                  supertip="WRITES TO PRODUCTION CCAT. New records require Ownership Type, Model and Model Year. On an existing record, only the fields you fill are updated - blank fields are left out of the request entirely."/>
-          <button id="CatBtnExpire" size="large"
-                  label="Expire"
-                  imageMso="Delete" keytip="X"
-                  onAction="CatExpireOwnership_Ribbon"
-                  screentip="Expire one ownership record"
-                  supertip="WRITES TO PRODUCTION CCAT. Removes the ownership record. Expiring a PENDING record cancels its transfer request. Asks to confirm first."/>
-          <button id="CatBtnTransfer" size="large"
-                  label="Approve / Reject"
-                  imageMso="AcceptInvitation" keytip="T"
-                  onAction="CatTransferDecision_Ribbon"
-                  screentip="Decide a pending transfer request"
-                  supertip="WRITES TO PRODUCTION CCAT. Set Status to APPROVED or REJECTED on the Actions sheet. A reason is required to reject. No DCN is used for this endpoint."/>
-          <button id="CatBtnSetupActions"
-                  label="Build Actions Sheet"
-                  imageMso="TableInsert" keytip="B"
-                  onAction="CatSetupActionsSheet_Ribbon"
-                  screentip="Create the Actions input sheet"
-                  supertip="Run once per workbook. Builds an Actions sheet with labeled input cells for the buttons in this group."/>
+        <group id="CatGrpBuild" label="Build Sheet">
+          <menu id="CatMenuBuild" size="large"
+                label="Build Sheet"
+                imageMso="TableInsert" keytip="B" itemSize="normal"
+                screentip="Create an operation input sheet"
+                supertip="Each sheet is a table: one row per asset, a Result column on the right. A single asset is just one row.">
+            <button id="CatBtnBuildAdd"
+                    label="Add / Update Sheet"
+                    imageMso="FileSave"
+                    onAction="CatBuildAddUpdateSheet_Ribbon"
+                    screentip="Build the Cat Add-Update sheet"
+                    supertip="Columns: Serial, Make Code, Model, Model Year, DCN, Ownership Type, then the optional fields. The first six are in batch-lookup column order so they paste straight across."/>
+            <button id="CatBtnBuildExpire"
+                    label="Expire Sheet"
+                    imageMso="Delete"
+                    onAction="CatBuildExpireSheet_Ribbon"
+                    screentip="Build the Cat Expire sheet"
+                    supertip="Columns: Serial, Make Code, DCN, Dealer Make Code. Expire REMOVES ownership records - always Validate before you Run."/>
+            <button id="CatBtnBuildTransfer"
+                    label="Transfer Sheet"
+                    imageMso="AcceptInvitation"
+                    onAction="CatBuildTransferSheet_Ribbon"
+                    screentip="Build the Cat Transfer sheet"
+                    supertip="Columns: Serial, Make Code, Dealer Make Code, Status, Reason. Status is APPROVED or REJECTED; a reason is required to reject."/>
+          </menu>
         </group>
 
-        <group id="CatGrpBatchWrite" label="Batch Add / Update">
-          <button id="CatBtnRunBatch" size="large"
-                  label="Run Batch"
+        <group id="CatGrpRun" label="Active Sheet">
+          <button id="CatBtnValidate" size="large"
+                  label="Validate"
+                  imageMso="CheckSpelling" keytip="V"
+                  onAction="CatValidateSheet_Ribbon"
+                  screentip="Check every row without sending anything"
+                  supertip="SENDS NOTHING. Works out the operation from the active sheet, checks every row, and writes the outcome to the Result column - green ready, yellow skipped with the reason. On Add / Update it also lists which optional fields are being left out. Always do this first."/>
+          <button id="CatBtnRun" size="large"
+                  label="Run"
                   imageMso="ExportExcel" keytip="R"
-                  onAction="CatBatchAddUpdate_Ribbon"
-                  screentip="Add or update every row on the Batch Add-Update sheet"
-                  supertip="WRITES TO PRODUCTION CCAT, one row at a time. One confirmation for the whole batch. Each row gets a colour-coded result: green ok, red failed, yellow skipped. Add/update is idempotent, so failed rows are safe to re-run."/>
-          <button id="CatBtnSetupBatch"
-                  label="Build Batch Sheet"
-                  imageMso="TableInsert" keytip="G"
-                  onAction="CatSetupBatchAddUpdateSheet_Ribbon"
-                  screentip="Create the Batch Add-Update input sheet"
-                  supertip="Run once per workbook. Builds the sheet with the right column headers and an Ownership Type dropdown."/>
+                  onAction="CatRunSheet_Ribbon"
+                  screentip="Send every valid row on the active sheet"
+                  supertip="WRITES TO PRODUCTION CCAT. Works out the operation from the active sheet and confirms once with the row count. Each row gets a colour-coded result: green ok, red failed, yellow skipped. Add / update is idempotent, so failed rows are safe to re-run."/>
         </group>
 
         <group id="CatGrpSetup" label="Setup">
@@ -76,7 +70,7 @@
                   imageMso="PropertySheet" keytip="P"
                   onAction="CatSettings_Ribbon"
                   screentip="Set the proxy URL and function key"
-                  supertip="Stored per-user in the Windows registry, not inside this add-in file. Each person enters their own; the key is never distributed with the .xlam."/>
+                  supertip="Stored per-user in the Windows registry, not inside this add-in file. You can point at a two-column range on a sheet instead of typing them."/>
         </group>
 
       </tab>

@@ -1,113 +1,129 @@
-# Cat Asset Tools — Excel add-in (.xlam) build
+# Cat Asset Tools — Excel add-in (.xlam)
 
-The same five modules as [`../excel/`](../excel/), converted to run as a loaded
-**add-in** rather than as code inside one workbook. Install it once and the
-buttons work in every workbook, with nothing to open.
+A ribbon tab that works in every workbook. Install once, nothing to open.
 
-Use this folder if you want a ribbon tab. Use `../excel/` if you want a
-self-contained `.xlsm` someone can email.
+Every operation is the same shape: **a sheet of rows with a Result column**. A
+single asset is just a batch of one — type or paste one row and run it. There
+is no separate form.
 
-## What changed, and why
+> `../excel/` is the older workbook build with the `Actions` form sheet. The two
+> have diverged; this folder is the one being developed.
 
-**`ThisWorkbook` is the add-in.** That's the whole conversion. In an `.xlam`,
-`ThisWorkbook` is the hidden add-in file itself — so the original code would
-have built the Actions sheet, the Batch Add-Update sheet and every results
-sheet *inside a workbook nobody can see*. Every button would have appeared to
-run and produced nothing.
+## The four modules
 
-The rule applied throughout: anything the user is meant to see goes to the
-workbook they're working in; only genuine add-in resources stay `ThisWorkbook`.
+| Module | Holds |
+|---|---|
+| `CatAssetLookup.bas` | proxy client, `=CatLookupSerial` / `=CatLookupDCN`, shared helpers, `TargetBook()` |
+| `CatBatchLookup.bas` | batch lookup by serial and by DCN |
+| `CatBatchOps.bas` | the three operation sheets — build, validate, run |
+| `CatRibbon.bas` | ribbon callbacks, per-user settings |
 
-| Where | Before | After |
-|---|---|---|
-| `CatActions.NV` | `ThisWorkbook.Names` | `TargetBook().Names` |
-| `CatActions.SetResult` | `ThisWorkbook.Names` | `ActiveWorkbook.Names` (never raises — it runs inside error handlers) |
-| `CatActions.CatSetupActionsSheet` | `ThisWorkbook.Worksheets` | `TargetBook().Worksheets` |
-| `CatActions.AddList` | `ThisWorkbook.Names` | `ws.Parent.Names` |
-| `CatBatchActions.TargetSheet` | `ThisWorkbook.Worksheets` | `TargetBook().Worksheets` |
-| `CatBatchActions.CatSetupBatchAddUpdateSheet` | `ThisWorkbook.Worksheets` | `TargetBook().Worksheets` |
-| `CatBatchLookup.MakeOutputSheet` | `ThisWorkbook.Worksheets` | takes a `Workbook` argument |
-| Shape `OnAction` | bare macro name | `'CatAssetTools.xlam'!Macro` |
+`CatBatchOps` replaces both the old `CatActions` (the named-cell form) and
+`CatBatchActions` (add/update only). Expire and Transfer became batch-capable
+in the process — they weren't before.
 
-`TargetBook()` is new, in `CatAssetLookup`. It returns `ActiveWorkbook` and
-raises a readable error if there's no workbook open, or if the add-in somehow
-targets itself — otherwise those cases fail as a confusing "required field"
-message much later.
+## Column order is deliberate
 
-Results from a batch lookup go to `rng.Worksheet.Parent` — the workbook the
-selection came from — rather than `ActiveWorkbook`, so they land next to the
-input even if the user picked a range in another workbook.
+The leading columns of every operation sheet appear in the **same relative
+order as the batch-lookup output**, so you can Ctrl-select the matching columns
+on a results sheet, copy, and paste them straight in. Excel pastes a
+multi-area column selection as one contiguous block in left-to-right order.
 
-**Config moved out of the worksheet.** The old `Config` sheet would ship
-*inside* the distributed `.xlam`, function key and all. `Cfg()` now reads
-per-user registry settings:
+```
+lookup output :  SerialNumber MakeCode MakeName Model ModelYear AssetName
+                 DealerCode DealerName DCN DcnName CCID CcidName
+                 OwnershipType Status
+                 (1)          (2)      (4)   (5)             (9)     (13)
 
-```vb
-Private Function Cfg(ByVal label As String) As String
-    Cfg = GetSetting(REG_APP, REG_SECTION, label, "")
-End Function
+Add-Update    :  Serial       Make Code Model Model Year     DCN     Ownership Type
 ```
 
-The labels are unchanged — `ProxyUrl`, `FunctionKey`, `PartyNumber` — so no
-call site needed editing. `CatRibbon.CatSettings` prompts for all three and is
-wired to the ribbon's Settings button. `CatClearSettings` wipes them, which
-matters on a shared machine.
+| Sheet | Columns |
+|---|---|
+| `Cat Add-Update` | Serial, Make Code, Model, Model Year, DCN, Ownership Type, Dealer Make Code, Product Family Code/Name, Base/Custom Asset Name, Result |
+| `Cat Expire` | Serial, Make Code, DCN, Dealer Make Code, Result |
+| `Cat Transfer` | Serial, Make Code, Dealer Make Code, Status, Reason, Result |
 
-This makes `CatAssetLookup` depend on `CatRibbon` for the `REG_APP` /
-`REG_SECTION` constants. Import both.
+Anything with no lookup counterpart sits after the aligned block. Headers are
+matched by name — case, spaces and punctuation ignored — so extra columns and
+reordering are both harmless.
 
-**Ribbon callbacks.** A ribbon `onAction` must be
-`Sub Name(control As IRibbonControl)`, and the existing macros take no
-arguments. `CatRibbon` holds ten one-line wrappers, so `CatAddOwnership` and
-friends stay callable from Alt+F8 and Assign Macro exactly as before.
+## Two buttons drive all three
+
+**Validate** and **Run** act on the **active sheet** and work out the operation
+from its name, falling back to its headers if you've renamed it (it says which
+operation it inferred, and waits for you to confirm).
+
+- **Validate** sends nothing. It checks every row and writes the outcome to the
+  Result column — green ready, yellow skipped with the reason. On Add/Update it
+  also lists which optional fields are being left out, so the omit-blanks rule
+  is visible before anything goes.
+- **Run** confirms once with the row count, then sends. Green ok, red failed,
+  yellow skipped.
+
+A batch-lookup **results** sheet also has an `OwnershipType` column, so it
+would otherwise look like an Add-Update sheet and Run would fire writes for
+every row. Its `QuerySerial` / `QueryDCN` column is the tell, and those sheets
+are refused outright.
+
+## Validation rules
+
+Every operation requires a Serial and exactly one of Make Code / Dealer Make
+Code — the API rejects both together and rejects neither.
+
+| Operation | Also required |
+|---|---|
+| Add / Update | DCN, **Ownership Type** (one of owned/rental/leased/sold/inventory/unknown). Model Year must be 4 digits if given. |
+| Expire | DCN |
+| Transfer | Status = APPROVED or REJECTED; a Reason when rejecting |
+
+**Ownership Type is required on every row by choice, not by the API.** Cat only
+demands it for a *new* record. Enforcing it turns the most common rejection
+into a skipped row you can see and fix. The trade: every update then rewrites
+`ownershipTypeCode`, so pasting a stale value overwrites a correct one. Pasted
+from a fresh lookup it's the current value, which is harmless.
+
+Blank optional cells are still omitted from the request entirely — they never
+overwrite what CCAT already holds.
 
 ## Build it
 
-1. Open a blank workbook, import all five `.bas` files plus `JsonConverter.bas`
-   (VBA-JSON), and add the **Microsoft Scripting Runtime** reference
-   (Tools ▸ References).
-2. Delete any `Config` sheet — it's not used any more and you don't want a key
-   in the file.
-3. **File ▸ Save As ▸ Excel Add-In (`.xlam`)**. Name it `CatAssetTools.xlam`;
-   it defaults to `%APPDATA%\Microsoft\AddIns\`.
-4. Close it in Excel, then open the `.xlam` in the
+1. Blank workbook → import the four `.bas` files plus `JsonConverter.bas`
+   (VBA-JSON) → add the **Microsoft Scripting Runtime** reference.
+2. Delete any `Config` sheet — settings live in the registry now, and you don't
+   want a key inside the file.
+3. **File ▸ Save As ▸ Excel Add-In (`.xlam`)**, named `CatAssetTools.xlam`.
+4. Close it, open it in the
    [Office RibbonX Editor](https://github.com/fernandreu/office-ribbonx-editor) →
-   **Insert ▸ Office 2010+ Custom UI Part** → paste `customUI14.xml` → Validate
-   → Save.
-5. Back in Excel: **File ▸ Options ▸ Add-ins ▸ Manage: Excel Add-ins ▸ Go** and
-   tick it.
-6. Click **Cat Assets ▸ Settings** and enter the proxy URL and function key.
+   **Insert ▸ Office 2010+ Custom UI Part** → paste `customUI14.xml` → Validate → Save.
+5. **File ▸ Options ▸ Add-ins ▸ Manage: Excel Add-ins ▸ Go** → tick it.
+6. **Cat Assets ▸ Settings** — type the proxy URL and key, or point at a
+   two-column range (an old Config sheet works as-is).
+
+Ribbon XML is read only when the add-in loads, so **restart Excel** after any
+edit to it.
 
 ## Deploying to other people
 
 Put the `.xlam` on a share and add that share as a **Trusted Location**
-(File ▸ Options ▸ Trust Center ▸ Trust Center Settings ▸ Trusted Locations,
-with *Allow Trusted Locations on my network* ticked). Without it Excel blocks
-the macros and the buttons silently do nothing.
-
-Each person installs it once and enters their own key via Settings. Nothing
-sensitive travels with the file.
+(with *Allow Trusted Locations on my network* ticked). Without it Excel blocks
+the macros and the buttons silently do nothing. Each person installs once and
+enters their own key.
 
 ## Known gotchas
 
-- **Macros don't appear in Alt+F8** for a loaded add-in. That's normal — the
-  ribbon is how you run them; type the name if you need the dialog.
-- **`=CatLookupSerial(...)` needs the add-in properly installed** via the
-  Add-ins dialog. If you merely *open* the `.xlam`, Excel writes the full path
-  into the formula.
-- **Blank button icon** means an `imageMso` name is wrong. Cosmetic; swap it.
-- **"Expected variable or procedure, not module"** — the module
-  `CatBatchLookup` also contains a `Sub CatBatchLookup`, and in a compile-time
-  reference the module name wins. `CatRibbon` calls it module-qualified as
-  `CatBatchLookup.CatBatchLookup`. The shape `OnAction` path never hit this
-  because a macro-name string resolves at run time, not compile time.
-- **"User-defined type not defined"** on compile means the Office object
-  library reference is missing — change `IRibbonControl` / `IRibbonUI` to
-  `Object` in `CatRibbon`, or add the reference.
+- **Macros don't appear in Alt+F8** for a loaded add-in. Normal — use the ribbon.
+- **`=CatLookupSerial(...)` needs the add-in properly installed** via the Add-ins
+  dialog. If you merely *open* the `.xlam`, Excel writes the full path into the formula.
+- **"Expected variable or procedure, not module"** — the module `CatBatchLookup`
+  also contains a `Sub CatBatchLookup`, and in a compile-time reference the module
+  name wins. `CatRibbon` calls it module-qualified as `CatBatchLookup.CatBatchLookup`.
+- **"User-defined type not defined"** — the Office object library reference is
+  missing; change `IRibbonControl` / `IRibbonUI` to `Object`, or add the reference.
+- **Blank button icon** — an `imageMso` name is wrong. Cosmetic.
 
 ## What this still doesn't fix
 
-The add-in talks to the Azure proxy directly, so none of it writes a
+The add-in talks to the Azure proxy directly, so nothing here writes a
 `CCAT_AUDIT` row and none of the Snowflake business rules apply. Manual edits
-are the ones most worth having a record of. See the Streamlit-in-Snowflake
-option before this becomes the permanent home for manual updates.
+are the ones most worth having a record of.

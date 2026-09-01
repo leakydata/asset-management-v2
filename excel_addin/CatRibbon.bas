@@ -47,15 +47,12 @@ End Sub
 '==============================================================================
 ' Button callbacks - thin wrappers over the real macros
 '==============================================================================
-Public Sub CatCheckOwnership_Ribbon(control As IRibbonControl)
-    CatCheckOwnership
-End Sub
 
+' --- read-only lookups -------------------------------------------------------
 Public Sub CatBatchLookup_Ribbon(control As IRibbonControl)
     ' Module-qualified deliberately: the module CatBatchLookup also contains a
     ' Sub CatBatchLookup, and in a compile-time reference the MODULE name wins -
-    ' "Expected variable or procedure, not module". Calling it through a shape's
-    ' OnAction string never hit this because that resolves at run time.
+    ' "Expected variable or procedure, not module".
     CatBatchLookup.CatBatchLookup
 End Sub
 
@@ -63,30 +60,29 @@ Public Sub CatBatchLookupDCN_Ribbon(control As IRibbonControl)
     CatBatchLookupDCN
 End Sub
 
-Public Sub CatAddOwnership_Ribbon(control As IRibbonControl)
-    CatAddOwnership
+' --- build the operation sheets ----------------------------------------------
+Public Sub CatBuildAddUpdateSheet_Ribbon(control As IRibbonControl)
+    CatBuildAddUpdateSheet
 End Sub
 
-Public Sub CatExpireOwnership_Ribbon(control As IRibbonControl)
-    CatExpireOwnership
+Public Sub CatBuildExpireSheet_Ribbon(control As IRibbonControl)
+    CatBuildExpireSheet
 End Sub
 
-Public Sub CatTransferDecision_Ribbon(control As IRibbonControl)
-    CatTransferDecision
+Public Sub CatBuildTransferSheet_Ribbon(control As IRibbonControl)
+    CatBuildTransferSheet
 End Sub
 
-Public Sub CatSetupActionsSheet_Ribbon(control As IRibbonControl)
-    CatSetupActionsSheet
+' --- act on whatever sheet is in front of you --------------------------------
+Public Sub CatValidateSheet_Ribbon(control As IRibbonControl)
+    CatValidateSheet
 End Sub
 
-Public Sub CatBatchAddUpdate_Ribbon(control As IRibbonControl)
-    CatBatchAddUpdate
+Public Sub CatRunSheet_Ribbon(control As IRibbonControl)
+    CatRunSheet
 End Sub
 
-Public Sub CatSetupBatchAddUpdateSheet_Ribbon(control As IRibbonControl)
-    CatSetupBatchAddUpdateSheet
-End Sub
-
+' --- setup -------------------------------------------------------------------
 Public Sub CatSettings_Ribbon(control As IRibbonControl)
     CatSettings
 End Sub
