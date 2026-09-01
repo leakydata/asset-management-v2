@@ -119,21 +119,26 @@ End Sub
 
 ' Names any of the six that were dropped into a container rather than straight
 ' onto the form.
+'
+' Uses the direct control references, NOT Me.Controls(name). That lookup does
+' not reliably reach a control nested inside a Frame - it fails, the error is
+' swallowed, and the control is skipped, so the check reported "all clear" for
+' exactly the case it exists to catch.
 Private Function ControlsNotOnForm() As String
-    Dim nm As Variant, c As Object
-    For Each nm In Array("txtSerial", "btnLookup", "lstRecords", _
-                         "lstFields", "btnCopy", "btnPaste")
-        Set c = Nothing
-        On Error Resume Next
-        Set c = Me.Controls(CStr(nm))
-        On Error GoTo 0
-        If Not c Is Nothing Then
-            If Not c.Parent Is Me Then
-                ControlsNotOnForm = ControlsNotOnForm & _
-                    IIf(Len(ControlsNotOnForm) > 0, ", ", "") & CStr(nm)
-            End If
-        End If
-    Next nm
+    ControlsNotOnForm = StrayOne("txtSerial", txtSerial) _
+                      & StrayOne("btnLookup", btnLookup) _
+                      & StrayOne("lstRecords", lstRecords) _
+                      & StrayOne("lstFields", lstFields) _
+                      & StrayOne("btnCopy", btnCopy) _
+                      & StrayOne("btnPaste", btnPaste)
+    If Len(ControlsNotOnForm) > 2 Then
+        ControlsNotOnForm = Mid$(ControlsNotOnForm, 3)
+    End If
+End Function
+
+Private Function StrayOne(ByVal nm As String, ByVal c As Object) As String
+    If c Is Nothing Then Exit Function
+    If Not c.Parent Is Me Then StrayOne = ", " & nm
 End Function
 
 ' Everything about the form's appearance is set here rather than in the
@@ -281,7 +286,37 @@ Private Sub ReportLayout(ByVal clientW As Long, ByVal clientH As Long, _
     Debug.Print CtlRow("lstFields", lstFields);
     Debug.Print CtlRow("btnCopy", btnCopy);
     Debug.Print CtlRow("btnPaste", btnPaste);
+    Debug.Print
+    Debug.Print "control        sits in               its size"
+    Debug.Print String$(52, "-")
+    Debug.Print ParentRow("txtSerial", txtSerial);
+    Debug.Print ParentRow("btnLookup", btnLookup);
+    Debug.Print ParentRow("lstRecords", lstRecords);
+    Debug.Print ParentRow("lstFields", lstFields);
+    Debug.Print ParentRow("btnCopy", btnCopy);
+    Debug.Print ParentRow("btnPaste", btnPaste);
 End Sub
+
+' Anything other than FORM on the two list rows is the answer: a control in a
+' container is positioned relative to it AND clipped by it, so no size the
+' code asks for can ever exceed the container.
+Private Function ParentRow(ByVal nm As String, ByVal c As Object) As String
+    Dim pnt As Object, who As String, sz As String
+    Set pnt = c.Parent
+    If pnt Is Me Then
+        who = "FORM"
+    Else
+        who = TypeName(pnt)
+        On Error Resume Next
+        who = who & " " & Chr$(39) & pnt.Name & Chr$(39)
+        On Error GoTo 0
+    End If
+    On Error Resume Next
+    sz = CStr(CLng(pnt.Width)) & " x " & CStr(CLng(pnt.Height))
+    On Error GoTo 0
+    ParentRow = Left$(nm & Space$(15), 15) & Left$(who & Space$(22), 22) & _
+                sz & vbCrLf
+End Function
 
 ' Not called Row: LayoutControls used to declare a local of that name, and a
 ' local and a module function sharing an identifier is a trap worth not
