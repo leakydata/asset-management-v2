@@ -271,11 +271,14 @@ function hide(id) { $(id).className = "msg"; }
    serials; this only strips the invisible junk pasted data carries. */
 function cleanId(s) {
   if (!s) return "";
-  return String(s)
-    .replace(/ /g, " ")
-    .replace(/[\t\r\n]/g, " ")
-    .replace(/[​‌‍﻿]/g, "")
-    .trim();
+  var out = "";
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    if (c === 0x00a0 || c === 0x09 || c === 0x0a || c === 0x0d) { out += " "; continue; }
+    if (c === 0x200b || c === 0x200c || c === 0x200d || c === 0xfeff) continue;
+    out += s.charAt(i);
+  }
+  return out.trim();
 }
 
 /* ==========================================================================
@@ -450,7 +453,7 @@ function copyTsv(grid, msgId) {
     function () { show(msgId, "bad", "Clipboard blocked by the browser. Use Download CSV instead."); });
 }
 function downloadCsv(grid, name) {
-  var blob = new Blob(["﻿" + toCsv(grid)], { type: "text/csv;charset=utf-8" });
+  var blob = new Blob(["\ufeff" + toCsv(grid)], { type: "text/csv;charset=utf-8" });
   var a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
