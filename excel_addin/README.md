@@ -54,9 +54,13 @@ Each action's required set is a prefix of the next, so one lookup ordering
 serves all three. Columns 7+ of the lookup are reference detail, grouped:
 record state, who holds it, what the asset is.
 
-**Dealer Make Code is last on every action sheet, deliberately.** It's the
-alternative to Make Code — supplying both is rejected — so it must not sit
-inside the paste block. Fill it by hand only when you're *not* using Make Code.
+**Dealer Make Code is optional and sits last on every sheet.** The spec says
+*"one of makeCode or dealerMakeCode must be provided"* — they're two separate
+code systems for the same manufacturer, not two halves of one. Cat's code for
+Caterpillar is `CAT`; our dealer code for it is `AA`. Use **Make Code**: it
+comes back on every lookup and means the same thing to everyone. Fill Dealer
+Make Code only if some source system hands you `AA` and not `CAT` — and then
+clear Make Code, because supplying both is rejected.
 
 | Sheet | Columns |
 |---|---|
@@ -125,8 +129,8 @@ matching CCAT.
 
 ## Validation rules
 
-Every operation requires a Serial and exactly one of Make Code / Dealer Make
-Code — the API rejects both together and rejects neither.
+Every operation requires a Serial and a Make Code. Dealer Make Code is the
+optional alternative — the API rejects both together and rejects neither.
 
 | Operation | Also required |
 |---|---|

@@ -259,12 +259,16 @@ Private Function ValidateRow(ByVal ws As Worksheet, ByVal r As Long, ByVal cols 
     Dim dmk As String: dmk = CellStr(ws, r, ColOf(cols, "dealermakecode", "dealermake"))
     Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
 
-    ' The API rejects both codes together and rejects neither.
+    ' "One of makeCode or dealerMakeCode must be provided" - the API rejects
+    ' both together and rejects neither. They are separate code systems for the
+    ' same manufacturer (Cat says CAT, our dealer code is AA), so Make Code is
+    ' the normal one and Dealer Make Code is only a fallback.
     If Len(mk) = 0 And Len(dmk) = 0 Then
-        ValidateRow = "provide Make Code or Dealer Make Code.": Exit Function
+        ValidateRow = "Make Code is required (or Dealer Make Code instead).": Exit Function
     End If
     If Len(mk) > 0 And Len(dmk) > 0 Then
-        ValidateRow = "provide only one of Make Code / Dealer Make Code.": Exit Function
+        ValidateRow = "Make Code and Dealer Make Code are alternatives - clear one. " & _
+                      "Use Make Code unless your data only has the dealer code.": Exit Function
     End If
 
     Select Case op
@@ -498,10 +502,10 @@ Private Sub SheetSpec(ByVal op As String, ByRef nm As String, ByRef headers As V
                             "Product Family Code", "Product Family Name", _
                             "Base Asset Name", "Custom Asset Name", _
                             "Dealer Make Code", "Result")
-            tiers = Array(0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 0, 3)
+            tiers = Array(0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 3)
             notes = Array( _
                 "REQUIRED. Asset serial number (exact match).", _
-                "REQUIRED (this OR Dealer Make Code, not both). Caterpillar manufacturer code, e.g. CW1.", _
+                "REQUIRED. Caterpillar manufacturer code, e.g. CAT or CW1. This is the one to use - it comes back on every lookup and means the same thing to everyone.", _
                 "REQUIRED. Dealer Customer Number.", _
                 "REQUIRED on every row. One of: owned, rental, leased, sold, inventory, unknown. The API only demands it for a NEW record, but a blank here is the most common cause of a rejection, so it is enforced.", _
                 "Required for a NEW record. Asset model, e.g. 980H. Max 65 characters. Blank on an existing record leaves the stored model alone.", _
@@ -510,18 +514,18 @@ Private Sub SheetSpec(ByVal op As String, ByRef nm As String, ByRef headers As V
                 "Optional. Product family name, e.g. MEDIUM WHEEL LOADER. Max 50.", _
                 "Optional. Canonical asset name set by the dealer. Max 60.", _
                 "Optional. Your own label; shown in preference to Base Asset Name. Max 60.", _
-                "REQUIRED (this OR Make Code, not both). Dealer-specific make code, usually 2 chars, e.g. CW. Kept out of the paste block on purpose - fill it only when you are NOT using Make Code.", _
+                "OPTIONAL - the alternative to Make Code, not an extra. Your dealership's own two-character code, e.g. AA. Leave it blank and use Make Code; fill this ONLY when your source data has the dealer code and not the Cat one. Supplying both is rejected.", _
                 "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
 
         Case OP_EXP
             nm = SH_EXP
             headers = Array("Serial", "Make Code", "DCN", "Dealer Make Code", "Result")
-            tiers = Array(0, 0, 0, 0, 3)
+            tiers = Array(0, 0, 0, 2, 3)
             notes = Array( _
                 "REQUIRED. Asset serial number (exact match).", _
-                "REQUIRED (this OR Dealer Make Code, not both). e.g. CW1.", _
+                "REQUIRED. Caterpillar manufacturer code, e.g. CAT or CW1. This is the one to use.", _
                 "REQUIRED. Dealer Customer Number of the record to remove.", _
-                "REQUIRED (this OR Make Code, not both). e.g. CW. Kept out of the paste block on purpose.", _
+                "OPTIONAL - the alternative to Make Code, not an extra. e.g. AA. Leave blank and use Make Code. Supplying both is rejected.", _
                 "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
 
         Case OP_TRF
@@ -531,13 +535,13 @@ Private Sub SheetSpec(ByVal op As String, ByRef nm As String, ByRef headers As V
             ' follow; Dealer Make Code goes last for the same reason as above.
             headers = Array("Serial", "Make Code", "Status", "Reason", _
                             "Dealer Make Code", "Result")
-            tiers = Array(0, 0, 0, 1, 0, 3)
+            tiers = Array(0, 0, 0, 1, 2, 3)
             notes = Array( _
                 "REQUIRED. Asset serial number (exact match).", _
-                "REQUIRED (this OR Dealer Make Code, not both). e.g. CW1.", _
+                "REQUIRED. Caterpillar manufacturer code, e.g. CAT or CW1. This is the one to use.", _
                 "REQUIRED. APPROVED or REJECTED. No DCN is used by this endpoint. Filter a lookup on OwnershipRequestType = RECEIVED to find the ones waiting on you.", _
                 "Required only when Status is REJECTED; optional otherwise.", _
-                "REQUIRED (this OR Make Code, not both). e.g. CW. Kept out of the paste block on purpose.", _
+                "OPTIONAL - the alternative to Make Code, not an extra. e.g. AA. Leave blank and use Make Code. Supplying both is rejected.", _
                 "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
     End Select
 End Sub
