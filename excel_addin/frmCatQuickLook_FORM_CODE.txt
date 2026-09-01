@@ -185,18 +185,16 @@ Private Sub LayoutControls()
     btnLookup.Height = ROW
     y = y + ROW + PAD
 
-    y = y + PlaceLabel("lblRecords", "Ownership records - DCN, name, type, status, sub, dealer", PAD, y, W, LBL)
+        ' MSForms only draws real column heads for a RowSource-bound list, never
+    ' for one filled with AddItem - so the heading is a Label in the same
+    ' monospaced face, padded from the same widths the columns use.
+    y = y + PlaceLabel("lblRecords", RecordHeader(LIST_SIZE), PAD, y, W, LBL, _
+                       "Consolas", LIST_SIZE)
     lstRecords.Left = PAD
     lstRecords.Top = y
     lstRecords.Width = W
     lstRecords.Height = 72          ' ~6 rows at 9pt before it needs to scroll
-    ' DCN | name | type | status | subscription | dealer. Fixed columns rather
-    ' than one padded string, so the fields line up however long the DCN name is.
-    ' Total is deliberately ~30pt short of the list width: a ListBox grows its
-    ' own vertical scrollbar once the items overflow, and that steals about
-    ' 17pt - without the slack the last column would clip exactly when a serial
-    ' has enough records to scroll.
-    lstRecords.ColumnWidths = "68 pt;130 pt;55 pt;50 pt;30 pt;33 pt"
+    lstRecords.ColumnWidths = RecordColumnWidths()
     y = y + lstRecords.Height + PAD
 
     y = y + PlaceLabel("lblFields", "Record detail", PAD, y, W, LBL)
@@ -228,13 +226,17 @@ End Sub
 ' you never added it. The form lays out correctly either way.
 Private Function PlaceLabel(ByVal nm As String, ByVal cap As String, _
                             ByVal x As Long, ByVal y As Long, _
-                            ByVal w As Long, ByVal h As Long) As Long
+                            ByVal w As Long, ByVal h As Long, _
+                            Optional ByVal fontName As String = "", _
+                            Optional ByVal fontSize As Single = 0) As Long
     Dim c As Object
     On Error Resume Next
     Set c = Me.Controls(nm)
     On Error GoTo 0
     If c Is Nothing Then Exit Function
 
+    If Len(fontName) > 0 Then c.Font.Name = fontName
+    If fontSize > 0 Then c.Font.Size = fontSize
     c.Caption = cap
     c.Left = x
     c.Top = y
@@ -388,6 +390,43 @@ Private Sub btnPaste_Click()
     Me.Caption = "Cat Quick Look - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
 End Sub
+
+' The record list's column widths, in points. ONE definition - the list and
+' its heading are both built from this, so they cannot drift apart.
+'
+' The total is deliberately ~30pt short of the 400pt list: a ListBox grows its
+' own vertical scrollbar once items overflow, and that steals about 17pt.
+' Without the slack the last column would clip exactly when a serial has
+' enough records to need scrolling.
+Private Function RecordColumns() As Variant
+    '            DCN  name type status sub dealer
+    RecordColumns = Array(68, 130, 55, 50, 30, 33)
+End Function
+
+Private Function RecordColumnWidths() As String
+    Dim w As Variant: w = RecordColumns()
+    Dim s As String, i As Long
+    For i = LBound(w) To UBound(w)
+        s = s & CStr(w(i)) & " pt" & IIf(i < UBound(w), ";", "")
+    Next i
+    RecordColumnWidths = s
+End Function
+
+' A heading padded to sit over the columns. Consolas advances 0.55 em per
+' character, so a column w points wide holds Int(w / (size * 0.55)) of them.
+Private Function RecordHeader(ByVal fontSize As Single) As String
+    Dim w As Variant: w = RecordColumns()
+    Dim caps As Variant
+    caps = Array("DCN", "DCN NAME", "TYPE", "STATUS", "SUB", "DLR")
+
+    Dim charW As Single: charW = fontSize * 0.55
+    Dim s As String, i As Long, n As Long
+    For i = LBound(w) To UBound(w)
+        n = Int(w(i) / charW)
+        s = s & Left$(CStr(caps(i)) & Space$(n), n)
+    Next i
+    RecordHeader = s
+End Function
 
 ' TRUE/FALSE -> Yes/No, and a dash when the API didn't return the field at
 ' all. Absent is not the same as No, so it must not read as one.
