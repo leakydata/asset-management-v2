@@ -154,7 +154,20 @@ Private Sub LayoutControls()
     ' of height, which is why a default TextBox is 18 high: Tahoma 8pt + 10.
     Const UI_SIZE   As Single = 11   ' the serial box
     Const LIST_SIZE As Single = 9    ' the two lists
+    Const REC_H     As Long = 72     ' ~6 records before it scrolls
+    Const FLD_H     As Long = 300    ' all 22 fields, no scrolling
     Dim ROW As Long: ROW = UI_SIZE + 11
+
+    ' SIZE THE FORM FIRST. MSForms clamps a child control to the form's
+    ' current client area, so setting a control's Width while the form is
+    ' still narrow silently truncates it - the control keeps the old width and
+    ' the form just grows more empty background. Everything below assumes the
+    ' form is already big enough.
+    Dim labels As Long
+    labels = LabelSpace("lblRecords", LBL) + LabelSpace("lblFields", LBL)
+
+    Me.Width = W + (PAD * 2) + 6
+    Me.Height = PAD + ROW + PAD + labels + REC_H + PAD + FLD_H + PAD + BTN + PAD + 26
 
     Me.Caption = "Cat Quick Look"
 
@@ -195,7 +208,7 @@ Private Sub LayoutControls()
     lstRecords.Left = PAD
     lstRecords.Top = y
     lstRecords.Width = W
-    lstRecords.Height = 72          ' ~6 rows at 9pt before it needs to scroll
+    lstRecords.Height = REC_H
     lstRecords.ColumnWidths = RecordColumnWidths()
     y = y + lstRecords.Height + PAD
 
@@ -203,7 +216,7 @@ Private Sub LayoutControls()
     lstFields.Left = PAD
     lstFields.Top = y
     lstFields.Width = W
-    lstFields.Height = 300
+    lstFields.Height = FLD_H
     ' Proportional, and deliberately short of the full width - the totals have
     ' to clear the vertical scrollbar, or the list grows a horizontal one too
     ' and clips the last column.
@@ -219,12 +232,17 @@ Private Sub LayoutControls()
     btnPaste.Top = y
     btnPaste.Width = W - btnCopy.Width - PAD
     btnPaste.Height = BTN
-
-    ' Size the form to the content rather than guessing - the extra allows for
-    ' the window border and the title bar.
-    Me.Width = W + (PAD * 2) + 6
-    Me.Height = y + BTN + PAD + 26
 End Sub
+
+' Vertical space an optional label will take, or 0 if it isn't on the form.
+' Needed up front so the form can be sized before anything is positioned.
+Private Function LabelSpace(ByVal nm As String, ByVal h As Long) As Long
+    Dim c As Object
+    On Error Resume Next
+    Set c = Me.Controls(nm)
+    On Error GoTo 0
+    If Not c Is Nothing Then LabelSpace = h + 2
+End Function
 
 ' Positions an OPTIONAL label and returns the vertical space it used, or 0 if
 ' you never added it. The form lays out correctly either way.
