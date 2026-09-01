@@ -37,6 +37,18 @@ don't need to set captions either.
     CommandButton    btnCopy
     CommandButton    btnPaste
 
+OPTIONAL, if you want headings between the two lists — add them or don't, the
+code lays out correctly either way and captions them for you:
+
+    Label            lblRecords      -> "Ownership records"
+    Label            lblFields       -> "Record detail"
+
+DO NOT put the controls inside a Frame. A control in a Frame has its Left/Top
+measured from the FRAME, not the form, so the absolute positioning the code
+does lands it in the wrong place and everything piles up. The code checks for
+this on open and tells you which controls are affected. To move one out: cut
+it (Ctrl+X), click the form background, paste (Ctrl+V).
+
 Rough layout:
 
     ┌─ Cat Quick Look ─────────────────────────────┐
@@ -72,6 +84,23 @@ Private mRows As Collection
 ' Setup
 '==============================================================================
 Private Sub UserForm_Initialize()
+    Dim stray As String
+    stray = ControlsNotOnForm()
+    If Len(stray) > 0 Then
+        ' Worth stopping for: a control inside a Frame has coordinates relative
+        ' to the FRAME, so the absolute positioning below silently lands it in
+        ' the wrong place and everything looks piled up.
+        MsgBox "These controls are inside a Frame or other container:" & vbCrLf & vbCrLf & _
+               "    " & stray & vbCrLf & vbCrLf & _
+               "Their Left/Top are measured from the container, not the form, so " & _
+               "the layout will be wrong. Cut them (Ctrl+X), click the form " & _
+               "background, and paste (Ctrl+V) to move them out - then delete " & _
+               "the Frame." & vbCrLf & vbCrLf & _
+               "For headings above the lists, add Labels named lblRecords and " & _
+               "lblFields instead; the code positions them if they exist.", _
+               vbExclamation, "Cat Quick Look - form layout"
+    End If
+
     LayoutControls
 
     lstRecords.ColumnCount = 1
@@ -83,13 +112,38 @@ Private Sub UserForm_Initialize()
     ResetDisplay
 End Sub
 
+' Names any of the six that were dropped into a container rather than straight
+' onto the form.
+Private Function ControlsNotOnForm() As String
+    Dim nm As Variant, c As Object
+    For Each nm In Array("txtSerial", "btnLookup", "lstRecords", _
+                         "lstFields", "btnCopy", "btnPaste")
+        Set c = Nothing
+        On Error Resume Next
+        Set c = Me.Controls(CStr(nm))
+        On Error GoTo 0
+        If Not c Is Nothing Then
+            If Not c.Parent Is Me Then
+                ControlsNotOnForm = ControlsNotOnForm & _
+                    IIf(Len(ControlsNotOnForm) > 0, ", ", "") & CStr(nm)
+            End If
+        End If
+    Next nm
+End Function
+
 ' Everything about the form's appearance is set here rather than in the
-' designer, so building it by hand is only ever "drop six controls and name
+' designer, so building it by hand is only ever "drop the controls and name
 ' them". Wherever you dragged them, they end up here. A new UserForm defaults
 ' to roughly 240x180, which is why an unsized one looks tiny.
+'
+' Do NOT put the controls in a Frame - see ControlsNotOnForm above. If you want
+' headings between the lists, add two Labels named lblRecords and lblFields and
+' they get positioned and captioned automatically. Leave them out and the form
+' closes the gap.
 Private Sub LayoutControls()
     Const PAD As Long = 8
     Const BTN As Long = 26
+    Const LBL As Long = 13
     Const W   As Long = 400          ' usable width inside the border
 
     ' MSForms has no "fit the text to the box" - AutoSize resizes the BOX to
@@ -116,43 +170,71 @@ Private Sub LayoutControls()
     lstFields.Font.Name = "Consolas"
     lstFields.Font.Size = LIST_SIZE
 
+    ' A running cursor down the form, so an optional label simply consumes a
+    ' band of space and everything below shuffles down.
+    Dim y As Long: y = PAD
+
     txtSerial.Left = PAD
-    txtSerial.Top = PAD
+    txtSerial.Top = y
     txtSerial.Width = W - 100
     txtSerial.Height = ROW
 
     btnLookup.Left = PAD + txtSerial.Width + PAD
-    btnLookup.Top = PAD
+    btnLookup.Top = y
     btnLookup.Width = 92 - PAD
     btnLookup.Height = ROW
+    y = y + ROW + PAD
 
+    y = y + PlaceLabel("lblRecords", "Ownership records", PAD, y, W, LBL)
     lstRecords.Left = PAD
-    lstRecords.Top = txtSerial.Top + ROW + PAD
+    lstRecords.Top = y
     lstRecords.Width = W
     lstRecords.Height = 56
+    y = y + lstRecords.Height + PAD
 
+    y = y + PlaceLabel("lblFields", "Record detail", PAD, y, W, LBL)
     lstFields.Left = PAD
-    lstFields.Top = lstRecords.Top + lstRecords.Height + PAD
+    lstFields.Top = y
     lstFields.Width = W
     lstFields.Height = 300
     ' Proportional, so the value column still fits if you widen the form later.
     lstFields.ColumnWidths = CStr(Int(W * 0.35)) & " pt;" & CStr(Int(W * 0.6)) & " pt"
+    y = y + lstFields.Height + PAD
 
     btnCopy.Left = PAD
-    btnCopy.Top = lstFields.Top + lstFields.Height + PAD
+    btnCopy.Top = y
     btnCopy.Width = 110
     btnCopy.Height = BTN
 
     btnPaste.Left = btnCopy.Left + btnCopy.Width + PAD
-    btnPaste.Top = btnCopy.Top
+    btnPaste.Top = y
     btnPaste.Width = W - btnCopy.Width - PAD
     btnPaste.Height = BTN
 
     ' Size the form to the content rather than guessing - the extra allows for
     ' the window border and the title bar.
     Me.Width = W + (PAD * 2) + 6
-    Me.Height = btnPaste.Top + BTN + PAD + 26
+    Me.Height = y + BTN + PAD + 26
 End Sub
+
+' Positions an OPTIONAL label and returns the vertical space it used, or 0 if
+' you never added it. The form lays out correctly either way.
+Private Function PlaceLabel(ByVal nm As String, ByVal cap As String, _
+                            ByVal x As Long, ByVal y As Long, _
+                            ByVal w As Long, ByVal h As Long) As Long
+    Dim c As Object
+    On Error Resume Next
+    Set c = Me.Controls(nm)
+    On Error GoTo 0
+    If c Is Nothing Then Exit Function
+
+    c.Caption = cap
+    c.Left = x
+    c.Top = y
+    c.Width = w
+    c.Height = h
+    PlaceLabel = h + 2
+End Function
 
 ' Called by CatQuickLook before Show, so selecting a cell that holds a serial
 ' and clicking the button pre-fills it.
