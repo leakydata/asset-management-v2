@@ -184,7 +184,7 @@ End Sub
 ' Excel, an email or a ticket unchanged.
 Private Sub btnCopy_Click()
     Dim v As Variant
-    If Not Selected(v) Then Exit Sub
+    If Not PickedRecord(v) Then Exit Sub
 
     Dim h As Variant: h = HeaderArray()
     Dim s As String, i As Long
@@ -209,7 +209,7 @@ End Sub
 ' it is never stale no matter how much you clicked around while this was open.
 Private Sub btnPaste_Click()
     Dim v As Variant
-    If Not Selected(v) Then Exit Sub
+    If Not PickedRecord(v) Then Exit Sub
 
     Dim c As Range
     On Error Resume Next
@@ -229,7 +229,10 @@ Private Sub btnPaste_Click()
 End Sub
 
 ' Hands back the selected record, or reports why it can't.
-Private Function Selected(ByRef v As Variant) As Boolean
+' NOT called Selected: UserForm already inherits a member of that name,
+' and redeclaring it is "Member already exists in an object module from
+' which this object module derives".
+Private Function PickedRecord(ByRef v As Variant) As Boolean
     If mRows Is Nothing Then
         Me.Caption = "Cat Quick Look - look up a serial first"
         Exit Function
@@ -239,5 +242,5 @@ Private Function Selected(ByRef v As Variant) As Boolean
         Exit Function
     End If
     v = mRows(lstRecords.ListIndex + 1)
-    Selected = True
+    PickedRecord = True
 End Function
