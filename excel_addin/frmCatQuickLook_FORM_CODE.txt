@@ -267,7 +267,36 @@ Private Sub LayoutControls()
     PlaceLabel "lblRecords", RecordHeader(LIST_SIZE, lstRecords.Width), _
                PAD, lstRecords.Top - (LBL + 2), rightEdge - PAD, LBL, _
                "Consolas", LIST_SIZE
+
+    If DIAG Then ReportLayout FW, rightEdge
 End Sub
+
+' Set to False once the layout is right. This reports what the code ASKED for
+' against what each control actually reports back, which is the only way to
+' tell whether an assignment is being ignored rather than mis-calculated.
+Private Const DIAG As Boolean = True
+
+Private Sub ReportLayout(ByVal FW As Long, ByVal rightEdge As Long)
+    Dim m As String
+    m = "form   Width=" & Me.Width & "  InsideWidth=" & Me.InsideWidth & vbCrLf & _
+        "       Height=" & Me.Height & "  InsideHeight=" & Me.InsideHeight & vbCrLf & _
+        "FW=" & FW & "   rightEdge asked for=" & rightEdge & vbCrLf & vbCrLf & _
+        "control        Left  Width  right   Top  Height" & vbCrLf & _
+        "-------------------------------------------------" & vbCrLf
+    m = m & Row("txtSerial", txtSerial) & Row("btnLookup", btnLookup) & _
+            Row("lstRecords", lstRecords) & Row("lstFields", lstFields) & _
+            Row("btnCopy", btnCopy) & Row("btnPaste", btnPaste)
+    MsgBox m, vbInformation, "Cat Quick Look - layout report"
+End Sub
+
+Private Function Row(ByVal nm As String, ByVal c As Object) As String
+    Row = Left$(nm & Space$(15), 15) & _
+          Right$(Space$(4) & CStr(CLng(c.Left)), 5) & _
+          Right$(Space$(6) & CStr(CLng(c.Width)), 7) & _
+          Right$(Space$(6) & CStr(CLng(c.Left + c.Width)), 7) & _
+          Right$(Space$(5) & CStr(CLng(c.Top)), 6) & _
+          Right$(Space$(6) & CStr(CLng(c.Height)), 8) & vbCrLf
+End Function
 
 ' Vertical space an optional label will take, or 0 if it isn't on the form.
 ' Needed up front so the form can be sized before anything is positioned.
