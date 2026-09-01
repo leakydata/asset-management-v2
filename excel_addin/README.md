@@ -22,54 +22,57 @@ is no separate form.
 `CatBatchActions` (add/update only). Expire and Transfer became batch-capable
 in the process — they weren't before.
 
-## Column order is deliberate
+## Column order is the interface
 
-The leading columns of every operation sheet appear in the **same relative
-order as the batch-lookup output**, so you can Ctrl-select the matching columns
-on a results sheet, copy, and paste them straight in. Excel pastes a
-multi-area column selection as one contiguous block in left-to-right order.
+Excel pastes a copied block into **adjacent** destination columns, so the
+action sheets lead with exactly the fields the lookup leads with, in the same
+order. Moving data across is a drag-select and a paste — no Ctrl-clicking.
 
 ```text
-lookup output (22 columns)
-  1 SerialNumber     2 MakeCode        3 MakeName         4 Model
-  5 ModelYear        6 AssetName       7 DealerCode       8 DealerName
-  9 DCN             10 DcnName        11 CCID            12 CcidName
- 13 OwnershipType   14 Status         15 OwnershipTypeName
- 16 StatusName      17 HasSubscription
- 18 OwnershipRequestType               19 DealerMakeCode
- 20 ProductFamilyCode                  21 ProductFamilyName
- 22 BaseAssetName
-
-Ctrl-select these ten, in this order, and paste into Add-Update column 1:
-  1 Serial   2 MakeCode   4 Model   5 ModelYear   9 DCN   13 OwnershipType
- 19 DealerMakeCode  20 ProductFamilyCode  21 ProductFamilyName  22 BaseAssetName
-       ->  Add-Update columns 1..10
+batch-lookup results sheet
+  A  QuerySerial / QueryDCN
+  B  SerialNumber   C  MakeCode      D  DCN          E  OwnershipType
+  F  Model          G  ModelYear
+  H  Status         I  StatusName    J  OwnershipTypeName
+  K  OwnershipRequestType             L  HasSubscription
+  M  DcnName        N  CCID          O  CcidName
+  P  DealerCode     Q  DealerName    R  DealerMakeCode
+  S  MakeName       T  ProductFamilyCode              U  ProductFamilyName
+  V  AssetName      W  BaseAssetName
 ```
 
-The first 14 positions are frozen — new fields are appended, never inserted —
-so anything already built against the old layout keeps working.
+| Copy | Paste into | Fills |
+|---|---|---|
+| `B:C` | `Cat Transfer` A2 | Serial, Make Code |
+| `B:D` | `Cat Expire` A2 | Serial, Make Code, DCN |
+| `B:G` | `Cat Add-Update` A2 | Serial, Make Code, DCN, Ownership Type, Model, Model Year |
 
-**Take only one make column.** `MakeCode` and `DealerMakeCode` both come back
-populated, but supplying both is rejected. Paste all ten and then clear
-whichever you don't want, or Ctrl-select just the first six.
+Each action's required set is a prefix of the next, so one lookup ordering
+serves all three. Columns 7+ of the lookup are reference detail, grouped:
+record state, who holds it, what the asset is.
 
-`OwnershipRequestType` is only populated on **PENDING** records: `RECEIVED`
-means another dealer asked and you must approve or reject, `SENT` means you
-asked and are waiting. Blank means no pending request, or one you can't act
-on. Filter on it to build the Transfer sheet.
-
-`HasSubscription` is tri-state: `TRUE`, `FALSE`, or blank when the API didn't
-return the field at all — which is not the same as false.
+**Dealer Make Code is last on every action sheet, deliberately.** It's the
+alternative to Make Code — supplying both is rejected — so it must not sit
+inside the paste block. Fill it by hand only when you're *not* using Make Code.
 
 | Sheet | Columns |
 |---|---|
-| `Cat Add-Update` | Serial, Make Code, Model, Model Year, DCN, Ownership Type, Dealer Make Code, Product Family Code/Name, Base/Custom Asset Name, Result |
+| `Cat Add-Update` | Serial, Make Code, DCN, Ownership Type, Model, Model Year, Product Family Code/Name, Base/Custom Asset Name, Dealer Make Code, Result |
 | `Cat Expire` | Serial, Make Code, DCN, Dealer Make Code, Result |
-| `Cat Transfer` | Serial, Make Code, Dealer Make Code, Status, Reason, Result |
+| `Cat Transfer` | Serial, Make Code, Status, Reason, Dealer Make Code, Result |
 
-Anything with no lookup counterpart sits after the aligned block. Headers are
-matched by name — case, spaces and punctuation ignored — so extra columns and
-reordering are both harmless.
+Headers are matched by name — case, spaces and punctuation ignored — so extra
+columns and reordering are harmless. `HeaderArray` in `CatAssetLookup` and
+`SheetSpec` in `CatBatchOps` must stay in step; changing one alone silently
+breaks the paste.
+
+`OwnershipRequestType` is only populated on **PENDING** records: `RECEIVED`
+means another dealer asked and you must approve or reject, `SENT` means you
+asked and are waiting. Filter a lookup on `RECEIVED` and you have your
+Transfer sheet.
+
+`HasSubscription` is tri-state: `TRUE`, `FALSE`, or blank when the API didn't
+return the field — which is not the same as false.
 
 ## Two buttons drive all three
 

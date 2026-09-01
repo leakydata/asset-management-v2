@@ -265,22 +265,24 @@ End Function
 
 ' Column headers for the 14 record fields.
 Public Function HeaderArray() As Variant
-    ' The first 14 are FROZEN in position - the operation sheets in CatBatchOps
-    ' are aligned to this order, and anything already built against it keeps
-    ' working. New fields are appended, never inserted.
+    ' ORDER IS THE INTERFACE. The first six columns are exactly the fields the
+    ' operation sheets in CatBatchOps take, in the order those sheets expect
+    ' them - so you drag-select a block and paste, with no Ctrl-clicking:
     '
-    ' The append order is not arbitrary either: OwnershipType(13) < DealerMakeCode(19)
-    ' < ProductFamilyCode(20) < ProductFamilyName(21) < BaseAssetName(22) matches
-    ' Add-Update columns 6..10, so a Ctrl-selected copy of
-    '   Serial, MakeCode, Model, ModelYear, DCN, OwnershipType,
-    '   DealerMakeCode, ProductFamilyCode, ProductFamilyName, BaseAssetName
-    ' pastes into Add-Update columns 1..10 in one go.
-    HeaderArray = Array("SerialNumber", "MakeCode", "MakeName", "Model", "ModelYear", _
-                        "AssetName", "DealerCode", "DealerName", "DCN", "DcnName", _
-                        "CCID", "CcidName", "OwnershipType", "Status", _
-                        "OwnershipTypeName", "StatusName", "HasSubscription", _
-                        "OwnershipRequestType", "DealerMakeCode", _
-                        "ProductFamilyCode", "ProductFamilyName", "BaseAssetName")
+    '     Transfer     needs 1-2   (Serial, MakeCode)
+    '     Expire       needs 1-3   (+ DCN)
+    '     Add / Update needs 1-6   (+ OwnershipType, Model, ModelYear)
+    '
+    ' Each action's required set is a prefix of the next, so one ordering here
+    ' serves all three. Everything after column 6 is reference detail, grouped:
+    ' record state (7-11), who holds it (12-17), asset description (18-22).
+    HeaderArray = Array( _
+        "SerialNumber", "MakeCode", "DCN", "OwnershipType", "Model", "ModelYear", _
+        "Status", "StatusName", "OwnershipTypeName", "OwnershipRequestType", _
+        "HasSubscription", _
+        "DcnName", "CCID", "CcidName", "DealerCode", "DealerName", "DealerMakeCode", _
+        "MakeName", "ProductFamilyCode", "ProductFamilyName", "AssetName", _
+        "BaseAssetName")
 End Function
 
 ' Returns a 1-D array of the 14 field values for one ownership record.
@@ -297,32 +299,42 @@ Public Function RecordValues(ByVal rec As Object) As Variant
     Set dmi = SafeObj(da, "dealerMakeInfo")
 
     Dim v(0 To 21) As Variant
+
+    ' 1-6: the paste block - keep in step with HeaderArray and with SheetSpec
+    ' in CatBatchOps. Reordering any one of the three breaks the copy/paste.
     v(0) = SafeStr(md, "serialNumber")
     v(1) = SafeStr(mk, "code")
-    v(2) = SafeStr(mk, "name")
-    v(3) = SafeStr(md, "model")
-    v(4) = SafeStr(md, "modelYear")
-    v(5) = SafeStr(md, "assetName")
-    v(6) = SafeStr(da, "dealerCode")
-    v(7) = SafeStr(da, "dealerName")
-    v(8) = SafeStr(da, "dcn")
-    v(9) = SafeStr(da, "dcnName")
-    v(10) = SafeStr(ow, "ccid")
-    v(11) = SafeStr(ow, "ccidName")
-    v(12) = SafeStr(ot, "code")
-    v(13) = SafeStr(rs, "code")
-    v(14) = SafeStr(ot, "name")
-    v(15) = SafeStr(rs, "name")
-    v(16) = SafeBool(da, "dcnHasSubscription")
+    v(2) = SafeStr(da, "dcn")
+    v(3) = SafeStr(ot, "code")
+    v(4) = SafeStr(md, "model")
+    v(5) = SafeStr(md, "modelYear")
+
+    ' 7-11: state of this ownership record
+    v(6) = SafeStr(rs, "code")
+    v(7) = SafeStr(rs, "name")
+    v(8) = SafeStr(ot, "name")
     ' Only populated on PENDING records. RECEIVED = another dealer asked and we
     ' must approve or reject; SENT = we asked and are waiting on them. Absent
     ' means no pending request, or one we cannot act on.
-    v(17) = SafeStr(da, "ownershipRequestType")
-    v(18) = SafeStr(dmi, "code")
-    v(19) = SafeStr(pf, "code")
-    v(20) = SafeStr(pf, "name")
-    ' assetName above is the coalesced custom-or-base value; this is the raw base.
+    v(9) = SafeStr(da, "ownershipRequestType")
+    v(10) = SafeBool(da, "dcnHasSubscription")
+
+    ' 12-17: who holds it
+    v(11) = SafeStr(da, "dcnName")
+    v(12) = SafeStr(ow, "ccid")
+    v(13) = SafeStr(ow, "ccidName")
+    v(14) = SafeStr(da, "dealerCode")
+    v(15) = SafeStr(da, "dealerName")
+    v(16) = SafeStr(dmi, "code")
+
+    ' 18-22: what the asset is
+    v(17) = SafeStr(mk, "name")
+    v(18) = SafeStr(pf, "code")
+    v(19) = SafeStr(pf, "name")
+    ' assetName is the coalesced custom-or-base value; baseAssetName is the raw base.
+    v(20) = SafeStr(md, "assetName")
     v(21) = SafeStr(ow, "baseAssetName")
+
     RecordValues = v
 End Function
 

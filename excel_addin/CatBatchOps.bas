@@ -10,19 +10,27 @@ Attribute VB_Name = "CatBatchOps"
 '   Cat Expire       POST /api/expire      remove ownership records
 '   Cat Transfer     POST /api/transfer    approve / reject pending transfers
 '
-' COLUMN ORDER IS DELIBERATE. The leading columns of every sheet appear in the
-' same relative order as the batch-lookup output, so you can Ctrl-select the
-' matching columns on a results sheet, copy, and paste them straight in:
+' COLUMN ORDER IS THE INTERFACE. The first columns of each sheet are exactly
+' the leading columns of the batch-lookup output, in the same order, so moving
+' data across is a drag-select and a paste - no Ctrl-clicking:
 '
-'   lookup output :  SerialNumber MakeCode MakeName Model ModelYear AssetName
-'                    DealerCode DealerName DCN DcnName CCID CcidName
-'                    OwnershipType Status
-'                    (1)      (2)          (4)  (5)              (9)      (13)
-'   Add-Update    :  Serial   Make Code    Model Model Year      DCN      Ownership Type
+'   lookup output :  1 SerialNumber  2 MakeCode  3 DCN  4 OwnershipType
+'                    5 Model         6 ModelYear    ... then reference detail
 '
-' Excel pastes a multi-area column selection as one contiguous block in
-' left-to-right order, so the six required fields land in the six first
-' columns. Everything with no lookup counterpart sits after them.
+'   Cat Transfer   <- lookup columns 1-2   (Serial, Make Code)
+'   Cat Expire     <- lookup columns 1-3   (+ DCN)
+'   Cat Add-Update <- lookup columns 1-6   (+ Ownership Type, Model, Model Year)
+'
+' Each action's required set is a prefix of the next, so one lookup ordering
+' serves all three. On a results sheet the fields start in column B (column A
+' is QuerySerial / QueryDCN), so the drags are B:C, B:D and B:G.
+'
+' Dealer Make Code is deliberately LAST on every sheet. It is the alternative
+' to Make Code - supplying both is rejected - so it must not sit inside the
+' paste block. Everything else after the block is optional.
+'
+' Keep HeaderArray (CatAssetLookup) and SheetSpec (below) in step. Reordering
+' one without the other silently breaks the paste.
 '
 ' Headers are matched by NAME (case, spaces and punctuation ignored), so extra
 ' columns and reordering are both harmless.
@@ -481,22 +489,28 @@ Private Sub SheetSpec(ByVal op As String, ByRef nm As String, ByRef headers As V
     Select Case op
         Case OP_ADD
             nm = SH_ADD
-            headers = Array("Serial", "Make Code", "Model", "Model Year", "DCN", _
-                            "Ownership Type", "Dealer Make Code", "Product Family Code", _
-                            "Product Family Name", "Base Asset Name", "Custom Asset Name", "Result")
-            tiers = Array(0, 0, 1, 1, 0, 0, 0, 2, 2, 2, 2, 3)
+            ' Columns 1-6 are the paste block and MUST stay in this order and
+            ' adjacent - they mirror HeaderArray columns 1-6. Dealer Make Code
+            ' is the rarely-used alternative to Make Code, so it sits at the far
+            ' end rather than splitting the block.
+            headers = Array("Serial", "Make Code", "DCN", "Ownership Type", _
+                            "Model", "Model Year", _
+                            "Product Family Code", "Product Family Name", _
+                            "Base Asset Name", "Custom Asset Name", _
+                            "Dealer Make Code", "Result")
+            tiers = Array(0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 0, 3)
             notes = Array( _
                 "REQUIRED. Asset serial number (exact match).", _
                 "REQUIRED (this OR Dealer Make Code, not both). Caterpillar manufacturer code, e.g. CW1.", _
-                "Required for a NEW record. Asset model, e.g. 980H. Max 65 characters. Blank on an existing record leaves the stored model alone.", _
-                "Required for a NEW record. 4-digit year of manufacture, e.g. 2006. Blank on an existing record leaves the stored year alone.", _
                 "REQUIRED. Dealer Customer Number.", _
                 "REQUIRED on every row. One of: owned, rental, leased, sold, inventory, unknown. The API only demands it for a NEW record, but a blank here is the most common cause of a rejection, so it is enforced.", _
-                "REQUIRED (this OR Make Code, not both). Dealer-specific make code, usually 2 chars, e.g. CW.", _
+                "Required for a NEW record. Asset model, e.g. 980H. Max 65 characters. Blank on an existing record leaves the stored model alone.", _
+                "Required for a NEW record. 4-digit year of manufacture, e.g. 2006. Blank on an existing record leaves the stored year alone.", _
                 "Optional. Cat product family code, e.g. MDWL. Max 50.", _
                 "Optional. Product family name, e.g. MEDIUM WHEEL LOADER. Max 50.", _
                 "Optional. Canonical asset name set by the dealer. Max 60.", _
                 "Optional. Your own label; shown in preference to Base Asset Name. Max 60.", _
+                "REQUIRED (this OR Make Code, not both). Dealer-specific make code, usually 2 chars, e.g. CW. Kept out of the paste block on purpose - fill it only when you are NOT using Make Code.", _
                 "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
 
         Case OP_EXP
@@ -507,19 +521,23 @@ Private Sub SheetSpec(ByVal op As String, ByRef nm As String, ByRef headers As V
                 "REQUIRED. Asset serial number (exact match).", _
                 "REQUIRED (this OR Dealer Make Code, not both). e.g. CW1.", _
                 "REQUIRED. Dealer Customer Number of the record to remove.", _
-                "REQUIRED (this OR Make Code, not both). e.g. CW.", _
+                "REQUIRED (this OR Make Code, not both). e.g. CW. Kept out of the paste block on purpose.", _
                 "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
 
         Case OP_TRF
             nm = SH_TRF
-            headers = Array("Serial", "Make Code", "Dealer Make Code", "Status", "Reason", "Result")
-            tiers = Array(0, 0, 0, 0, 1, 3)
+            ' Columns 1-2 are the paste block (HeaderArray 1-2). Status and
+            ' Reason are decisions you type, not values you look up, so they
+            ' follow; Dealer Make Code goes last for the same reason as above.
+            headers = Array("Serial", "Make Code", "Status", "Reason", _
+                            "Dealer Make Code", "Result")
+            tiers = Array(0, 0, 0, 1, 0, 3)
             notes = Array( _
                 "REQUIRED. Asset serial number (exact match).", _
                 "REQUIRED (this OR Dealer Make Code, not both). e.g. CW1.", _
-                "REQUIRED (this OR Make Code, not both). e.g. CW.", _
-                "REQUIRED. APPROVED or REJECTED. No DCN is used by this endpoint.", _
+                "REQUIRED. APPROVED or REJECTED. No DCN is used by this endpoint. Filter a lookup on OwnershipRequestType = RECEIVED to find the ones waiting on you.", _
                 "Required only when Status is REJECTED; optional otherwise.", _
+                "REQUIRED (this OR Make Code, not both). e.g. CW. Kept out of the paste block on purpose.", _
                 "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
     End Select
 End Sub
