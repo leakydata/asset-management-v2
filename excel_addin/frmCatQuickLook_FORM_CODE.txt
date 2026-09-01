@@ -103,7 +103,7 @@ Private Sub UserForm_Initialize()
 
     LayoutControls
 
-    lstRecords.ColumnCount = 1
+    lstRecords.ColumnCount = 6
     lstFields.ColumnCount = 2
 
     ' Enter in the serial box triggers Look Up.
@@ -185,11 +185,14 @@ Private Sub LayoutControls()
     btnLookup.Height = ROW
     y = y + ROW + PAD
 
-    y = y + PlaceLabel("lblRecords", "Ownership records", PAD, y, W, LBL)
+    y = y + PlaceLabel("lblRecords", "Ownership records - DCN, name, type, status, sub, dealer", PAD, y, W, LBL)
     lstRecords.Left = PAD
     lstRecords.Top = y
     lstRecords.Width = W
     lstRecords.Height = 56
+    ' DCN | name | type | status | subscription | dealer. Fixed columns rather
+    ' than one padded string, so the fields line up however long the DCN name is.
+    lstRecords.ColumnWidths = "70 pt;145 pt;58 pt;52 pt;32 pt;33 pt"
     y = y + lstRecords.Height + PAD
 
     y = y + PlaceLabel("lblFields", "Record detail", PAD, y, W, LBL)
@@ -287,9 +290,13 @@ Private Sub btnLookup_Click()
     For i = 1 To recs.Count
         v = RecordValues(recs(i))
         mRows.Add v
-        ' DCN, DCN name, [type / status], dealer - enough to tell records apart
-        lstRecords.AddItem CStr(v(2)) & "   " & CStr(v(11)) & _
-                           "   [" & CStr(v(3)) & " / " & CStr(v(6)) & "]   " & CStr(v(14))
+        ' One column each, so nothing shifts when a DCN name is long
+        lstRecords.AddItem CStr(v(2))                    ' DCN
+        lstRecords.List(lstRecords.ListCount - 1, 1) = CStr(v(11))          ' DcnName
+        lstRecords.List(lstRecords.ListCount - 1, 2) = CStr(v(3))           ' OwnershipType
+        lstRecords.List(lstRecords.ListCount - 1, 3) = CStr(v(6))           ' Status
+        lstRecords.List(lstRecords.ListCount - 1, 4) = YesNo(CStr(v(10)))   ' HasSubscription
+        lstRecords.List(lstRecords.ListCount - 1, 5) = CStr(v(14))          ' DealerCode
     Next i
 
     Me.Caption = "Cat Quick Look - " & recs.Count & " record(s) for " & serial
@@ -377,6 +384,16 @@ Private Sub btnPaste_Click()
     Me.Caption = "Cat Quick Look - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
 End Sub
+
+' TRUE/FALSE -> Yes/No, and a dash when the API didn't return the field at
+' all. Absent is not the same as No, so it must not read as one.
+Private Function YesNo(ByVal s As String) As String
+    Select Case UCase$(Trim$(s))
+        Case "TRUE":  YesNo = "Yes"
+        Case "FALSE": YesNo = "No"
+        Case Else:    YesNo = "-"
+    End Select
+End Function
 
 ' Hands back the selected record, or reports why it can't.
 ' NOT called Selected: UserForm already inherits a member of that name,
