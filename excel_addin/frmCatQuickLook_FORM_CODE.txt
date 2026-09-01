@@ -191,17 +191,6 @@ Private Sub LayoutControls()
     btnCopy.Caption = "Copy Row"
     btnPaste.Caption = "Paste at Selection"
 
-    ' AUTOSIZE OFF FIRST. A control with AutoSize = True resizes itself to its
-    ' contents and silently DISCARDS anything assigned to Width or Height - no
-    ' error, the assignment just does nothing. That is why the two ListBoxes
-    ' kept their designer size while the TextBox and the buttons obeyed.
-    txtSerial.AutoSize = False
-    btnLookup.AutoSize = False
-    lstRecords.AutoSize = False
-    lstFields.AutoSize = False
-    btnCopy.AutoSize = False
-    btnPaste.AutoSize = False
-
     ' Monospaced for anything holding an identifier. Serials and DCNs get read
     ' character by character and 0/O, 1/l are easy to confuse in a proportional
     ' face; a fixed-width one also lines the value column up.
@@ -220,60 +209,35 @@ Private Sub LayoutControls()
     ' band of space and everything below shuffles down.
     Dim y As Long: y = PAD
 
-    txtSerial.Left = PAD
-    txtSerial.Top = y
-    txtSerial.Width = FW - 100
-    txtSerial.Height = ROW
+    Dim lookLeft As Long: lookLeft = PAD + (FW - 100) + PAD
 
-    btnLookup.Left = PAD + txtSerial.Width + PAD
-    btnLookup.Top = y
-    btnLookup.Width = (PAD + FW) - btnLookup.Left   ' flush with the right edge
-    btnLookup.Height = ROW
+    Place txtSerial, PAD, y, FW - 100, ROW
+    Place btnLookup, lookLeft, y, (PAD + FW) - lookLeft, ROW
     y = y + ROW + PAD
 
-        ' MSForms only draws real column heads for a RowSource-bound list, never
+    ' MSForms only draws real column heads for a RowSource-bound list, never
     ' for one filled with AddItem - so the heading is a Label in the same
-    ' monospaced face, padded from the same widths the columns use.
-    y = y + LabelSpace("lblRecords", LBL)   ' captioned after the reconcile below
-    lstRecords.Left = PAD
-    lstRecords.Top = y
-    lstRecords.Width = FW
-    lstRecords.Height = REC_H
-    y = y + lstRecords.Height + PAD
+    ' monospaced face, captioned after the widths are known (below).
+    y = y + LabelSpace("lblRecords", LBL)
+    Place lstRecords, PAD, y, FW, REC_H
+    y = y + REC_H + PAD
 
     y = y + PlaceLabel("lblFields", "Record detail", PAD, y, FW, LBL)
-    lstFields.Left = PAD
-    lstFields.Top = y
-    lstFields.Width = FW
-    lstFields.Height = FLD_H
-    y = y + lstFields.Height + PAD
+    Place lstFields, PAD, y, FW, FLD_H
+    y = y + FLD_H + PAD
 
-    btnCopy.Left = PAD
-    btnCopy.Top = y
-    btnCopy.Width = 110
-    btnCopy.Height = BTN
+    Place btnCopy, PAD, y, 110, BTN
+    Place btnPaste, PAD + 110 + PAD, y, FW - 110 - PAD, BTN
 
-    btnPaste.Left = btnCopy.Left + btnCopy.Width + PAD
-    btnPaste.Top = y
-    btnPaste.Width = FW - btnCopy.Width - PAD
-    btnPaste.Height = BTN
-
-    ' RECONCILE. Everything above is derived from one width, so in theory the
-    ' four rows already share a right edge - but the lists were coming out
-    ' short anyway, which means something clamps or rounds a ListBox that it
-    ' does not do to a TextBox or a CommandButton.
-    '
-    ' So rather than trusting the arithmetic, measure what the top and bottom
-    ' rows ACTUALLY achieved and make the lists match that. Whatever the real
-    ' right edge turns out to be, all four rows land on it.
+    ' Match the lists to the right edge the button row actually achieved,
+    ' rather than trusting that the arithmetic above landed.
     Dim rightEdge As Long
     rightEdge = btnPaste.Left + btnPaste.Width
     If btnLookup.Left + btnLookup.Width < rightEdge Then
         rightEdge = btnLookup.Left + btnLookup.Width
     End If
-
-    lstRecords.Width = rightEdge - lstRecords.Left
-    lstFields.Width = rightEdge - lstFields.Left
+    Place lstRecords, PAD, lstRecords.Top, rightEdge - PAD, REC_H
+    Place lstFields, PAD, lstFields.Top, rightEdge - PAD, FLD_H
 
     ' Columns are a fraction of what the list really is, not of the constant.
     lstRecords.ColumnWidths = RecordColumnWidths(lstRecords.Width)
@@ -337,16 +301,31 @@ Private Function PlaceLabel(ByVal nm As String, ByVal cap As String, _
     On Error GoTo 0
     If c Is Nothing Then Exit Function
 
-    c.AutoSize = False              ' or Width/Height below are ignored
     If Len(fontName) > 0 Then c.Font.Name = fontName
     If fontSize > 0 Then c.Font.Size = fontSize
     c.Caption = cap
-    c.Left = x
-    c.Top = y
-    c.Width = w
-    c.Height = h
+    Place c, x, y, w, h
     PlaceLabel = h + 2
 End Function
+
+' Positions AND sizes a control in one call.
+'
+' Assigning .Width and .Height individually was silently doing nothing on the
+' two ListBoxes - no error, the value simply did not stick, while .Left and
+' .Top on the same control worked. .Move sets all four through a single call
+' and is the documented way to reposition an MSForms control.
+'
+' AutoSize is tried first because a TextBox, Label or CommandButton with it on
+' resizes to its contents and ignores an explicit size. ListBox has no such
+' property, hence the guard rather than a plain assignment.
+Private Sub Place(ByVal c As Object, ByVal x As Long, ByVal y As Long, _
+                  ByVal w As Long, ByVal h As Long)
+    On Error Resume Next
+    c.AutoSize = False
+    On Error GoTo 0
+
+    c.Move x, y, w, h
+End Sub
 
 ' Called by CatQuickLook before Show, so selecting a cell that holds a serial
 ' and clicking the button pre-fills it.
