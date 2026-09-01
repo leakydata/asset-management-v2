@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat Asset Console</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --ink:#1a1d21; --muted:#5c6570; --line:#dde1e6;
+  --accent:#0b6bcb; --accent-ink:#fff; --ok:#1a7f37; --okbg:#e8f5ec;
+  --bad:#b42318; --badbg:#fdeceb; --warn:#8a6100; --warnbg:#fdf5e3;
+  --grey:#6b7280; --greybg:#eef0f2; --mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181c; --panel:#1d2126; --ink:#e6e9ed; --muted:#98a2b0; --line:#333a42;
+    --accent:#4d9fe8; --accent-ink:#0b1116; --ok:#5fd07f; --okbg:#16301f;
+    --bad:#f28b82; --badbg:#3a1d1a; --warn:#e8c26a; --warnbg:#332a14;
+    --grey:#98a2b0; --greybg:#262b31;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+     font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:19px;margin:0 0 2px}
+h1 span{font-weight:400;color:var(--muted)}
+.sub{color:var(--muted);margin:0 0 18px;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+       padding:16px;margin-bottom:16px}
+.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;
+          color:var(--muted);margin:0 0 12px;font-weight:600}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);
+  border-radius:5px;background:var(--panel);color:var(--ink);font:inherit}
+textarea{font-family:var(--mono);font-size:12.5px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{padding:8px 14px;border:1px solid var(--line);border-radius:5px;
+  background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{border-color:var(--bad);color:var(--bad)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;
+  background:none;color:var(--muted);padding:9px 14px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tblwrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--greybg);font-weight:600;position:sticky;top:0}
+tr:last-child td{border-bottom:none}
+tr.r-ok td{background:var(--okbg)} tr.r-bad td{background:var(--badbg)}
+tr.r-warn td{background:var(--warnbg)} tr.r-grey td{background:var(--greybg);color:var(--muted)}
+.msg{margin-top:12px;padding:9px 11px;border-radius:5px;font-size:13px;display:none}
+.msg.show{display:block}
+.msg.ok{background:var(--okbg);color:var(--ok)}
+.msg.bad{background:var(--badbg);color:var(--bad)}
+.msg.info{background:var(--greybg);color:var(--muted)}
+pre{background:var(--greybg);border:1px solid var(--line);border-radius:6px;
+    padding:11px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;margin:12px 0 0}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;
+     font-size:12.5px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--grey);margin-right:5px}
+.dot.on{background:var(--ok)} .dot.off{background:var(--bad)}
+fieldset{border:1px solid var(--line);border-radius:6px;padding:13px;margin:0 0 14px}
+legend{font-size:12px;color:var(--muted);padding:0 6px}
+.warnbox{background:var(--warnbg);color:var(--warn);border-radius:5px;padding:9px 11px;
+         font-size:12.5px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Cat Asset Console <span>&mdash; Asset Management V2 via the proxy</span></h1>
+<p class="sub">Single-file client for the same proxy routes the Excel workbook uses. No credentials live in
+this file &mdash; the function key you enter stays in this browser.</p>
+
+<div class="panel">
+  <h2>Connection</h2>
+  <div class="grid g2">
+    <div><label for="cfgUrl">Proxy URL</label>
+      <input id="cfgUrl" placeholder="https://&lt;app&gt;.azurewebsites.net/api" autocomplete="off"></div>
+    <div><label for="cfgKey">Function key</label>
+      <input id="cfgKey" type="password" placeholder="paste the function key" autocomplete="off"></div>
+  </div>
+  <div class="bar">
+    <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px">
+      <input type="checkbox" id="cfgSave" style="width:auto" checked> Remember on this machine
+    </label>
+    <button id="btnPing">Test connection</button>
+    <span id="pingState"><span class="dot"></span>not tested</span>
+  </div>
+  <div id="cfgMsg" class="msg"></div>
+</div>
+
+<div class="tabs" role="tablist">
+  <button role="tab" data-tab="lookup" aria-selected="true">Lookup</button>
+  <button role="tab" data-tab="batch" aria-selected="false">Batch lookup</button>
+  <button role="tab" data-tab="actions" aria-selected="false">Actions</button>
+  <button role="tab" data-tab="batchwrite" aria-selected="false">Batch add / update</button>
+</div>
+
+<section id="tab-lookup" class="panel">
+  <h2>Search ownership records</h2>
+  <div class="grid g2">
+    <div><label for="lkSerial">Serial number</label><input id="lkSerial" autocomplete="off"></div>
+    <div><label for="lkDcn">DCN</label><input id="lkDcn" autocomplete="off"></div>
+  </div>
+  <p class="hint">Exact match &mdash; the API has no partial search. Give a serial, a DCN, or both.</p>
+  <div class="row">
+    <button class="primary" id="btnLookup">Search</button>
+    <button id="btnLookupCopy" disabled>Copy as TSV</button>
+    <button id="btnLookupCsv" disabled>Download CSV</button>
+  </div>
+  <div id="lkMsg" class="msg"></div>
+  <div id="lkOut"></div>
+</section>
+
+<section id="tab-batch" class="panel" hidden>
+  <h2>Batch lookup</h2>
+  <div class="grid g2">
+    <div>
+      <label for="bkIds">Identifiers &mdash; one per line (paste a column straight from Excel)</label>
+      <textarea id="bkIds" rows="8" placeholder="9303&#10;CAT0980HA1234"></textarea>
+    </div>
+    <div>
+      <div style="margin-bottom:12px">
+        <label for="bkMode">Look up by</label>
+        <select id="bkMode"><option value="serial">Serial number</option><option value="dcn">DCN</option></select>
+      </div>
+      <div style="margin-bottom:12px">
+        <label for="bkConc">Parallel requests</label>
+        <select id="bkConc"><option>1</option><option selected>3</option><option>5</option><option>8</option></select>
+        <p class="hint">Higher is faster but risks HTTP 429. Transient failures retry up to 3 times.</p>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <button class="primary" id="btnBatch">Run batch lookup</button>
+    <button id="btnBatchStop" disabled>Stop</button>
+    <button id="btnBatchCopy" disabled>Copy as TSV</button>
+    <button id="btnBatchCsv" disabled>Download CSV</button>
+  </div>
+  <div id="bkMsg" class="msg"></div>
+  <div id="bkOut"></div>
+</section>
+
+<section id="tab-actions" class="panel" hidden>
+  <h2>Single-asset actions</h2>
+  <div class="warnbox"><strong>These change real data in CCAT.</strong> There is no Cat sandbox.
+    Every button confirms first, and shows the exact JSON body before it sends.</div>
+
+  <fieldset>
+    <legend>Asset identifier</legend>
+    <div class="grid g3">
+      <div><label for="acSerial">Serial number *</label><input id="acSerial" autocomplete="off"></div>
+      <div><label for="acDcn">DCN *</label><input id="acDcn" autocomplete="off"></div>
+      <div><label for="acMake">Make code</label><input id="acMake" placeholder="CW1" autocomplete="off"></div>
+      <div><label for="acDmake">Dealer make code</label><input id="acDmake" placeholder="CW" autocomplete="off"></div>
+    </div>
+    <p class="hint">Supply <strong>exactly one</strong> of Make code / Dealer make code &mdash; the API rejects both and neither.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Add / update fields</legend>
+    <div class="grid g3">
+      <div><label for="acType">Ownership type</label>
+        <select id="acType">
+          <option value=""></option><option>owned</option><option>rental</option><option>leased</option>
+          <option>sold</option><option>inventory</option><option>unknown</option>
+        </select></div>
+      <div><label for="acModel">Model</label><input id="acModel" placeholder="980H" maxlength="65" autocomplete="off"></div>
+      <div><label for="acYear">Model year</label><input id="acYear" placeholder="2006" maxlength="4" inputmode="numeric" autocomplete="off"></div>
+      <div><label for="acPfc">Product family code</label><input id="acPfc" placeholder="MDWL" maxlength="50" autocomplete="off"></div>
+      <div><label for="acPfn">Product family name</label><input id="acPfn" placeholder="MEDIUM WHEEL LOADER" maxlength="50" autocomplete="off"></div>
+      <div><label for="acBase">Base asset name</label><input id="acBase" maxlength="60" autocomplete="off"></div>
+      <div><label for="acCustom">Custom asset name</label><input id="acCustom" maxlength="60" autocomplete="off"></div>
+    </div>
+    <p class="hint">Ownership type, Model and Model year are required for a <em>new</em> record. On an existing
+      record only the fields you fill are updated &mdash; <strong>blank fields are left out of the request entirely</strong>,
+      so they never overwrite what CCAT already holds.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Transfer decision</legend>
+    <div class="grid g2">
+      <div><label for="acStatus">Status</label>
+        <select id="acStatus"><option value=""></option><option>APPROVED</option><option>REJECTED</option></select></div>
+      <div><label for="acReason">Reason (required to reject)</label><input id="acReason" autocomplete="off"></div>
+    </div>
+  </fieldset>
+
+  <div class="row">
+    <button id="btnCheck">Check ownership</button>
+    <button class="primary" id="btnAdd">Add / update</button>
+    <button class="danger" id="btnExpire">Expire</button>
+    <button id="btnTransfer">Approve / reject transfer</button>
+    <button id="btnPreview">Preview body only</button>
+  </div>
+  <div id="acMsg" class="msg"></div>
+  <div id="acOut"></div>
+</section>
+
+<section id="tab-batchwrite" class="panel" hidden>
+  <h2>Batch add / update</h2>
+  <div class="warnbox"><strong>Writes one row per line to production CCAT.</strong>
+    Run <em>Validate only</em> first &mdash; it checks every row and shows the bodies without sending anything.</div>
+  <label for="bwData">Paste rows from Excel including the header row (tab-separated)</label>
+  <textarea id="bwData" rows="9" placeholder="Serial&#9;Make Code&#9;DCN&#9;Ownership Type&#9;Model&#9;Model Year"></textarea>
+  <p class="hint">Headers are matched by name, case and spaces ignored. Recognised: Serial, Make Code,
+    Dealer Make Code, DCN, Ownership Type, Model, Model Year, Product Family Code, Product Family Name,
+    Base Asset Name, Custom Asset Name. Extra columns are ignored.</p>
+  <div class="row">
+    <button id="btnBwValidate">Validate only</button>
+    <button class="primary" id="btnBwRun">Run batch write</button>
+    <button id="btnBwStop" disabled>Stop</button>
+    <button id="btnBwCopy" disabled>Copy results as TSV</button>
+  </div>
+  <div id="bwMsg" class="msg"></div>
+  <div id="bwOut"></div>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ==========================================================================
+   Config. The function key is never baked into this file - it is typed at
+   runtime and (optionally) kept in this browser's localStorage. Treat the
+   key like a password, exactly as the workbook's Config sheet does.
+   ========================================================================== */
+var CFG_KEY = "catAssetConsole.cfg";
+var cfg = { url: "", key: "" };
+
+function loadCfg() {
+  try {
+    var raw = localStorage.getItem(CFG_KEY);
+    if (raw) { var o = JSON.parse(raw); cfg.url = o.url || ""; cfg.key = o.key || ""; }
+  } catch (e) { /* private window or blocked storage - run without it */ }
+  $("cfgUrl").value = cfg.url;
+  $("cfgKey").value = cfg.key;
+}
+function saveCfg() {
+  cfg.url = $("cfgUrl").value.trim();
+  cfg.key = $("cfgKey").value.trim();
+  try {
+    if ($("cfgSave").checked) localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+    else localStorage.removeItem(CFG_KEY);
+  } catch (e) { /* storage unavailable - config still works for this session */ }
+}
+
+/* ========================== small DOM helpers ============================ */
+function $(id) { return document.getElementById(id); }
+function val(id) { return cleanId($(id).value); }
+function show(id, kind, text) {
+  var el = $(id);
+  el.className = "msg show " + kind;
+  el.textContent = text;
+}
+function hide(id) { $(id).className = "msg"; }
+
+/* Normalize a pasted identifier - mirrors CleanId in CatAssetLookup.bas.
+   Internal spaces and hyphens are kept because both are valid in CCAT
+   serials; this only strips the invisible junk pasted data carries. */
+function cleanId(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/ /g, " ")
+    .replace(/[\t\r\n]/g, " ")
+    .replace(/[​‌‍﻿]/g, "")
+    .trim();
+}
+
+/* ==========================================================================
+   Proxy transport
+   --------------------------------------------------------------------------
+   The workbook sends the key as an x-functions-key header. A browser cannot
+   do that without tripping a CORS preflight on every call, so we pass it as
+   the ?code= query parameter instead - the same auth, no custom header, and
+   GET /search stays a "simple" request with no OPTIONS round trip.
+   ========================================================================== */
+function proxyCall(method, route, query, bodyObj) {
+  if (!cfg.url) return Promise.reject(new Error("Set the proxy URL first."));
+  var base = cfg.url.replace(/\/+$/, "");
+  var qs = new URLSearchParams(query || {});
+  if (cfg.key) qs.set("code", cfg.key);
+  var url = base + "/" + route + "?" + qs.toString();
+
+  var init = { method: method, headers: { "Accept": "application/json" } };
+  if (method === "POST") {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(bodyObj || {});
+  }
+  return fetch(url, init).then(function (r) {
+    return r.text().then(function (text) {
+      var json = null;
+      try { json = text ? JSON.parse(text) : null; } catch (e) { /* not JSON */ }
+      return { status: r.status, text: text, json: json };
+    });
+  });
+}
+
+/* Retry only what is worth retrying: timeouts, 429 and 5xx. A 400/401/403
+   will fail again identically, so retrying it just wastes the rate limit. */
+function isTransient(res) { return !res || res.status === 429 || res.status >= 500; }
+
+function proxyCallRetry(method, route, query, bodyObj, tries) {
+  tries = tries || 3;
+  function attempt(n) {
+    return proxyCall(method, route, query, bodyObj).then(function (res) {
+      if (n < tries && isTransient(res)) return wait(600 * n).then(function () { return attempt(n + 1); });
+      return res;
+    }, function (err) {
+      if (n < tries) return wait(600 * n).then(function () { return attempt(n + 1); });
+      throw err;
+    });
+  }
+  return attempt(1);
+}
+function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+/* ==========================================================================
+   Response parsing. The deployed proxy wraps Cat's reply in
+   { ok, data:{...}, error:{code,description} }; the read-only build in
+   azure-function/ passes Cat's body through bare. Accept either so this page
+   works against both.
+   ========================================================================== */
+function ownershipRecords(res) {
+  var j = res.json;
+  if (!j) return [];
+  if (j.data && Array.isArray(j.data.ownershipRecords)) return j.data.ownershipRecords;
+  if (Array.isArray(j.ownershipRecords)) return j.ownershipRecords;
+  return [];
+}
+function fieldOf(res, key) {
+  var j = res.json;
+  if (!j) return "";
+  if (j.data && j.data[key] != null) return String(j.data[key]);
+  if (j[key] != null) return String(j[key]);
+  return "";
+}
+function proxyError(res) {
+  var e = res.json && res.json.error;
+  if (e && (e.code || e.description)) return [e.code, e.description].filter(Boolean).join(" ");
+  return (res.text || "").slice(0, 200) || ("HTTP " + res.status);
+}
+
+var HEADERS = ["SerialNumber", "MakeCode", "MakeName", "Model", "ModelYear", "AssetName",
+               "DealerCode", "DealerName", "DCN", "DcnName", "CCID", "CcidName",
+               "OwnershipType", "Status"];
+
+function g(obj) {
+  var cur = obj;
+  for (var i = 1; i < arguments.length; i++) {
+    if (cur == null) return "";
+    cur = cur[arguments[i]];
+  }
+  return cur == null ? "" : String(cur);
+}
+function recordValues(rec) {
+  return [
+    g(rec, "metadata", "serialNumber"),
+    g(rec, "metadata", "makeInfo", "code"),
+    g(rec, "metadata", "makeInfo", "name"),
+    g(rec, "metadata", "model"),
+    g(rec, "metadata", "modelYear"),
+    g(rec, "metadata", "assetName"),
+    g(rec, "ownership", "dealerAssociation", "dealerCode"),
+    g(rec, "ownership", "dealerAssociation", "dealerName"),
+    g(rec, "ownership", "dealerAssociation", "dcn"),
+    g(rec, "ownership", "dealerAssociation", "dcnName"),
+    g(rec, "ownership", "ccid"),
+    g(rec, "ownership", "ccidName"),
+    g(rec, "ownership", "dealerAssociation", "dcnOwnershipType", "code"),
+    g(rec, "ownership", "dealerAssociation", "dcnRelationStatus", "code")
+  ];
+}
+
+/* ==========================================================================
+   Request body building - the whole point of the "blank fields" rule.
+   A blank value is OMITTED, never sent as "". Cat's spec says an existing
+   record updates "only the fields provided in the request body", so an empty
+   string would overwrite a good value with a blank. This mirrors JF() in
+   CatAssetLookup.bas exactly.
+   ========================================================================== */
+function put(body, name, value) {
+  var v = cleanId(value);
+  if (v.length) body[name] = v;
+  return body;
+}
+function addUpdateBody(f) {
+  var b = {};
+  put(b, "serial_number", f.serial);
+  put(b, "dcn", f.dcn);
+  put(b, "make_code", f.make);
+  put(b, "dealer_make_code", f.dmake);
+  put(b, "ownership_type_code", (f.type || "").toLowerCase());
+  put(b, "model", f.model);
+  put(b, "model_year", f.year);
+  put(b, "product_family_code", f.pfc);
+  put(b, "product_family_name", f.pfn);
+  put(b, "base_asset_name", f.base);
+  put(b, "custom_asset_name", f.custom);
+  return b;
+}
+
+/* ============================ table rendering ============================ */
+var lastGrid = { lookup: null, batch: null, write: null };
+
+function renderTable(hostId, headers, rows, classes) {
+  var host = $(hostId);
+  if (!rows.length) { host.innerHTML = ""; return; }
+  var h = "<div class=\"tblwrap\"><table><thead><tr>";
+  headers.forEach(function (c) { h += "<th>" + esc(c) + "</th>"; });
+  h += "</tr></thead><tbody>";
+  rows.forEach(function (r, i) {
+    var cls = classes && classes[i] ? " class=\"" + classes[i] + "\"" : "";
+    h += "<tr" + cls + ">";
+    r.forEach(function (c) { h += "<td>" + esc(c) + "</td>"; });
+    h += "</tr>";
+  });
+  host.innerHTML = h + "</tbody></table></div>";
+}
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function toTsv(grid) {
+  return [grid.headers].concat(grid.rows)
+    .map(function (r) { return r.join("\t"); }).join("\n");
+}
+function toCsv(grid) {
+  return [grid.headers].concat(grid.rows).map(function (r) {
+    return r.map(function (c) {
+      c = String(c == null ? "" : c);
+      return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c;
+    }).join(",");
+  }).join("\r\n");
+}
+function copyTsv(grid, msgId) {
+  navigator.clipboard.writeText(toTsv(grid)).then(
+    function () { show(msgId, "ok", "Copied " + grid.rows.length + " rows - paste straight into Excel."); },
+    function () { show(msgId, "bad", "Clipboard blocked by the browser. Use Download CSV instead."); });
+}
+function downloadCsv(grid, name) {
+  var blob = new Blob(["﻿" + toCsv(grid)], { type: "text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+/* =============================== tabs =================================== */
+document.querySelectorAll(".tabs button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    document.querySelectorAll(".tabs button").forEach(function (o) {
+      o.setAttribute("aria-selected", String(o === b));
+    });
+    ["lookup", "batch", "actions", "batchwrite"].forEach(function (t) {
+      $("tab-" + t).hidden = (t !== b.dataset.tab);
+    });
+  });
+});
+
+/* ========================= connection test ============================== */
+$("btnPing").addEventListener("click", function () {
+  saveCfg();
+  hide("cfgMsg");
+  if (!cfg.url) { show("cfgMsg", "bad", "Enter the proxy URL first."); return; }
+  $("pingState").innerHTML = "<span class=\"dot\"></span>testing";
+  /* A search with no parameters is the cheapest probe: the proxy answers 400
+     with its own error envelope, which proves reachability, CORS and the key
+     without touching an asset. */
+  proxyCall("GET", "search", {}).then(function (res) {
+    if (res.status === 401 || res.status === 403) {
+      $("pingState").innerHTML = "<span class=\"dot off\"></span>rejected";
+      show("cfgMsg", "bad", "Reached the proxy but the function key was rejected (" + res.status + ").");
+    } else {
+      $("pingState").innerHTML = "<span class=\"dot on\"></span>reachable";
+      show("cfgMsg", "ok", "Proxy answered HTTP " + res.status + ". Connection and CORS are good.");
+    }
+  }).catch(function (err) {
+    $("pingState").innerHTML = "<span class=\"dot off\"></span>unreachable";
+    show("cfgMsg", "bad", "Could not reach the proxy: " + err.message +
+      " - this is almost always CORS. Add this page's origin (" + location.origin +
+      ") to the Function App's CORS allowed origins.");
+  });
+});
+
+/* ============================== lookup ================================== */
+$("btnLookup").addEventListener("click", function () {
+  saveCfg();
+  hide("lkMsg");
+  $("lkOut").innerHTML = "";
+  $("btnLookupCopy").disabled = $("btnLookupCsv").disabled = true;
+
+  var serial = val("lkSerial"), dcn = val("lkDcn");
+  if (!serial && !dcn) { show("lkMsg", "bad", "Enter a serial number and/or a DCN."); return; }
+
+  var q = {};
+  if (serial) q.serial = serial;
+  if (dcn) q.dcn = dcn;
+
+  $("btnLookup").disabled = true;
+  show("lkMsg", "info", "Searching...");
+  proxyCallRetry("GET", "search", q).then(function (res) {
+    if (res.status !== 200) { show("lkMsg", "bad", "FAILED " + res.status + ": " + proxyError(res)); return; }
+    var recs = ownershipRecords(res);
+    if (!recs.length) { show("lkMsg", "info", "No records - not in CCAT (the search succeeded and returned zero rows)."); return; }
+    var rows = recs.map(recordValues);
+    lastGrid.lookup = { headers: HEADERS, rows: rows };
+    renderTable("lkOut", HEADERS, rows);
+    show("lkMsg", "ok", recs.length + " ownership record" + (recs.length === 1 ? "" : "s") + ".");
+    $("btnLookupCopy").disabled = $("btnLookupCsv").disabled = false;
+  }).catch(function (err) {
+    show("lkMsg", "bad", "Request failed: " + err.message);
+  }).then(function () { $("btnLookup").disabled = false; });
+});
+$("btnLookupCopy").addEventListener("click", function () { copyTsv(lastGrid.lookup, "lkMsg"); });
+$("btnLookupCsv").addEventListener("click", function () { downloadCsv(lastGrid.lookup, "asset-lookup.csv"); });
+
+/* =========================== batch lookup =============================== */
+var batchStop = false;
+
+$("btnBatchStop").addEventListener("click", function () { batchStop = true; });
+
+$("btnBatch").addEventListener("click", function () {
+  saveCfg();
+  hide("bkMsg");
+  $("bkOut").innerHTML = "";
+  $("btnBatchCopy").disabled = $("btnBatchCsv").disabled = true;
+
+  var mode = $("bkMode").value;
+  var ids = $("bkIds").value.split(/\r?\n/).map(cleanId).filter(function (s) { return s.length; });
+  if (!ids.length) { show("bkMsg", "bad", "Paste at least one identifier."); return; }
+
+  var conc = parseInt($("bkConc").value, 10) || 3;
+  var headers = [mode === "serial" ? "QuerySerial" : "QueryDCN", "Note"].concat(HEADERS);
+  var results = new Array(ids.length);
+  var done = 0;
+  batchStop = false;
+  $("btnBatch").disabled = true;
+  $("btnBatchStop").disabled = false;
+
+  function one(i) {
+    var id = ids[i];
+    var q = {};
+    q[mode] = id;
+    return proxyCallRetry("GET", "search", q).then(function (res) {
+      if (res.status !== 200) {
+        results[i] = { cls: "r-bad", rows: [[id, "LOOKUP FAILED: " + proxyError(res)].concat(blank())] };
+      } else {
+        var recs = ownershipRecords(res);
+        if (!recs.length) {
+          var note = mode === "serial" ? "NOT IN CCAT" : "NO ACTIVE RECORDS";
+          results[i] = { cls: "r-grey", rows: [[id, note].concat(blank())] };
+        } else {
+          results[i] = { cls: "", rows: recs.map(function (r) { return [id, ""].concat(recordValues(r)); }) };
+        }
+      }
+    }).catch(function (err) {
+      results[i] = { cls: "r-bad", rows: [[id, "LOOKUP FAILED: " + err.message].concat(blank())] };
+    }).then(function () {
+      done++;
+      show("bkMsg", "info", "Looked up " + done + " of " + ids.length + "...");
+    });
+  }
+  function blank() { return HEADERS.map(function () { return ""; }); }
+
+  runPool(ids.length, conc, one, function () { return batchStop; }).then(function () {
+    var rows = [], classes = [];
+    results.forEach(function (r) {
+      if (!r) return;
+      r.rows.forEach(function (row) { rows.push(row); classes.push(r.cls); });
+    });
+    lastGrid.batch = { headers: headers, rows: rows };
+    renderTable("bkOut", headers, rows, classes);
+    var failed = results.filter(function (r) { return r && r.cls === "r-bad"; }).length;
+    var missing = results.filter(function (r) { return r && r.cls === "r-grey"; }).length;
+    show("bkMsg", failed ? "bad" : "ok",
+      done + " of " + ids.length + " looked up" + (batchStop ? " (stopped early)" : "") +
+      " - " + (done - failed - missing) + " found, " + missing + " not in CCAT, " + failed + " failed." +
+      (failed ? " Red rows are unknown, not empty - re-run just those." : ""));
+    $("btnBatchCopy").disabled = $("btnBatchCsv").disabled = !rows.length;
+    $("btnBatch").disabled = false;
+    $("btnBatchStop").disabled = true;
+  });
+});
+$("btnBatchCopy").addEventListener("click", function () { copyTsv(lastGrid.batch, "bkMsg"); });
+$("btnBatchCsv").addEventListener("click", function () { downloadCsv(lastGrid.batch, "batch-lookup.csv"); });
+
+/* Bounded-concurrency worker pool - keeps `conc` requests in flight and
+   stops cleanly when the stop flag goes up. */
+function runPool(n, conc, worker, stopped) {
+  var next = 0;
+  function lane() {
+    if (next >= n || stopped()) return Promise.resolve();
+    var i = next++;
+    return worker(i).then(lane);
+  }
+  var lanes = [];
+  for (var k = 0; k < Math.min(conc, n); k++) lanes.push(lane());
+  return Promise.all(lanes);
+}
+
+/* ============================== actions ================================= */
+function actionFields() {
+  return {
+    serial: val("acSerial"), dcn: val("acDcn"),
+    make: val("acMake"), dmake: val("acDmake"),
+    type: val("acType"), model: val("acModel"), year: val("acYear"),
+    pfc: val("acPfc"), pfn: val("acPfn"),
+    base: val("acBase"), custom: val("acCustom"),
+    status: val("acStatus"), reason: val("acReason")
+  };
+}
+function needMakeXor(f) {
+  /* The API rejects both codes together and rejects neither - mirrors the
+     bool(make_code) == bool(dealer_make_code) check in proc 21. */
+  if (!f.make && !f.dmake) return "Provide Make code or Dealer make code.";
+  if (f.make && f.dmake) return "Provide only one of Make code / Dealer make code, not both.";
+  return "";
+}
+function showBody(title, method, route, body) {
+  var omitted = ["ownership_type_code", "model", "model_year", "product_family_code",
+                 "product_family_name", "base_asset_name", "custom_asset_name"]
+    .filter(function (k) { return !(k in body); });
+  var txt = title + "\n" + method + " " + (cfg.url || "<proxy>").replace(/\/+$/, "") + "/" + route +
+    "\n\n" + JSON.stringify(body, null, 2);
+  if (omitted.length) txt += "\n\nomitted (blank - CCAT keeps its current value):\n  " + omitted.join("\n  ");
+  $("acOut").innerHTML = "<pre>" + esc(txt) + "</pre>";
+}
+
+$("btnPreview").addEventListener("click", function () {
+  saveCfg();
+  hide("acMsg");
+  showBody("Would send:", "POST", "ownership", addUpdateBody(actionFields()));
+});
+
+$("btnCheck").addEventListener("click", function () {
+  saveCfg();
+  hide("acMsg");
+  $("acOut").innerHTML = "";
+  var f = actionFields();
+  if (!f.serial) { show("acMsg", "bad", "Enter a serial number to check."); return; }
+  show("acMsg", "info", "Checking...");
+  proxyCallRetry("GET", "search", { serial: f.serial }).then(function (res) {
+    if (res.status !== 200) { show("acMsg", "bad", "FAILED " + res.status + ": " + proxyError(res)); return; }
+    var recs = ownershipRecords(res);
+    if (!recs.length) { show("acMsg", "info", "Serial " + f.serial + " is not in CCAT."); return; }
+    renderTable("acOut", HEADERS, recs.map(recordValues));
+    show("acMsg", "ok", recs.length + " record" + (recs.length === 1 ? "" : "s") + " for " + f.serial + ".");
+  }).catch(function (err) { show("acMsg", "bad", "Request failed: " + err.message); });
+});
+
+$("btnAdd").addEventListener("click", function () {
+  saveCfg();
+  hide("acMsg");
+  var f = actionFields();
+  if (!f.serial || !f.dcn) { show("acMsg", "bad", "Serial number and DCN are required."); return; }
+  var e = needMakeXor(f);
+  if (e) { show("acMsg", "bad", e); return; }
+
+  var body = addUpdateBody(f);
+  showBody("Sending:", "POST", "ownership", body);
+  if (!confirm("Add / update ownership for serial " + f.serial + ", DCN " + f.dcn + "?\n\n" +
+               "This writes to production CCAT.")) { show("acMsg", "info", "Cancelled - nothing sent."); return; }
+
+  show("acMsg", "info", "Sending...");
+  proxyCall("POST", "ownership", {}, body).then(function (res) {
+    if (res.status === 200 || res.status === 201) {
+      show("acMsg", "ok", "OK (" + res.status + "). Record status: " + (fieldOf(res, "status") || "-"));
+    } else {
+      show("acMsg", "bad", "FAILED " + res.status + ": " + proxyError(res));
+    }
+  }).catch(function (err) { show("acMsg", "bad", "Request failed: " + err.message); });
+});
+
+$("btnExpire").addEventListener("click", function () {
+  saveCfg();
+  hide("acMsg");
+  var f = actionFields();
+  if (!f.serial || !f.dcn) { show("acMsg", "bad", "Serial number and DCN are required."); return; }
+  var e = needMakeXor(f);
+  if (e) { show("acMsg", "bad", e); return; }
+
+  var body = {};
+  put(body, "serial_number", f.serial);
+  put(body, "dcn", f.dcn);
+  put(body, "make_code", f.make);
+  put(body, "dealer_make_code", f.dmake);
+  showBody("Sending:", "POST", "expire", body);
+
+  if (!confirm("EXPIRE the ownership record for serial " + f.serial + ", DCN " + f.dcn + "?\n\n" +
+               "This removes the ownership record. Expiring a PENDING record cancels its transfer request.")) {
+    show("acMsg", "info", "Cancelled - nothing sent."); return;
+  }
+  show("acMsg", "info", "Sending...");
+  proxyCall("POST", "expire", {}, body).then(function (res) {
+    if (res.status === 204 || res.status === 200) show("acMsg", "ok", "OK - ownership expired (" + res.status + ").");
+    else show("acMsg", "bad", "FAILED " + res.status + ": " + proxyError(res));
+  }).catch(function (err) { show("acMsg", "bad", "Request failed: " + err.message); });
+});
+
+$("btnTransfer").addEventListener("click", function () {
+  saveCfg();
+  hide("acMsg");
+  var f = actionFields();
+  if (!f.serial) { show("acMsg", "bad", "Serial number is required."); return; }
+  var e = needMakeXor(f);
+  if (e) { show("acMsg", "bad", e); return; }
+  if (!f.status) { show("acMsg", "bad", "Choose APPROVED or REJECTED."); return; }
+  if (f.status.toUpperCase() === "REJECTED" && !f.reason) {
+    show("acMsg", "bad", "A reason is required to reject a transfer."); return;
+  }
+
+  var body = {};
+  put(body, "serial_number", f.serial);
+  put(body, "make_code", f.make);
+  put(body, "dealer_make_code", f.dmake);
+  put(body, "status", f.status.toUpperCase());
+  put(body, "reason", f.reason);
+  showBody("Sending:", "POST", "transfer", body);
+
+  if (!confirm(f.status.toUpperCase() + " the pending transfer for serial " + f.serial + "?")) {
+    show("acMsg", "info", "Cancelled - nothing sent."); return;
+  }
+  show("acMsg", "info", "Sending...");
+  proxyCall("POST", "transfer", {}, body).then(function (res) {
+    if (res.status === 204 || res.status === 200) show("acMsg", "ok", "OK - transfer " + f.status.toLowerCase() + " (" + res.status + ").");
+    else show("acMsg", "bad", "FAILED " + res.status + ": " + proxyError(res));
+  }).catch(function (err) { show("acMsg", "bad", "Request failed: " + err.message); });
+});
+
+/* ========================= batch add / update =========================== */
+var COLMAP = {
+  serial: ["serial", "serialnumber"],
+  make: ["makecode", "make"],
+  dmake: ["dealermakecode", "dealermake"],
+  dcn: ["dcn"],
+  type: ["ownershiptype", "ownershiptypecode", "type"],
+  model: ["model"],
+  year: ["modelyear", "year"],
+  pfc: ["productfamilycode", "pfcode", "pfc"],
+  pfn: ["productfamilyname", "pfname", "pfn"],
+  base: ["baseassetname", "basename"],
+  custom: ["customassetname", "customname"]
+};
+var OWN_TYPES = ["owned", "rental", "leased", "sold", "inventory", "unknown"];
+
+function norm(h) { return String(h).toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+function parseBatchWrite(text) {
+  var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
+  if (lines.length < 2) return { error: "Paste a header row plus at least one data row." };
+  var head = lines[0].split("\t").map(norm);
+  var idx = {};
+  Object.keys(COLMAP).forEach(function (k) {
+    idx[k] = -1;
+    COLMAP[k].some(function (alias) {
+      var i = head.indexOf(alias);
+      if (i >= 0) { idx[k] = i; return true; }
+      return false;
+    });
+  });
+  if (idx.serial < 0) return { error: "No 'Serial' column found in the header row." };
+
+  var rows = lines.slice(1).map(function (line) {
+    var c = line.split("\t");
+    var f = {};
+    Object.keys(idx).forEach(function (k) { f[k] = idx[k] >= 0 ? cleanId(c[idx[k]] || "") : ""; });
+    return f;
+  });
+  return { rows: rows };
+}
+
+function validateWriteRow(f) {
+  if (!f.serial) return "SKIPPED - no serial";
+  if (!f.dcn) return "SKIPPED - no DCN";
+  if (!f.make && !f.dmake) return "SKIPPED - no make code or dealer make code";
+  if (f.make && f.dmake) return "SKIPPED - both make code and dealer make code given";
+  if (f.type && OWN_TYPES.indexOf(f.type.toLowerCase()) < 0) return "SKIPPED - bad ownership type '" + f.type + "'";
+  if (f.year && !/^\d{4}$/.test(f.year)) return "SKIPPED - model year must be 4 digits";
+  return "";
+}
+
+var bwStop = false;
+$("btnBwStop").addEventListener("click", function () { bwStop = true; });
+
+function runBatchWrite(dryRun) {
+  saveCfg();
+  hide("bwMsg");
+  $("bwOut").innerHTML = "";
+  $("btnBwCopy").disabled = true;
+
+  var parsed = parseBatchWrite($("bwData").value);
+  if (parsed.error) { show("bwMsg", "bad", parsed.error); return; }
+  var rows = parsed.rows;
+
+  if (!dryRun) {
+    var willSend = rows.filter(function (f) { return !validateWriteRow(f); }).length;
+    if (!willSend) { show("bwMsg", "bad", "Every row was skipped by validation - nothing to send."); }
+    if (!confirm("Send " + willSend + " of " + rows.length + " rows to production CCAT?\n\n" +
+                 "Add / update is idempotent, so a failed row is safe to re-run.")) {
+      show("bwMsg", "info", "Cancelled - nothing sent."); return;
+    }
+  }
+
+  var headers = ["Row", "Serial", "DCN", "Result", "Body sent"];
+  var out = new Array(rows.length);
+  var classes = new Array(rows.length);
+  var done = 0;
+  bwStop = false;
+  $("btnBwRun").disabled = $("btnBwValidate").disabled = true;
+  $("btnBwStop").disabled = dryRun;
+
+  function one(i) {
+    var f = rows[i];
+    var bad = validateWriteRow(f);
+    var body = addUpdateBody(f);
+    var bodyTxt = JSON.stringify(body);
+
+    if (bad) {
+      out[i] = [i + 2, f.serial, f.dcn, bad, bodyTxt];
+      classes[i] = "r-warn";
+      done++;
+      return Promise.resolve();
+    }
+    if (dryRun) {
+      out[i] = [i + 2, f.serial, f.dcn, "OK to send", bodyTxt];
+      classes[i] = "r-ok";
+      done++;
+      return Promise.resolve();
+    }
+    return proxyCallRetry("POST", "ownership", {}, body).then(function (res) {
+      if (res.status === 200 || res.status === 201) {
+        out[i] = [i + 2, f.serial, f.dcn, "OK (" + res.status + ") - " + (fieldOf(res, "status") || "-"), bodyTxt];
+        classes[i] = "r-ok";
+      } else {
+        out[i] = [i + 2, f.serial, f.dcn, "FAILED " + res.status + ": " + proxyError(res), bodyTxt];
+        classes[i] = "r-bad";
+      }
+    }).catch(function (err) {
+      out[i] = [i + 2, f.serial, f.dcn, "FAILED: " + err.message, bodyTxt];
+      classes[i] = "r-bad";
+    }).then(function () {
+      done++;
+      show("bwMsg", "info", "Processed " + done + " of " + rows.length + "...");
+    });
+  }
+
+  runPool(rows.length, dryRun ? rows.length : 2, one, function () { return bwStop; }).then(function () {
+    var keep = [], kcls = [];
+    out.forEach(function (r, i) { if (r) { keep.push(r); kcls.push(classes[i]); } });
+    lastGrid.write = { headers: headers, rows: keep };
+    renderTable("bwOut", headers, keep, kcls);
+    var okN = kcls.filter(function (c) { return c === "r-ok"; }).length;
+    var badN = kcls.filter(function (c) { return c === "r-bad"; }).length;
+    var skipN = kcls.filter(function (c) { return c === "r-warn"; }).length;
+    show("bwMsg", badN ? "bad" : "ok",
+      (dryRun ? "Validation only - nothing was sent. " : "") +
+      okN + " ok, " + badN + " failed, " + skipN + " skipped" + (bwStop ? " (stopped early)" : "") + ".");
+    $("btnBwCopy").disabled = !keep.length;
+    $("btnBwRun").disabled = $("btnBwValidate").disabled = false;
+    $("btnBwStop").disabled = true;
+  });
+}
+$("btnBwValidate").addEventListener("click", function () { runBatchWrite(true); });
+$("btnBwRun").addEventListener("click", function () { runBatchWrite(false); });
+$("btnBwCopy").addEventListener("click", function () { copyTsv(lastGrid.write, "bwMsg"); });
+
+/* ================================ init ================================== */
+loadCfg();
+["cfgUrl", "cfgKey"].forEach(function (id) { $(id).addEventListener("change", saveCfg); });
+</script>
+</body>
+</html>
