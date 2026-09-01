@@ -19,7 +19,7 @@ Attribute VB_Name = "CatAssetLookup"
 '   2. Reference "Microsoft Scripting Runtime" (Tools > References) - required
 '      by VBA-JSON for Scripting.Dictionary.
 '
-' SETUP: click Cat Assets > Settings on the ribbon and enter the proxy URL
+' SETUP: click CCAT > Settings on the ribbon and enter the proxy URL
 ' and function key. They are stored per-user under HKCU, never in this file.
 ' (Add-in build: this module now depends on CatRibbon for REG_APP/REG_SECTION.)
 '
@@ -199,7 +199,7 @@ Public Function CatProxyCall(ByVal method As String, ByVal route As String, _
         ByVal query As String, ByVal jsonBody As String, ByRef statusOut As Long) As String
     Dim baseUrl As String: baseUrl = Cfg("ProxyUrl")
     If Len(baseUrl) = 0 Then Err.Raise vbObjectError + 10, , _
-        "No proxy URL set. Click Cat Assets > Settings and enter it (once per user)."
+        "No proxy URL set. Click CCAT > Settings and enter it (once per user)."
     If Right$(baseUrl, 1) = "/" Then baseUrl = Left$(baseUrl, Len(baseUrl) - 1)
 
     Dim url As String: url = baseUrl & "/" & route
@@ -212,7 +212,7 @@ Public Function CatProxyCall(ByVal method As String, ByVal route As String, _
 
     Dim key As String: key = Cfg("FunctionKey")
     If Len(key) = 0 Then Err.Raise vbObjectError + 11, , _
-        "No function key set. Click Cat Assets > Settings and enter it (once per user)."
+        "No function key set. Click CCAT > Settings and enter it (once per user)."
     http.SetRequestHeader "x-functions-key", key
     http.SetRequestHeader "Accept", "application/json"
     If UCase$(method) = "POST" Then http.SetRequestHeader "Content-Type", "application/json"

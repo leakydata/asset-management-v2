@@ -475,7 +475,7 @@ Private Sub BuildSheet(ByVal op As String)
 
     ws.Cells(HEADER_ROW + 1, 1).Select
     MsgBox "'" & nm & "' is ready." & vbCrLf & vbCrLf & _
-           "Fill rows, then Cat Assets > Validate, then Run.", _
+           "Fill rows, then CCAT > Validate, then Run.", _
            vbInformation, "Cat Asset Tools"
     Exit Sub
 Fail:

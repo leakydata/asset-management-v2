@@ -5,7 +5,7 @@
            attribute lands after all the built-in tabs. To pin it somewhere
            specific instead, add insertAfterMso="TabHome" (or TabView,
            TabData, TabDeveloper ...) back onto this element. -->
-      <tab id="CatTab" label="Cat Assets" keytip="K">
+      <tab id="CCATTab" label="CCAT" keytip="K">
 
         <group id="CatGrpLookup" label="Lookup">
           <button id="CatBtnCheck" size="large"

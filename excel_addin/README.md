@@ -157,7 +157,7 @@ overwrite what CCAT already holds.
    [Office RibbonX Editor](https://github.com/fernandreu/office-ribbonx-editor) →
    **Insert ▸ Office 2010+ Custom UI Part** → paste `customUI14.xml` → Validate → Save.
 5. **File ▸ Options ▸ Add-ins ▸ Manage: Excel Add-ins ▸ Go** → tick it.
-6. **Cat Assets ▸ Settings** — type the proxy URL and key, or point at a
+6. **CCAT ▸ Settings** — type the proxy URL and key, or point at a
    two-column range (an old Config sheet works as-is).
 
 Ribbon XML is read only when the add-in loads, so **restart Excel** after any
