@@ -158,16 +158,27 @@ Private Sub LayoutControls()
     Const FLD_H     As Long = 300    ' all 22 fields, no scrolling
     Dim ROW As Long: ROW = UI_SIZE + 11
 
-    ' SIZE THE FORM FIRST. MSForms clamps a child control to the form's
-    ' current client area, so setting a control's Width while the form is
-    ' still narrow silently truncates it - the control keeps the old width and
-    ' the form just grows more empty background. Everything below assumes the
-    ' form is already big enough.
+    ' SIZE THE FORM FIRST, and MEASURE its chrome rather than guessing it.
+    ' Me.Width/Height are the OUTER window; the usable area is InsideWidth /
+    ' InsideHeight, and the difference (border + title bar) varies with the
+    ' Windows theme and DPI. Guessing it is what left a band of dead grey down
+    ' the right and along the bottom: the controls were laid out to a width the
+    ' form did not actually have inside.
     Dim labels As Long
     labels = LabelSpace("lblRecords", LBL) + LabelSpace("lblFields", LBL)
 
-    Me.Width = W + (PAD * 2) + 6
-    Me.Height = PAD + ROW + PAD + labels + REC_H + PAD + FLD_H + PAD + BTN + PAD + 26
+    Dim contentH As Long
+    contentH = PAD + ROW + PAD + labels + REC_H + PAD + FLD_H + PAD + BTN + PAD
+
+    ' Provisional size, so InsideWidth/InsideHeight are meaningful to read.
+    Me.Width = W + (PAD * 2) + 20
+    Me.Height = contentH + 40
+
+    Dim chromeW As Long: chromeW = Me.Width - Me.InsideWidth
+    Dim chromeH As Long: chromeH = Me.Height - Me.InsideHeight
+
+    Me.Width = W + (PAD * 2) + chromeW
+    Me.Height = contentH + chromeH
 
     Me.Caption = "Cat Quick Look"
 
@@ -185,42 +196,40 @@ Private Sub LayoutControls()
     lstFields.Font.Name = "Consolas"
     lstFields.Font.Size = LIST_SIZE
 
+    ' Lay out against the measured client area, not the constant. If anything
+    ' clamps or rounds, every full-width control still shares one right edge.
+    Dim FW As Long: FW = Me.InsideWidth - (PAD * 2)
+
     ' A running cursor down the form, so an optional label simply consumes a
     ' band of space and everything below shuffles down.
     Dim y As Long: y = PAD
 
     txtSerial.Left = PAD
     txtSerial.Top = y
-    txtSerial.Width = W - 100
+    txtSerial.Width = FW - 100
     txtSerial.Height = ROW
 
     btnLookup.Left = PAD + txtSerial.Width + PAD
     btnLookup.Top = y
-    btnLookup.Width = (PAD + W) - btnLookup.Left    ' flush with the right edge
+    btnLookup.Width = (PAD + FW) - btnLookup.Left   ' flush with the right edge
     btnLookup.Height = ROW
     y = y + ROW + PAD
 
         ' MSForms only draws real column heads for a RowSource-bound list, never
     ' for one filled with AddItem - so the heading is a Label in the same
     ' monospaced face, padded from the same widths the columns use.
-    y = y + PlaceLabel("lblRecords", RecordHeader(LIST_SIZE), PAD, y, W, LBL, _
-                       "Consolas", LIST_SIZE)
+    y = y + LabelSpace("lblRecords", LBL)   ' captioned after the reconcile below
     lstRecords.Left = PAD
     lstRecords.Top = y
-    lstRecords.Width = W
+    lstRecords.Width = FW
     lstRecords.Height = REC_H
-    lstRecords.ColumnWidths = RecordColumnWidths()
     y = y + lstRecords.Height + PAD
 
-    y = y + PlaceLabel("lblFields", "Record detail", PAD, y, W, LBL)
+    y = y + PlaceLabel("lblFields", "Record detail", PAD, y, FW, LBL)
     lstFields.Left = PAD
     lstFields.Top = y
-    lstFields.Width = W
+    lstFields.Width = FW
     lstFields.Height = FLD_H
-    ' Proportional, and deliberately short of the full width - the totals have
-    ' to clear the vertical scrollbar, or the list grows a horizontal one too
-    ' and clips the last column.
-    lstFields.ColumnWidths = CStr(Int(W * 0.32)) & " pt;" & CStr(Int(W * 0.55)) & " pt"
     y = y + lstFields.Height + PAD
 
     btnCopy.Left = PAD
@@ -230,8 +239,34 @@ Private Sub LayoutControls()
 
     btnPaste.Left = btnCopy.Left + btnCopy.Width + PAD
     btnPaste.Top = y
-    btnPaste.Width = W - btnCopy.Width - PAD
+    btnPaste.Width = FW - btnCopy.Width - PAD
     btnPaste.Height = BTN
+
+    ' RECONCILE. Everything above is derived from one width, so in theory the
+    ' four rows already share a right edge - but the lists were coming out
+    ' short anyway, which means something clamps or rounds a ListBox that it
+    ' does not do to a TextBox or a CommandButton.
+    '
+    ' So rather than trusting the arithmetic, measure what the top and bottom
+    ' rows ACTUALLY achieved and make the lists match that. Whatever the real
+    ' right edge turns out to be, all four rows land on it.
+    Dim rightEdge As Long
+    rightEdge = btnPaste.Left + btnPaste.Width
+    If btnLookup.Left + btnLookup.Width < rightEdge Then
+        rightEdge = btnLookup.Left + btnLookup.Width
+    End If
+
+    lstRecords.Width = rightEdge - lstRecords.Left
+    lstFields.Width = rightEdge - lstFields.Left
+
+    ' Columns are a fraction of what the list really is, not of the constant.
+    lstRecords.ColumnWidths = RecordColumnWidths(lstRecords.Width)
+    lstFields.ColumnWidths = CStr(Int(lstFields.Width * 0.32)) & " pt;" & _
+                             CStr(Int(lstFields.Width * 0.55)) & " pt"
+
+    PlaceLabel "lblRecords", RecordHeader(LIST_SIZE, lstRecords.Width), _
+               PAD, lstRecords.Top - (LBL + 2), rightEdge - PAD, LBL, _
+               "Consolas", LIST_SIZE
 End Sub
 
 ' Vertical space an optional label will take, or 0 if it isn't on the form.
@@ -425,26 +460,35 @@ Private Function RecordColumns() As Variant
     RecordColumns = Array(68, 155, 58, 52, 30, 38)
 End Function
 
-Private Function RecordColumnWidths() As String
+' Scaled to the list's real width, keeping ~13% clear for the vertical
+' scrollbar so the last column never clips.
+Private Function RecordColumnWidths(ByVal listW As Long) As String
     Dim w As Variant: w = RecordColumns()
+    Dim k As Single: k = (listW * 0.87) / SumOf(w)
     Dim s As String, i As Long
     For i = LBound(w) To UBound(w)
-        s = s & CStr(w(i)) & " pt" & IIf(i < UBound(w), ";", "")
+        s = s & CStr(Int(w(i) * k)) & " pt" & IIf(i < UBound(w), ";", "")
     Next i
     RecordColumnWidths = s
 End Function
 
+Private Function SumOf(ByVal w As Variant) As Long
+    Dim i As Long
+    For i = LBound(w) To UBound(w): SumOf = SumOf + w(i): Next i
+End Function
+
 ' A heading padded to sit over the columns. Consolas advances 0.55 em per
 ' character, so a column w points wide holds Int(w / (size * 0.55)) of them.
-Private Function RecordHeader(ByVal fontSize As Single) As String
+Private Function RecordHeader(ByVal fontSize As Single, ByVal listW As Long) As String
     Dim w As Variant: w = RecordColumns()
     Dim caps As Variant
     caps = Array("DCN", "DCN NAME", "TYPE", "STATUS", "SUB", "DLR")
 
+    Dim k As Single: k = (listW * 0.87) / SumOf(w)
     Dim charW As Single: charW = fontSize * 0.55
     Dim s As String, i As Long, n As Long
     For i = LBound(w) To UBound(w)
-        n = Int(w(i) / charW)
+        n = Int((w(i) * k) / charW)
         s = s & Left$(CStr(caps(i)) & Space$(n), n)
     Next i
     RecordHeader = s
