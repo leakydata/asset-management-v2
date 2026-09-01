@@ -149,51 +149,16 @@ Private Sub LayoutControls()
     Const PAD As Long = 8
     Const BTN As Long = 26
     Const LBL As Long = 13
-    ' Every full-width control spans PAD .. PAD + W, so the serial row, both
-    ' lists and the button row share one right edge.
-    Const W   As Long = 460          ' usable width inside the border
 
-    ' MSForms has no "fit the text to the box" - AutoSize resizes the BOX to
-    ' the text, which is the wrong way round. You set Font.Size and make the
-    ' control tall enough for it. A control needs roughly Font.Size + 10 points
-    ' of height, which is why a default TextBox is 18 high: Tahoma 8pt + 10.
     Const UI_SIZE   As Single = 11   ' the serial box
     Const LIST_SIZE As Single = 9    ' the two lists
-    Const REC_H     As Long = 72     ' ~6 records before it scrolls
-    Const FLD_H     As Long = 300    ' all 22 fields, no scrolling
     Dim ROW As Long: ROW = UI_SIZE + 11
 
-    ' SIZE THE FORM FIRST, and MEASURE its chrome rather than guessing it.
-    ' Me.Width/Height are the OUTER window; the usable area is InsideWidth /
-    ' InsideHeight, and the difference (border + title bar) varies with the
-    ' Windows theme and DPI. Guessing it is what left a band of dead grey down
-    ' the right and along the bottom: the controls were laid out to a width the
-    ' form did not actually have inside.
-    Dim labels As Long
-    labels = LabelSpace("lblRecords", LBL) + LabelSpace("lblFields", LBL)
+    ' What we would LIKE. Treated as a request, not a guarantee.
+    Const W_WANT     As Long = 460
+    Const REC_H_WANT As Long = 72
+    Const FLD_H_WANT As Long = 300
 
-    Dim contentH As Long
-    contentH = PAD + ROW + PAD + labels + REC_H + PAD + FLD_H + PAD + BTN + PAD
-
-    ' Provisional size, so InsideWidth/InsideHeight are meaningful to read.
-    Me.Width = W + (PAD * 2) + 20
-    Me.Height = contentH + 40
-
-    Dim chromeW As Long: chromeW = Me.Width - Me.InsideWidth
-    Dim chromeH As Long: chromeH = Me.Height - Me.InsideHeight
-
-    Me.Width = W + (PAD * 2) + chromeW
-    Me.Height = contentH + chromeH
-
-    Me.Caption = "Cat Quick Look"
-
-    btnLookup.Caption = "Look Up"
-    btnCopy.Caption = "Copy Row"
-    btnPaste.Caption = "Paste at Selection"
-
-    ' Monospaced for anything holding an identifier. Serials and DCNs get read
-    ' character by character and 0/O, 1/l are easy to confuse in a proportional
-    ' face; a fixed-width one also lines the value column up.
     txtSerial.Font.Name = "Consolas"
     txtSerial.Font.Size = UI_SIZE
     lstRecords.Font.Name = "Consolas"
@@ -201,54 +166,88 @@ Private Sub LayoutControls()
     lstFields.Font.Name = "Consolas"
     lstFields.Font.Size = LIST_SIZE
 
-    ' Lay out against the measured client area, not the constant. If anything
-    ' clamps or rounds, every full-width control still shares one right edge.
-    Dim FW As Long: FW = Me.InsideWidth - (PAD * 2)
+    Me.Caption = "Cat Quick Look"
+    btnLookup.Caption = "Look Up"
+    btnCopy.Caption = "Copy Row"
+    btnPaste.Caption = "Paste at Selection"
 
-    ' A running cursor down the form, so an optional label simply consumes a
-    ' band of space and everything below shuffles down.
+    '--------------------------------------------------------------------------
+    ' 1. ASK the lists for the size we want, then MEASURE what they became.
+    '
+    ' The two ListBoxes have been refusing to resize - Left and Top apply,
+    ' Width and Height silently do not. Rather than keep fighting that, the
+    ' form is built around whatever the lists actually are. If they take the
+    ' request, everything is 460 wide; if they don't, every other control and
+    ' the form itself shrink to match them. Either way the rows line up and
+    ' the columns fit inside the list, which is what actually matters.
+    '--------------------------------------------------------------------------
+    Place lstRecords, PAD, 0, W_WANT, REC_H_WANT
+    Place lstFields, PAD, 0, W_WANT, FLD_H_WANT
+
+    Dim FW As Long
+    FW = lstRecords.Width
+    If lstFields.Width < FW Then FW = lstFields.Width
+    If FW < 200 Then FW = 200                    ' sanity floor
+
+    ' Make the two lists agree with each other on that width.
+    Place lstRecords, PAD, 0, FW, lstRecords.Height
+    Place lstFields, PAD, 0, FW, lstFields.Height
+
+    Dim recH As Long: recH = lstRecords.Height
+    Dim fldH As Long: fldH = lstFields.Height
+
+    '--------------------------------------------------------------------------
+    ' 2. Size the form from the MEASURED content and the MEASURED chrome.
+    '--------------------------------------------------------------------------
+    Dim labels As Long
+    labels = LabelSpace("lblRecords", LBL) + LabelSpace("lblFields", LBL)
+
+    Dim contentH As Long
+    contentH = PAD + ROW + PAD + labels + recH + PAD + fldH + PAD + BTN + PAD
+
+    Me.Width = FW + (PAD * 2) + 20               ' provisional
+    Me.Height = contentH + 40
+    Dim chromeW As Long: chromeW = Me.Width - Me.InsideWidth
+    Dim chromeH As Long: chromeH = Me.Height - Me.InsideHeight
+    Me.Width = FW + (PAD * 2) + chromeW
+    Me.Height = contentH + chromeH
+
+    '--------------------------------------------------------------------------
+    ' 3. Everything else is laid out to FW, so all four rows share a right edge.
+    '--------------------------------------------------------------------------
     Dim y As Long: y = PAD
+    Dim lookW As Long: lookW = 92
+    If lookW > FW - 120 Then lookW = FW - 120    ' keep the serial box usable
 
-    Dim lookLeft As Long: lookLeft = PAD + (FW - 100) + PAD
-
-    Place txtSerial, PAD, y, FW - 100, ROW
-    Place btnLookup, lookLeft, y, (PAD + FW) - lookLeft, ROW
+    Place txtSerial, PAD, y, FW - lookW - PAD, ROW
+    Place btnLookup, PAD + (FW - lookW - PAD) + PAD, y, lookW, ROW
     y = y + ROW + PAD
 
-    ' MSForms only draws real column heads for a RowSource-bound list, never
-    ' for one filled with AddItem - so the heading is a Label in the same
-    ' monospaced face, captioned after the widths are known (below).
     y = y + LabelSpace("lblRecords", LBL)
-    Place lstRecords, PAD, y, FW, REC_H
-    y = y + REC_H + PAD
+    Place lstRecords, PAD, y, FW, recH
+    y = y + recH + PAD
 
     y = y + PlaceLabel("lblFields", "Record detail", PAD, y, FW, LBL)
-    Place lstFields, PAD, y, FW, FLD_H
-    y = y + FLD_H + PAD
+    Place lstFields, PAD, y, FW, fldH
+    y = y + fldH + PAD
 
-    Place btnCopy, PAD, y, 110, BTN
-    Place btnPaste, PAD + 110 + PAD, y, FW - 110 - PAD, BTN
+    Dim copyW As Long: copyW = 110
+    If copyW > FW \ 3 Then copyW = FW \ 3
+    Place btnCopy, PAD, y, copyW, BTN
+    Place btnPaste, PAD + copyW + PAD, y, FW - copyW - PAD, BTN
 
-    ' Match the lists to the right edge the button row actually achieved,
-    ' rather than trusting that the arithmetic above landed.
-    Dim rightEdge As Long
-    rightEdge = btnPaste.Left + btnPaste.Width
-    If btnLookup.Left + btnLookup.Width < rightEdge Then
-        rightEdge = btnLookup.Left + btnLookup.Width
-    End If
-    Place lstRecords, PAD, lstRecords.Top, rightEdge - PAD, REC_H
-    Place lstFields, PAD, lstFields.Top, rightEdge - PAD, FLD_H
-
-    ' Columns are a fraction of what the list really is, not of the constant.
+    '--------------------------------------------------------------------------
+    ' 4. Columns scaled to the list's REAL width, so nothing is ever clipped.
+    '--------------------------------------------------------------------------
     lstRecords.ColumnWidths = RecordColumnWidths(lstRecords.Width)
     lstFields.ColumnWidths = CStr(Int(lstFields.Width * 0.32)) & " pt;" & _
                              CStr(Int(lstFields.Width * 0.55)) & " pt"
 
     PlaceLabel "lblRecords", RecordHeader(LIST_SIZE, lstRecords.Width), _
-               PAD, lstRecords.Top - (LBL + 2), rightEdge - PAD, LBL, _
+               PAD, lstRecords.Top - (LBL + 2), FW, LBL, _
                "Consolas", LIST_SIZE
 
-    If DIAG Then ReportLayout FW, rightEdge
+    If DIAG Then ReportLayout FW, PAD + FW
 End Sub
 
 ' Immediate window (Ctrl+G in the VBE), not a MsgBox - you can select and
