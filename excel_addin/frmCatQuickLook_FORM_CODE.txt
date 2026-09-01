@@ -191,6 +191,17 @@ Private Sub LayoutControls()
     btnCopy.Caption = "Copy Row"
     btnPaste.Caption = "Paste at Selection"
 
+    ' AUTOSIZE OFF FIRST. A control with AutoSize = True resizes itself to its
+    ' contents and silently DISCARDS anything assigned to Width or Height - no
+    ' error, the assignment just does nothing. That is why the two ListBoxes
+    ' kept their designer size while the TextBox and the buttons obeyed.
+    txtSerial.AutoSize = False
+    btnLookup.AutoSize = False
+    lstRecords.AutoSize = False
+    lstFields.AutoSize = False
+    btnCopy.AutoSize = False
+    btnPaste.AutoSize = False
+
     ' Monospaced for anything holding an identifier. Serials and DCNs get read
     ' character by character and 0/O, 1/l are easy to confuse in a proportional
     ' face; a fixed-width one also lines the value column up.
@@ -276,17 +287,22 @@ Private Sub LayoutControls()
     If DIAG Then ReportLayout FW, rightEdge
 End Sub
 
+' Immediate window (Ctrl+G in the VBE), not a MsgBox - you can select and
+' copy from it.
 Private Sub ReportLayout(ByVal FW As Long, ByVal rightEdge As Long)
-    Dim m As String
-    m = "form   Width=" & Me.Width & "  InsideWidth=" & Me.InsideWidth & vbCrLf & _
-        "       Height=" & Me.Height & "  InsideHeight=" & Me.InsideHeight & vbCrLf & _
-        "FW=" & FW & "   rightEdge asked for=" & rightEdge & vbCrLf & vbCrLf & _
-        "control        Left  Width  right   Top  Height" & vbCrLf & _
-        "-------------------------------------------------" & vbCrLf
-    m = m & Row("txtSerial", txtSerial) & Row("btnLookup", btnLookup) & _
-            Row("lstRecords", lstRecords) & Row("lstFields", lstFields) & _
-            Row("btnCopy", btnCopy) & Row("btnPaste", btnPaste)
-    MsgBox m, vbInformation, "Cat Quick Look - layout report"
+    Debug.Print String$(50, "-")
+    Debug.Print "form   Width=" & Me.Width & "  InsideWidth=" & Me.InsideWidth
+    Debug.Print "       Height=" & Me.Height & "  InsideHeight=" & Me.InsideHeight
+    Debug.Print "FW=" & FW & "   rightEdge asked for=" & rightEdge
+    Debug.Print
+    Debug.Print "control        Left  Width  right   Top  Height"
+    Debug.Print String$(50, "-")
+    Debug.Print Row("txtSerial", txtSerial);
+    Debug.Print Row("btnLookup", btnLookup);
+    Debug.Print Row("lstRecords", lstRecords);
+    Debug.Print Row("lstFields", lstFields);
+    Debug.Print Row("btnCopy", btnCopy);
+    Debug.Print Row("btnPaste", btnPaste);
 End Sub
 
 Private Function Row(ByVal nm As String, ByVal c As Object) As String
@@ -321,6 +337,7 @@ Private Function PlaceLabel(ByVal nm As String, ByVal cap As String, _
     On Error GoTo 0
     If c Is Nothing Then Exit Function
 
+    c.AutoSize = False              ' or Width/Height below are ignored
     If Len(fontName) > 0 Then c.Font.Name = fontName
     If fontSize > 0 Then c.Font.Size = fontSize
     c.Caption = cap
