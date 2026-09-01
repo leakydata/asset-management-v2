@@ -189,10 +189,14 @@ Private Sub LayoutControls()
     lstRecords.Left = PAD
     lstRecords.Top = y
     lstRecords.Width = W
-    lstRecords.Height = 56
+    lstRecords.Height = 72          ' ~6 rows at 9pt before it needs to scroll
     ' DCN | name | type | status | subscription | dealer. Fixed columns rather
     ' than one padded string, so the fields line up however long the DCN name is.
-    lstRecords.ColumnWidths = "70 pt;145 pt;58 pt;52 pt;32 pt;33 pt"
+    ' Total is deliberately ~30pt short of the list width: a ListBox grows its
+    ' own vertical scrollbar once the items overflow, and that steals about
+    ' 17pt - without the slack the last column would clip exactly when a serial
+    ' has enough records to scroll.
+    lstRecords.ColumnWidths = "68 pt;130 pt;55 pt;50 pt;30 pt;33 pt"
     y = y + lstRecords.Height + PAD
 
     y = y + PlaceLabel("lblFields", "Record detail", PAD, y, W, LBL)
