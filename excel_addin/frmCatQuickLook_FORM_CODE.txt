@@ -89,15 +89,32 @@ End Sub
 ' to roughly 240x180, which is why an unsized one looks tiny.
 Private Sub LayoutControls()
     Const PAD As Long = 8
-    Const ROW As Long = 20
     Const BTN As Long = 26
     Const W   As Long = 400          ' usable width inside the border
+
+    ' MSForms has no "fit the text to the box" - AutoSize resizes the BOX to
+    ' the text, which is the wrong way round. You set Font.Size and make the
+    ' control tall enough for it. A control needs roughly Font.Size + 10 points
+    ' of height, which is why a default TextBox is 18 high: Tahoma 8pt + 10.
+    Const UI_SIZE   As Single = 11   ' the serial box
+    Const LIST_SIZE As Single = 9    ' the two lists
+    Dim ROW As Long: ROW = UI_SIZE + 11
 
     Me.Caption = "Cat Quick Look"
 
     btnLookup.Caption = "Look Up"
     btnCopy.Caption = "Copy Row"
     btnPaste.Caption = "Paste at Selection"
+
+    ' Monospaced for anything holding an identifier. Serials and DCNs get read
+    ' character by character and 0/O, 1/l are easy to confuse in a proportional
+    ' face; a fixed-width one also lines the value column up.
+    txtSerial.Font.Name = "Consolas"
+    txtSerial.Font.Size = UI_SIZE
+    lstRecords.Font.Name = "Consolas"
+    lstRecords.Font.Size = LIST_SIZE
+    lstFields.Font.Name = "Consolas"
+    lstFields.Font.Size = LIST_SIZE
 
     txtSerial.Left = PAD
     txtSerial.Top = PAD
