@@ -1,5 +1,10 @@
 # Excel demo — serial-number lookup (via the proxy)
 
+> **Looking for the ribbon add-in?** See [`../excel_addin/`](../excel_addin/)
+> — the same modules converted to a `.xlam` with a Cat Assets ribbon tab,
+> per-user registry settings instead of a Config sheet, and no function key
+> inside the distributed file.
+
 A worksheet function `=CatLookupSerial("<serial>")` that calls the **Asset
 Management Proxy** (an Azure Function) and spills one row per matching ownership
 record. The proxy holds the Cat credentials server-side, so **this workbook holds
