@@ -15,7 +15,7 @@ with anyone allowed to have the function key.
 
 Type a serial number and the function returns a spilled table:
 
-| SerialNumber | MakeCode | MakeName | Model | ModelYear | AssetName | DealerCode | DealerName | DCN | DcnName | CCID | CcidName | OwnershipType | Status |
+| SerialNumber | MakeCode | MakeName | Model | ModelYear | AssetName | DealerCode | DealerName | DCN | DcnName | CCID | CcidName | OwnershipType | Status | OwnershipTypeName | StatusName | HasSubscription | OwnershipRequestType | DealerMakeCode | ProductFamilyCode | ProductFamilyName | BaseAssetName |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 9303 | SB6 | SNOW WOLF | SSL | 2014 | | E480 | WHEELER | | RJT EXCAVATING INC | 2969528338 | R J T EXCAVATING INC | OWNED | ACTIVE |
 | … | | | | | | | | | | | | | |
@@ -53,7 +53,7 @@ Type a serial number and the function returns a spilled table:
    or point them at a cell: put a serial in `B1` and use `=CatLookupSerial(B1)`,
    or a DCN in `B2` and use `=CatLookupDCN(B2)`.
 
-   `CatLookupDCN` returns the same 14-column spilled table, filtered by Dealer
+   `CatLookupDCN` returns the same 22-column spilled table, filtered by Dealer
    Customer Number instead of serial — one row per ownership record. A DCN
    typically has many assets, so expect a taller spill than a serial lookup;
    leave empty rows below the formula or Excel shows a `#SPILL!` error.

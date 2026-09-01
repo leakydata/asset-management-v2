@@ -29,14 +29,37 @@ order as the batch-lookup output**, so you can Ctrl-select the matching columns
 on a results sheet, copy, and paste them straight in. Excel pastes a
 multi-area column selection as one contiguous block in left-to-right order.
 
-```
-lookup output :  SerialNumber MakeCode MakeName Model ModelYear AssetName
-                 DealerCode DealerName DCN DcnName CCID CcidName
-                 OwnershipType Status
-                 (1)          (2)      (4)   (5)             (9)     (13)
+```text
+lookup output (22 columns)
+  1 SerialNumber     2 MakeCode        3 MakeName         4 Model
+  5 ModelYear        6 AssetName       7 DealerCode       8 DealerName
+  9 DCN             10 DcnName        11 CCID            12 CcidName
+ 13 OwnershipType   14 Status         15 OwnershipTypeName
+ 16 StatusName      17 HasSubscription
+ 18 OwnershipRequestType               19 DealerMakeCode
+ 20 ProductFamilyCode                  21 ProductFamilyName
+ 22 BaseAssetName
 
-Add-Update    :  Serial       Make Code Model Model Year     DCN     Ownership Type
+Ctrl-select these ten, in this order, and paste into Add-Update column 1:
+  1 Serial   2 MakeCode   4 Model   5 ModelYear   9 DCN   13 OwnershipType
+ 19 DealerMakeCode  20 ProductFamilyCode  21 ProductFamilyName  22 BaseAssetName
+       ->  Add-Update columns 1..10
 ```
+
+The first 14 positions are frozen — new fields are appended, never inserted —
+so anything already built against the old layout keeps working.
+
+**Take only one make column.** `MakeCode` and `DealerMakeCode` both come back
+populated, but supplying both is rejected. Paste all ten and then clear
+whichever you don't want, or Ctrl-select just the first six.
+
+`OwnershipRequestType` is only populated on **PENDING** records: `RECEIVED`
+means another dealer asked and you must approve or reject, `SENT` means you
+asked and are waiting. Blank means no pending request, or one you can't act
+on. Filter on it to build the Transfer sheet.
+
+`HasSubscription` is tri-state: `TRUE`, `FALSE`, or blank when the API didn't
+return the field at all — which is not the same as false.
 
 | Sheet | Columns |
 |---|---|

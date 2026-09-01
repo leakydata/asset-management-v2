@@ -265,22 +265,38 @@ End Function
 
 ' Column headers for the 14 record fields.
 Public Function HeaderArray() As Variant
+    ' The first 14 are FROZEN in position - the operation sheets in CatBatchOps
+    ' are aligned to this order, and anything already built against it keeps
+    ' working. New fields are appended, never inserted.
+    '
+    ' The append order is not arbitrary either: OwnershipType(13) < DealerMakeCode(19)
+    ' < ProductFamilyCode(20) < ProductFamilyName(21) < BaseAssetName(22) matches
+    ' Add-Update columns 6..10, so a Ctrl-selected copy of
+    '   Serial, MakeCode, Model, ModelYear, DCN, OwnershipType,
+    '   DealerMakeCode, ProductFamilyCode, ProductFamilyName, BaseAssetName
+    ' pastes into Add-Update columns 1..10 in one go.
     HeaderArray = Array("SerialNumber", "MakeCode", "MakeName", "Model", "ModelYear", _
                         "AssetName", "DealerCode", "DealerName", "DCN", "DcnName", _
-                        "CCID", "CcidName", "OwnershipType", "Status")
+                        "CCID", "CcidName", "OwnershipType", "Status", _
+                        "OwnershipTypeName", "StatusName", "HasSubscription", _
+                        "OwnershipRequestType", "DealerMakeCode", _
+                        "ProductFamilyCode", "ProductFamilyName", "BaseAssetName")
 End Function
 
 ' Returns a 1-D array of the 14 field values for one ownership record.
 Public Function RecordValues(ByVal rec As Object) As Variant
     Dim md As Object, ow As Object, da As Object, mk As Object, ot As Object, rs As Object
+    Dim pf As Object, dmi As Object
     Set md = SafeObj(rec, "metadata")
     Set ow = SafeObj(rec, "ownership")
     Set da = SafeObj(ow, "dealerAssociation")
     Set mk = SafeObj(md, "makeInfo")
     Set ot = SafeObj(da, "dcnOwnershipType")
     Set rs = SafeObj(da, "dcnRelationStatus")
+    Set pf = SafeObj(md, "productFamily")
+    Set dmi = SafeObj(da, "dealerMakeInfo")
 
-    Dim v(0 To 13) As Variant
+    Dim v(0 To 21) As Variant
     v(0) = SafeStr(md, "serialNumber")
     v(1) = SafeStr(mk, "code")
     v(2) = SafeStr(mk, "name")
@@ -295,6 +311,18 @@ Public Function RecordValues(ByVal rec As Object) As Variant
     v(11) = SafeStr(ow, "ccidName")
     v(12) = SafeStr(ot, "code")
     v(13) = SafeStr(rs, "code")
+    v(14) = SafeStr(ot, "name")
+    v(15) = SafeStr(rs, "name")
+    v(16) = SafeBool(da, "dcnHasSubscription")
+    ' Only populated on PENDING records. RECEIVED = another dealer asked and we
+    ' must approve or reject; SENT = we asked and are waiting on them. Absent
+    ' means no pending request, or one we cannot act on.
+    v(17) = SafeStr(da, "ownershipRequestType")
+    v(18) = SafeStr(dmi, "code")
+    v(19) = SafeStr(pf, "code")
+    v(20) = SafeStr(pf, "name")
+    ' assetName above is the coalesced custom-or-base value; this is the raw base.
+    v(21) = SafeStr(ow, "baseAssetName")
     RecordValues = v
 End Function
 
@@ -339,6 +367,17 @@ Private Function SafeStr(ByVal parent As Object, ByVal key As String) As String
     On Error Resume Next
     If parent.Exists(key) Then
         If Not IsObject(parent(key)) Then SafeStr = CStr(parent(key))
+    End If
+End Function
+
+' Tri-state boolean: "TRUE" / "FALSE" / "" when the key is absent. Absent is
+' meaningful - no dcnHasSubscription in the response is not the same as false.
+' IIf rather than CStr so the text is stable regardless of the VBA locale.
+Private Function SafeBool(ByVal parent As Object, ByVal key As String) As String
+    If parent Is Nothing Then Exit Function
+    On Error Resume Next
+    If parent.Exists(key) Then
+        If Not IsObject(parent(key)) Then SafeBool = IIf(CBool(parent(key)), "TRUE", "FALSE")
     End If
 End Function
 
