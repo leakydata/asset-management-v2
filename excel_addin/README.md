@@ -172,10 +172,58 @@ edit to it.
 
 ## Deploying to other people
 
-Put the `.xlam` on a share and add that share as a **Trusted Location**
-(with *Allow Trusted Locations on my network* ticked). Without it Excel blocks
-the macros and the buttons silently do nothing. Each person installs once and
-enters their own key.
+### A zip with an installer (preferred)
+
+Ship a folder containing exactly three files and zip it:
+
+```text
+CatAssetTools/
+├── ASSET_MANAGEMENT_ADDIN.xlam    ← the built add-in
+├── Install.bat
+└── Uninstall.bat
+```
+
+They unzip it and double-click `Install.bat`. No admin rights — everything is
+under their own profile.
+
+**Never put the function key in the zip.** It lives per-user in `HKCU` and is
+entered once via **CCAT ▸ Settings**. A key inside a file that gets forwarded
+around is a key you have to rotate.
+
+`Install.bat` does three things, and the third is the one people miss:
+
+1. **Copies to `%APPDATA%\Microsoft\AddIns`.** That's Excel's per-user add-in
+   folder *and* one of its default Trusted Locations, so the macros run without
+   a prompt. Anywhere else and they get "macros have been disabled" with no
+   ribbon.
+2. **Drops the Mark-of-the-Web.** A file that arrived in a zip by email or
+   download carries a `Zone.Identifier` stream that makes Excel refuse to load
+   it. `COPY` writes only the primary stream, so the block goes with it.
+3. **Registers it.** Copying alone only makes it *appear*, unticked, in the
+   Add-ins dialog. Excel loads what's listed under
+   `HKCU\Software\Microsoft\Office\<ver>\Excel\Options` as `OPEN`, `OPEN1`,
+   `OPEN2`… — the installer finds the first free slot and writes
+   `"ASSET_MANAGEMENT_ADDIN.xlam"`, quotes included, exactly as Excel does.
+
+It refuses to run while Excel is open, for two reasons that both produce a
+confusing half-install: a loaded add-in is locked so the copy fails, and Excel
+rewrites its `Options` key on exit, so a registration made while it's running
+is overwritten on close.
+
+Re-running is safe — it overwrites the file and won't add a second registration.
+`Uninstall.bat` removes the file and only its own `OPEN` slot, leaving other
+people's add-ins and the saved settings alone.
+
+> **Tell them to unzip first.** Double-clicking `Install.bat` from inside the
+> zip viewer fails: Windows extracts just the `.bat` to a temp folder and the
+> `.xlam` isn't next to it. The installer detects this and says so.
+
+### From a network share
+
+Alternative if you'd rather not hand out files: put the `.xlam` on a share and
+add that share as a **Trusted Location** (with *Allow Trusted Locations on my
+network* ticked). Without it Excel blocks the macros and the buttons silently
+do nothing. Each person still installs once and enters their own key.
 
 ## Known gotchas
 
