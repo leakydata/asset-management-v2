@@ -141,8 +141,37 @@ Public Function CatSearch(ByVal serialNumber As String, ByVal dcn As String) As 
 
     Dim status As Long, txt As String
     txt = CatProxyCall("GET", "search", q, "", status)
-    If status <> 200 Then Err.Raise vbObjectError + 2, , "API " & status & ": " & Left$(ProxyError(txt, status), 300)
+
+    ' Logged HERE, at the one place every lookup passes through - Serial Lookup,
+    ' DCN Lookup, Batch Serials and Batch DCNs alike - so neither form needed
+    ' changing to get it. AuditLookup skips worksheet-function calls itself, so
+    ' Excel recalculating =CatLookupSerial() does not flood the log.
+    '
+    ' Failures are logged too, and before the raise. "I searched for it and got
+    ' a 401" is exactly the line you want when working out what happened.
+    Dim kind As String, subject As String
+    If Len(serialNumber) > 0 Then
+        kind = "SERIAL": subject = serialNumber
+    Else
+        kind = "DCN": subject = dcn
+    End If
+
+    If status <> 200 Then
+        CatAudit.AuditLookup kind, subject, 0, status
+        Err.Raise vbObjectError + 2, , "API " & status & ": " & Left$(ProxyError(txt, status), 300)
+    End If
+
+    CatAudit.AuditLookup kind, subject, CountRecords(txt), status
     CatSearch = txt
+End Function
+
+' How many ownership records came back, for the lookup log. Swallows anything
+' odd and reports 0 - a logger must never be the reason a lookup fails.
+Private Function CountRecords(ByVal txt As String) As Long
+    On Error Resume Next
+    Dim recs As Object
+    Set recs = OwnershipRecords(txt)
+    If Not recs Is Nothing Then CountRecords = recs.Count
 End Function
 
 ' POST /ownership - add or update an ownership record. Returns the proxy

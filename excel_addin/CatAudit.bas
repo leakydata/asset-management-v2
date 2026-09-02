@@ -57,6 +57,18 @@ Public Function AuditPath() As String
     AuditPath = AuditFolder() & "\cat-write-log-" & Format$(Now, "yyyy-mm") & ".csv"
 End Function
 
+' Lookups go in their OWN file, not mixed into the write log.
+'
+' Reads and writes answer different questions. "Who expired this record on
+' Tuesday" needs a short list of things that changed the world; "what did I
+' search for last week" needs a long list of things that did not. Interleaved,
+' a few hundred lookups bury the handful of writes that actually matter, and
+' the write log stops being usable as an audit trail. Two files, one purpose
+' each.
+Public Function ReadLogPath() As String
+    ReadLogPath = AuditFolder() & "\cat-lookup-log-" & Format$(Now, "yyyy-mm") & ".csv"
+End Function
+
 ' Ribbon: show someone the log without making them know where it is.
 '
 ' Says WHY the log is empty rather than opening an empty folder. The log covers
@@ -66,28 +78,33 @@ End Function
 Public Sub CatOpenAuditFolder()
     On Error GoTo Fail
 
-    Dim p As String: p = AuditPath()
+    Dim wp As String: wp = AuditPath()
+    Dim rp As String: rp = ReadLogPath()
+    Dim hasW As Boolean: hasW = (Len(Dir$(wp)) > 0)
+    Dim hasR As Boolean: hasR = (Len(Dir$(rp)) > 0)
 
-    If Len(Dir$(p)) = 0 Then
+    If Not hasW And Not hasR Then
         MsgBox "Nothing has been logged yet this month." & vbCrLf & vbCrLf & _
-               "The write log records what RUN sends to CCAT - add / update, " & _
-               "expire and transfer. Lookups are deliberately not logged: a " & _
-               "search changes nothing, so there is nothing to record and " & _
-               "nothing to undo." & vbCrLf & vbCrLf & _
-               "The file appears the first time you Run a sheet:" & vbCrLf & _
-               p, _
-               vbInformation, "Cat Asset Tools - Write Log"
+               "Two logs live here, and each appears the first time it has " & _
+               "something to record:" & vbCrLf & vbCrLf & _
+               "  Lookups - every serial and DCN you search for" & vbCrLf & _
+               "  Writes  - every row Run sends, with the state of the " & _
+               "record BEFORE it was touched" & vbCrLf & vbCrLf & _
+               AuditFolder(), _
+               vbInformation, "Cat Asset Tools - Logs"
         Exit Sub
     End If
 
-    ' /select, opens the folder with the file already highlighted, which beats
-    ' dropping someone into a directory listing to go hunting.
-    Dim runs As Collection: Set runs = AuditRunIds()
-    Shell "explorer.exe /select,""" & p & """", vbNormalFocus
+    Dim msg As String
+    msg = "This month so far:" & vbCrLf & vbCrLf & _
+          "  Lookups : " & IIf(hasR, CStr(CountLines(rp) - 1) & " searches", "none yet") & vbCrLf & _
+          "  Writes  : " & IIf(hasW, CStr(AuditRunIds().Count) & " run(s)", "none yet")
+    Application.StatusBar = msg
 
-    If runs.Count > 0 Then
-        Application.StatusBar = runs.Count & " run(s) logged this month - " & p
-    End If
+    ' /select, opens the folder with a file already highlighted, which beats
+    ' dropping someone into a directory listing to go hunting.
+    Shell "explorer.exe /select,""" & IIf(hasW, wp, rp) & """", vbNormalFocus
+    MsgBox msg, vbInformation, "Cat Asset Tools - Logs"
     Exit Sub
 
 Fail:
@@ -141,6 +158,60 @@ Public Sub AuditRow(ByVal runId As String, ByVal ws As Worksheet, ByVal r As Lon
     Next i
 
     AppendLine line
+End Sub
+
+'==============================================================================
+' PUBLIC: lookups
+'==============================================================================
+
+' One line per lookup. Called from CatSearch, so every window and every batch
+' goes through it without either form needing to change.
+'
+' SKIPS WORKSHEET FUNCTIONS. =CatLookupSerial() in a cell re-evaluates whenever
+' Excel feels like recalculating - open the workbook, edit an unrelated cell,
+' press F9 - and none of that is a person looking something up. Logging it
+' would bury the real searches in machine noise within a day.
+' Application.Caller is a Range only when we were called from a cell, which is
+' exactly the distinction needed.
+Public Sub AuditLookup(ByVal kind As String, ByVal query As String, _
+                       ByVal records As Long, ByVal status As Long)
+    On Error Resume Next          ' logging must never break a lookup
+
+    If CalledFromCell() Then Exit Sub
+
+    EnsureReadHeader
+
+    Dim wbName As String
+    wbName = ActiveWorkbookName()
+
+    AppendTo ReadLogPath(), _
+        CsvField(Format$(Now, "yyyy-mm-dd hh:nn:ss")) & "," & _
+        CsvField(Environ$("USERNAME")) & "," & _
+        CsvField(kind) & "," & _
+        CsvField(query) & "," & _
+        CsvField(CStr(records)) & "," & _
+        CsvField(CStr(status)) & "," & _
+        CsvField(wbName)
+End Sub
+
+Private Function CalledFromCell() As Boolean
+    On Error Resume Next
+    CalledFromCell = (TypeName(Application.Caller) = "Range")
+End Function
+
+' ActiveWorkbook is Nothing when no workbook is open, and asking for .Name
+' then raises inside a logger that must not raise.
+Private Function ActiveWorkbookName() As String
+    On Error Resume Next
+    If Not Application.ActiveWorkbook Is Nothing Then
+        ActiveWorkbookName = Application.ActiveWorkbook.Name
+    End If
+End Function
+
+Private Sub EnsureReadHeader()
+    On Error Resume Next
+    If Len(Dir$(ReadLogPath())) > 0 Then Exit Sub
+    AppendTo ReadLogPath(), "When,User,Kind,Query,Records,HttpStatus,Workbook"
 End Sub
 
 '==============================================================================
@@ -237,14 +308,33 @@ End Sub
 ' Opened and closed per line on purpose. A run is dominated by HTTP calls, so
 ' the file cost is noise - and a log written as it goes survives a crash, which
 ' is exactly the run you would most want a record of.
-Private Sub AppendLine(ByVal line As String)
+Private Sub AppendTo(ByVal path As String, ByVal line As String)
     On Error Resume Next
     Dim f As Integer
     f = FreeFile
-    Open AuditPath() For Append As #f
+    Open path For Append As #f
     Print #f, line
     Close #f
 End Sub
+
+Private Sub AppendLine(ByVal line As String)
+    AppendTo AuditPath(), line
+End Sub
+
+' Lines in a file, so the button can say how many searches without parsing.
+Private Function CountLines(ByVal path As String) As Long
+    On Error GoTo Done
+    Dim f As Integer, line As String
+    f = FreeFile
+    Open path For Input As #f
+    Do Until EOF(f)
+        Line Input #f, line
+        CountLines = CountLines + 1
+    Loop
+Done:
+    On Error Resume Next
+    Close #f
+End Function
 
 Private Function CsvField(ByVal s As String) As String
     CsvField = """" & Replace$(s, """", """""") & """"

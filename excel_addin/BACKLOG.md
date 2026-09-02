@@ -65,6 +65,20 @@ The installer means colleagues get this soon. These are the difference between
 
 ## Housekeeping — found along the way, not features
 
+- [x] **H.2 Lookups are logged too, in their own file**
+  Raised twice from use: doing two searches and then opening the log showed
+  nothing, because the log covered writes only. That was correct by design and
+  wrong for the person using it — a search is activity, and a log you check
+  after doing work should show the work you did.
+  **DONE.** `cat-lookup-log-YYYY-MM.csv`, deliberately **separate** from the
+  write log: reads and writes answer different questions, and a few hundred
+  searches would bury the handful of writes that matter. Logged inside
+  `CatSearch`, the one place every window and every batch passes through, so
+  neither form needed changing. Worksheet-function calls are skipped —
+  `=CatLookupSerial()` re-evaluates on any recalc, and that is Excel, not a
+  person. Failed lookups are logged before the raise, since "I searched and got
+  a 401" is exactly the line you want afterwards.
+
 - [ ] **H.1 `azure-function/` in this repo is stale**
   It defines only the `search` route, but the add-in also calls `ownership`,
   `expire` and `transfer`. The deployed function is ahead of the source here.
