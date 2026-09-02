@@ -179,6 +179,26 @@ All of the **[form]** work lives here. Do it in one sitting.
   **Done when:** the sheet it writes is identical to what Batch DCNs produces
   for that DCN.
 
+- [ ] **4.4 Say "not found" where the eye actually is** **[form]**
+  When a lookup returns zero records, both floating windows say so **only on
+  the title bar** while the two lists go blank. Blank lists read as "it broke",
+  not "the answer is none" — and the title bar is the smallest text on the
+  form.
+  **The other two surfaces are already fine**, which is why this is narrow:
+  `=CatLookupSerial()` returns *"No records found for X"*, and batch lookup
+  writes `NOT IN CCAT` / `NO ACTIVE RECORDS` per row plus a summary count. Only
+  the windows are quiet.
+  **Fix:** put one row into the record list itself — *"No records — KR12345 is
+  not in CCAT"* — and keep the caption as well. No new control, so it is pure
+  code, and `ShowRecord` already guards on `mRows Is Nothing` so a click on
+  that row does nothing.
+  **Worth distinguishing**, the way batch lookup already does: a serial that
+  isn't in CCAT at all, versus a DCN that exists but currently owns nothing.
+  **Done when:** looking up a nonsense serial puts a visible line in the list,
+  and it clears on the next successful search.
+  **Batches with 4.1 and 4.2** — all three are form-code, so they get pasted
+  into the VBE once, not three times.
+
 - [ ] **4.3 Right-click a cell ▸ "Cat: look up this serial"** **[bas]**
   Context-menu entry, seeded from the clicked cell.
   **Why:** beats travelling to the ribbon for the most common action.
