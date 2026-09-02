@@ -10,13 +10,13 @@
         <group id="CatGrpLookup" label="Lookup">
           <button id="CatBtnSerialLook" size="large"
                   label="Serial Lookup"
-                  imageMso="ZoomCurrent75" keytip="Q"
+                  imageMso="BarcodeInsert" keytip="Q"
                   onAction="CatSerialLook_Ribbon"
                   screentip="Look up one serial in a floating window"
                   supertip="Read-only. Shows every field for every ownership record on one serial, without spawning a sheet. The window floats, so you can keep clicking cells - Paste at Selection drops the row into the cell you have selected, as many columns as that sheet wants."/>
           <button id="CatBtnDcnLook" size="large"
                   label="DCN Lookup"
-                  imageMso="ZoomCurrent100" keytip="N"
+                  imageMso="OpenInBrowserOutlook" keytip="N"
                   onAction="CatDcnLook_Ribbon"
                   screentip="Look up one DCN in a floating window"
                   supertip="Read-only. The mirror of Serial Lookup: everything one customer owns, rather than everyone who owns one machine. The list shows the asset - serial, make, model, year, type, status - because the DCN is the same on every row. Same floating window and same Paste at Selection."/>
@@ -64,7 +64,7 @@
         <group id="CatGrpRun" label="Active Sheet">
           <button id="CatBtnValidate" size="large"
                   label="Validate"
-                  imageMso="CheckSpelling" keytip="V"
+                  imageMso="MailMergeAutoCheckForErrors" keytip="V"
                   onAction="CatValidateSheet_Ribbon"
                   screentip="Check every row without sending anything"
                   supertip="SENDS NOTHING. Works out the operation from the active sheet, checks every row, and writes the outcome to the Result column - green ready, yellow skipped with the reason. On Add / Update it also lists which optional fields are being left out. Always do this first."/>
