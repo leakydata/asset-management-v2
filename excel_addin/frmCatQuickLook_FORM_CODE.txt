@@ -1,417 +1,131 @@
 ================================================================================
-frmCatQuickLook — build it once, then paste the code below
+frmCatQuickLook - build it once, then paste the code below
 ================================================================================
 
 A UserForm is a .frm plus a binary .frx companion, so it can't be handed over
 as importable text the way a .bas can. Building it by hand takes a couple of
 minutes and only happens once.
 
+THE CODE CONTAINS NO SIZES. It never reads or writes Width, Height, Left, Top,
+Font, ColumnCount or ColumnWidths on anything. Every one of those is a
+property you set in the designer, and the form stays exactly as you draw it.
+Move things around whenever you like; nothing in the code needs to change.
+
 --------------------------------------------------------------------------------
 1. CREATE THE FORM
 --------------------------------------------------------------------------------
 
-In the VBE:  Insert ▸ UserForm
+In the VBE:  Insert > UserForm
 
-In the Properties window (F4) set ONE property:
+In the Properties window (F4):
 
     (Name)      frmCatQuickLook
+    Caption     Cat Quick Look
+    Width       511
+    Height      498
 
-Nothing else. Size, caption and button text are all set by the code — a fresh
-UserForm defaults to about 240x180, which looks tiny, and the code fixes that
-on open.
-
---------------------------------------------------------------------------------
-2. DROP ON SIX CONTROLS
---------------------------------------------------------------------------------
-
-Names must match exactly — the code is wired to them. **Position and size do
-not matter at all** — drop them anywhere, the code lays them out on open. You
-don't need to set captions either.
-
-    Control          (Name)
-    ------------------------------------
-    TextBox          txtSerial
-    CommandButton    btnLookup
-    ListBox          lstRecords
-    ListBox          lstFields
-    CommandButton    btnCopy
-    CommandButton    btnPaste
-
-OPTIONAL, if you want headings between the two lists — add them or don't, the
-code lays out correctly either way and captions them for you:
-
-    Label            lblRecords      -> "Ownership records"
-    Label            lblFields       -> "Record detail"
-
-DO NOT put the controls inside a Frame. A control in a Frame has its Left/Top
-measured from the FRAME, not the form, so the absolute positioning the code
-does lands it in the wrong place and everything piles up. The code checks for
-this on open and tells you which controls are affected. To move one out: cut
-it (Ctrl+X), click the form background, paste (Ctrl+V).
-
-Rough layout:
-
-    ┌─ Cat Quick Look ─────────────────────────────┐
-    │ [txtSerial................]  [ btnLookup ]   │
-    │ ┌─ lstRecords ─────────────────────────────┐ │
-    │ │ C01913004  DUSHORE SEWER  [OWNED/ACTIVE] │ │
-    │ │ C10001501  DUSHORE BOROUGH [OWNED/ACTIVE]│ │
-    │ └──────────────────────────────────────────┘ │
-    │ ┌─ lstFields ──────────────────────────────┐ │
-    │ │ SerialNumber      KR416089               │ │
-    │ │ MakeCode          CAT                    │ │
-    │ │ DCN               C01913004              │ │
-    │ │ OwnershipType     OWNED                  │ │
-    │ │ ...                                      │ │
-    │ └──────────────────────────────────────────┘ │
-    │ [ btnCopy ]   [ btnPaste                   ] │
-    └──────────────────────────────────────────────┘
+511 x 498 leaves 500 x 470 of usable space inside the border, which is what
+the sizes below add up to. The Caption is replaced at runtime - it doubles as
+the status line ("2 record(s) for KR416089", "FAILED: ...").
 
 --------------------------------------------------------------------------------
-3. PASTE THE CODE
+2. DROP ON THE CONTROLS
 --------------------------------------------------------------------------------
 
-Right-click the form ▸ View Code, then paste everything below the line.
-(Do NOT put this in a normal module — it belongs to the form.)
+Names must match exactly - the code is wired to them. Drop each one anywhere,
+then type these in. Nothing here is sacred; it is one arrangement that fits.
+
+    Control          (Name)        Left   Top   Width  Height
+    ---------------------------------------------------------
+    TextBox          txtSerial        8     8     386      22
+    CommandButton    btnLookup      400     8      92      22
+    Label            lblRecords       8    42     484      13   (optional)
+    ListBox          lstRecords       8    57     484      74
+    Label            lblFields        8   137     484      13   (optional)
+    ListBox          lstFields        8   152     484     278
+    CommandButton    btnCopy          8   436     110      26
+    CommandButton    btnPaste       124   436     368      26
+
+Why those numbers, if you want to move things: 8 all round is the margin.
+484 = 500 - 16, so everything full-width ends at 492. btnLookup ends there too
+(400 + 92) and so does btnPaste (124 + 368). lstFields just fills what is left
+between the heading above it and the buttons below.
+
+--------------------------------------------------------------------------------
+3. THE REST OF THE PROPERTIES
+--------------------------------------------------------------------------------
+
+    btnLookup     Caption           Look Up
+                  Default           True          <- Enter in the serial box
+    btnCopy       Caption           Copy Row
+    btnPaste      Caption           Paste at Selection
+    txtSerial     Font              Consolas 11
+
+    lstRecords    Font              Consolas 9
+                  ColumnCount       6
+                  ColumnWidths      71 pt;162 pt;60 pt;54 pt;31 pt;39 pt
+    lstFields     Font              Consolas 9
+                  ColumnCount       2
+                  ColumnWidths      154 pt;266 pt
+
+ColumnWidths must total LESS than the list is wide. The six above come to
+417 in a 484pt list, leaving room for the vertical scrollbar that appears
+once there are more records than fit - without that slack the last column
+clips exactly when a serial has enough records to need scrolling.
+
+The optional labels are headings. lblFields is just:
+
+    lblFields     Caption           Record detail
+
+lblRecords is the strip that names the record columns. It lines up by being
+padded with spaces, so it only works in a monospaced font - set it to
+Consolas 9 to match the list, and paste this as the Caption (the spacing
+matters, copy it exactly):
+
+    DCN           DCN NAME                        TYPE        STATUS    SUB   DLR
+
+If you resize lstRecords, redo ColumnWidths and this caption together - they
+are two halves of the same thing. Leave both labels off entirely if you would
+rather not bother; the code doesn't look for them.
+
+    +- Cat Quick Look -----------------------------+
+    | [txtSerial................]  [ btnLookup ]   |
+    | DCN      DCN NAME        TYPE STATUS SUB DLR |
+    | +- lstRecords ----------------------------+  |
+    | | C01913004 DUSHORE SEWER  OWNED ACTIVE.. |  |
+    | | C10001501 DUSHORE BOROUGH OWNED ACTIVE. |  |
+    | +-----------------------------------------+  |
+    | Record detail                                |
+    | +- lstFields -----------------------------+  |
+    | | SerialNumber      KR416089              |  |
+    | | MakeCode          CAT                   |  |
+    | | ...                                     |  |
+    | +-----------------------------------------+  |
+    | [ btnCopy ]   [ btnPaste                  ]  |
+    +----------------------------------------------+
+
+--------------------------------------------------------------------------------
+4. PASTE THE CODE
+--------------------------------------------------------------------------------
+
+Right-click the form > View Code, then paste everything below the line.
+(Do NOT put this in a normal module - it belongs to the form.)
 
 ================================================================================
 Option Explicit
-
-' Set to False once the layout is right. Module-level declarations have to sit
-' up here in the declarations section - VBA will not see a Const declared
-' between two procedures.
-Private Const DIAG As Boolean = True
 
 ' One entry per ownership record; each item is the array RecordValues returns.
 Private mRows As Collection
 
 '==============================================================================
 ' Setup
+'
+' Nothing here touches how the form LOOKS. No Width, no Height, no Left, no
+' Top, no Font, no ColumnCount, no ColumnWidths - those are all designer
+' properties, listed in the notes above. This code only does behaviour.
 '==============================================================================
 Private Sub UserForm_Initialize()
-    Dim stray As String
-    stray = ControlsNotOnForm()
-    If Len(stray) > 0 Then
-        ' Worth stopping for: a control inside a Frame has coordinates relative
-        ' to the FRAME, so the absolute positioning below silently lands it in
-        ' the wrong place and everything looks piled up.
-        MsgBox "These controls are inside a Frame or other container:" & vbCrLf & vbCrLf & _
-               "    " & stray & vbCrLf & vbCrLf & _
-               "Their Left/Top are measured from the container, not the form, so " & _
-               "the layout will be wrong. Cut them (Ctrl+X), click the form " & _
-               "background, and paste (Ctrl+V) to move them out - then delete " & _
-               "the Frame." & vbCrLf & vbCrLf & _
-               "For headings above the lists, add Labels named lblRecords and " & _
-               "lblFields instead; the code positions them if they exist.", _
-               vbExclamation, "Cat Quick Look - form layout"
-    End If
-
-    LayoutControls
-
-    lstRecords.ColumnCount = 6
-    lstFields.ColumnCount = 2
-
-    ' Enter in the serial box triggers Look Up.
-    btnLookup.Default = True
-
     ResetDisplay
-End Sub
-
-' Names any of the six that were dropped into a container rather than straight
-' onto the form.
-'
-' Uses the direct control references, NOT Me.Controls(name). That lookup does
-' not reliably reach a control nested inside a Frame - it fails, the error is
-' swallowed, and the control is skipped, so the check reported "all clear" for
-' exactly the case it exists to catch.
-Private Function ControlsNotOnForm() As String
-    ControlsNotOnForm = StrayOne("txtSerial", txtSerial) _
-                      & StrayOne("btnLookup", btnLookup) _
-                      & StrayOne("lstRecords", lstRecords) _
-                      & StrayOne("lstFields", lstFields) _
-                      & StrayOne("btnCopy", btnCopy) _
-                      & StrayOne("btnPaste", btnPaste)
-    If Len(ControlsNotOnForm) > 2 Then
-        ControlsNotOnForm = Mid$(ControlsNotOnForm, 3)
-    End If
-End Function
-
-Private Function StrayOne(ByVal nm As String, ByVal c As Object) As String
-    If c Is Nothing Then Exit Function
-    If Not c.Parent Is Me Then StrayOne = ", " & nm
-End Function
-
-' Everything about the form's appearance is set here rather than in the
-' designer, so building it by hand is only ever "drop the controls and name
-' them". Wherever you dragged them, they end up here. A new UserForm defaults
-' to roughly 240x180, which is why an unsized one looks tiny.
-'
-' THE ORDER MATTERS. The form is sized FIRST, before a single control is
-' touched. MSForms will not let a control be bigger than the client area it
-' sits in - the request is silently clamped, no error, which is exactly why
-' the two lists kept coming back 354 wide when they were asked for 460 while
-' the form was still its provisional size. Size the room, then the furniture.
-'
-' After that it is plain arithmetic. CLIENT_W and CLIENT_H are the only two
-' numbers to change; every position and size below is added to or subtracted
-' from them, so the layout stays consistent whatever you set them to.
-'
-' Do NOT put the controls in a Frame - see ControlsNotOnForm above. If you want
-' headings between the lists, add two Labels named lblRecords and lblFields and
-' they get positioned and captioned automatically. Leave them out and the form
-' closes the gap.
-Private Sub LayoutControls()
-    '--- the room -------------------------------------------------------------
-    Const CLIENT_W As Long = 500     ' usable width inside the border
-    Const CLIENT_H As Long = 470     ' usable height below the title bar
-
-    '--- the furniture --------------------------------------------------------
-    Const PAD    As Long = 8         ' margin all the way round
-    Const GAP    As Long = 6         ' between stacked controls
-    Const ROW_H  As Long = 22        ' serial box and Look Up
-    Const BTN_H  As Long = 26        ' Copy and Paste
-    Const LBL_H  As Long = 13        ' the two headings
-    Const REC_H  As Long = 74        ' records list - about 5 rows
-    Const LOOK_W As Long = 92        ' Look Up
-    Const COPY_W As Long = 110       ' Copy Row
-
-    Const UI_SIZE   As Single = 11   ' the serial box
-    Const LIST_SIZE As Single = 9    ' the two lists
-
-    txtSerial.Font.Name = "Consolas"
-    txtSerial.Font.Size = UI_SIZE
-    lstRecords.Font.Name = "Consolas"
-    lstRecords.Font.Size = LIST_SIZE
-    lstFields.Font.Name = "Consolas"
-    lstFields.Font.Size = LIST_SIZE
-
-    Me.Caption = "Cat Quick Look"
-    btnLookup.Caption = "Look Up"
-    If DIAG Then ProbeList "lstRecords", lstRecords
-    If DIAG Then ProbeList "lstFields", lstFields
-    btnCopy.Caption = "Copy Row"
-    btnPaste.Caption = "Paste at Selection"
-
-    '--------------------------------------------------------------------------
-    ' 1. THE FORM, FIRST AND EXACTLY.
-    '
-    ' Width/Height are the OUTER size; InsideWidth/InsideHeight are the client
-    ' area. The difference is the border and title bar, and it is not knowable
-    ' until the form has been given a size - so ask once, measure the
-    ' difference, then ask again with it added. InsideWidth is CLIENT_W after
-    ' this, to the point, on any Windows theme.
-    '--------------------------------------------------------------------------
-    Me.Width = CLIENT_W
-    Me.Height = CLIENT_H
-    Me.Width = CLIENT_W + (Me.Width - Me.InsideWidth)
-    Me.Height = CLIENT_H + (Me.Height - Me.InsideHeight)
-
-    '--------------------------------------------------------------------------
-    ' 2. One content width, used by every row, so all four share a right edge.
-    '--------------------------------------------------------------------------
-    Dim CW As Long
-    CW = CLIENT_W - (PAD * 2)                     ' 500 - 16 = 484
-
-    '--------------------------------------------------------------------------
-    ' 3. Down from the top.
-    '--------------------------------------------------------------------------
-    Dim y As Long
-    y = PAD                                       ' 8
-
-    Place txtSerial, PAD, y, CW - LOOK_W - GAP, ROW_H
-    Place btnLookup, PAD + CW - LOOK_W, y, LOOK_W, ROW_H
-    y = y + ROW_H + (GAP * 2)                     ' 8 + 22 + 12 = 42
-
-    ' PlaceLabel returns the space it used, or 0 when you never added the
-    ' label - so the gap closes by itself either way.
-    y = y + PlaceLabel("lblRecords", RecordHeader(LIST_SIZE, CW), _
-                       PAD, y, CW, LBL_H, "Consolas", LIST_SIZE)
-    Place lstRecords, PAD, y, CW, REC_H           ' 57 .. 131
-    y = y + REC_H + GAP
-
-    y = y + PlaceLabel("lblFields", "Record detail", PAD, y, CW, LBL_H)
-
-    '--------------------------------------------------------------------------
-    ' 4. Up from the bottom. The field list then takes everything in between,
-    '    so changing CLIENT_H only ever grows or shrinks that one list.
-    '--------------------------------------------------------------------------
-    Dim yBtn As Long
-    yBtn = CLIENT_H - PAD - BTN_H                 ' 470 - 8 - 26 = 436
-
-    Place btnCopy, PAD, yBtn, COPY_W, BTN_H
-    Place btnPaste, PAD + COPY_W + GAP, yBtn, CW - COPY_W - GAP, BTN_H
-
-    Dim fldH As Long
-    fldH = (yBtn - GAP) - y                       ' 430 - 152 = 278, ~23 rows
-    If fldH < 60 Then fldH = 60                   ' never collapse to nothing
-    Place lstFields, PAD, y, CW, fldH
-
-    '--------------------------------------------------------------------------
-    ' 5. Columns, scaled to CW - which is now a known number, not a measured
-    '    one. The one belt-and-braces line: if a list somehow still didn't take
-    '    the width, scale to what it actually got, so it shows every column
-    '    rather than clipping DLR off the right.
-    '--------------------------------------------------------------------------
-    Dim recW As Long
-    recW = CW
-    If lstRecords.Width < recW Then recW = lstRecords.Width
-
-    lstRecords.ColumnWidths = RecordColumnWidths(recW)
-    If recW <> CW Then
-        PlaceLabel "lblRecords", RecordHeader(LIST_SIZE, recW), _
-                   PAD, lstRecords.Top - (LBL_H + 2), recW, LBL_H, _
-                   "Consolas", LIST_SIZE
-    End If
-
-    lstFields.ColumnWidths = CStr(Int(lstFields.Width * 0.32)) & " pt;" & _
-                             CStr(Int(lstFields.Width * 0.55)) & " pt"
-
-    If DIAG Then ReportLayout CLIENT_W, CLIENT_H, PAD + CW
-End Sub
-
-' One-off diagnostic. Assigns the size three different ways and reads it back
-' after each, reporting any error rather than swallowing it. Whichever line
-' fails to move the number is the answer - and "start" shows what the control
-' was saved as in the designer, which is the number to compare 354 against.
-Private Sub ProbeList(ByVal nm As String, ByVal c As Object)
-    Debug.Print String$(52, "=")
-    Debug.Print nm & " is a " & TypeName(c)
-    Debug.Print "  start          " & Fmt(c.Width) & " x " & Fmt(c.Height)
-
-    On Error Resume Next
-
-    Err.Clear
-    c.Width = 484
-    Debug.Print "  .Width = 484   -> " & Fmt(c.Width) & ErrTail
-
-    Err.Clear
-    c.Height = 200
-    Debug.Print "  .Height = 200  -> " & Fmt(c.Height) & ErrTail
-
-    Err.Clear
-    c.Move 8, 50, 484, 200
-    Debug.Print "  .Move 484,200  -> " & Fmt(c.Width) & " x " & Fmt(c.Height) & ErrTail
-
-    Err.Clear
-    Debug.Print "  IntegralHeight=" & c.IntegralHeight & _
-                "  ColumnHeads=" & c.ColumnHeads & _
-                "  ColumnCount=" & c.ColumnCount
-    Err.Clear
-    On Error GoTo 0
-End Sub
-
-Private Function Fmt(ByVal v As Variant) As String
-    On Error Resume Next
-    Fmt = CStr(CLng(v))
-End Function
-
-' Empty when the assignment went through, otherwise the error it raised.
-Private Function ErrTail() As String
-    If Err.Number <> 0 Then
-        ErrTail = "   *** ERROR " & Err.Number & ": " & Err.Description
-    End If
-End Function
-
-' Immediate window (Ctrl+G in the VBE), not a MsgBox - you can select and copy
-' from it. What to look for: "Inside" matches "asked for", and the "right"
-' column reads the same number on all six controls.
-Private Sub ReportLayout(ByVal clientW As Long, ByVal clientH As Long, _
-                         ByVal rightEdge As Long)
-    Debug.Print String$(52, "-")
-    Debug.Print "asked for client  " & clientW & " x " & clientH
-    Debug.Print "got Inside        " & Me.InsideWidth & " x " & Me.InsideHeight
-    Debug.Print "form outer        " & Me.Width & " x " & Me.Height
-    Debug.Print "every row should end at " & rightEdge
-    Debug.Print
-    Debug.Print "control        Left  Width  right   Top  Height"
-    Debug.Print String$(52, "-")
-    Debug.Print CtlRow("txtSerial", txtSerial);
-    Debug.Print CtlRow("btnLookup", btnLookup);
-    Debug.Print CtlRow("lstRecords", lstRecords);
-    Debug.Print CtlRow("lstFields", lstFields);
-    Debug.Print CtlRow("btnCopy", btnCopy);
-    Debug.Print CtlRow("btnPaste", btnPaste);
-    Debug.Print
-    Debug.Print "control        sits in               its size"
-    Debug.Print String$(52, "-")
-    Debug.Print ParentRow("txtSerial", txtSerial);
-    Debug.Print ParentRow("btnLookup", btnLookup);
-    Debug.Print ParentRow("lstRecords", lstRecords);
-    Debug.Print ParentRow("lstFields", lstFields);
-    Debug.Print ParentRow("btnCopy", btnCopy);
-    Debug.Print ParentRow("btnPaste", btnPaste);
-End Sub
-
-' Anything other than FORM on the two list rows is the answer: a control in a
-' container is positioned relative to it AND clipped by it, so no size the
-' code asks for can ever exceed the container.
-Private Function ParentRow(ByVal nm As String, ByVal c As Object) As String
-    Dim pnt As Object, who As String, sz As String
-    Set pnt = c.Parent
-    If pnt Is Me Then
-        who = "FORM"
-    Else
-        who = TypeName(pnt)
-        On Error Resume Next
-        who = who & " " & Chr$(39) & pnt.Name & Chr$(39)
-        On Error GoTo 0
-    End If
-    On Error Resume Next
-    sz = CStr(CLng(pnt.Width)) & " x " & CStr(CLng(pnt.Height))
-    On Error GoTo 0
-    ParentRow = Left$(nm & Space$(15), 15) & Left$(who & Space$(22), 22) & _
-                sz & vbCrLf
-End Function
-
-' Not called Row: LayoutControls used to declare a local of that name, and a
-' local and a module function sharing an identifier is a trap worth not
-' setting again.
-Private Function CtlRow(ByVal nm As String, ByVal c As Object) As String
-    CtlRow = Left$(nm & Space$(15), 15) & _
-             Right$(Space$(4) & CStr(CLng(c.Left)), 5) & _
-             Right$(Space$(6) & CStr(CLng(c.Width)), 7) & _
-             Right$(Space$(6) & CStr(CLng(c.Left + c.Width)), 7) & _
-             Right$(Space$(5) & CStr(CLng(c.Top)), 6) & _
-             Right$(Space$(6) & CStr(CLng(c.Height)), 8) & vbCrLf
-End Function
-
-' Positions an OPTIONAL label and returns the vertical space it used, or 0 if
-' you never added it. The form lays out correctly either way.
-Private Function PlaceLabel(ByVal nm As String, ByVal cap As String, _
-                            ByVal x As Long, ByVal y As Long, _
-                            ByVal w As Long, ByVal h As Long, _
-                            Optional ByVal fontName As String = "", _
-                            Optional ByVal fontSize As Single = 0) As Long
-    Dim c As Object
-    On Error Resume Next
-    Set c = Me.Controls(nm)
-    On Error GoTo 0
-    If c Is Nothing Then Exit Function
-
-    If Len(fontName) > 0 Then c.Font.Name = fontName
-    If fontSize > 0 Then c.Font.Size = fontSize
-    c.Caption = cap
-    Place c, x, y, w, h
-    PlaceLabel = h + 2
-End Function
-
-' Positions AND sizes a control in one call.
-'
-' .Move sets Left, Top, Width and Height through a single call and is the
-' documented way to reposition an MSForms control. It still cannot make a
-' control bigger than the client area it sits in - that gets clamped with no
-' error - so LayoutControls sizes the form before it calls this at all.
-'
-' AutoSize is tried first because a TextBox, Label or CommandButton with it on
-' resizes to its contents and ignores an explicit size. ListBox has no such
-' property, hence the guard rather than a plain assignment.
-Private Sub Place(ByVal c As Object, ByVal x As Long, ByVal y As Long, _
-                  ByVal w As Long, ByVal h As Long)
-    On Error Resume Next
-    c.AutoSize = False
-    On Error GoTo 0
-
-    c.Move x, y, w, h
 End Sub
 
 ' Called by CatQuickLook before Show, so selecting a cell that holds a serial
@@ -559,52 +273,6 @@ Private Sub btnPaste_Click()
     Me.Caption = "Cat Quick Look - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
 End Sub
-
-' The record list's column widths, in points. ONE definition - the list and
-' its heading are both built from this, so they cannot drift apart.
-'
-' The total is deliberately ~30pt short of the 400pt list: a ListBox grows its
-' own vertical scrollbar once items overflow, and that steals about 17pt.
-' Without the slack the last column would clip exactly when a serial has
-' enough records to need scrolling.
-Private Function RecordColumns() As Variant
-    '            DCN  name type status sub dealer
-    RecordColumns = Array(68, 155, 58, 52, 30, 38)
-End Function
-
-' Scaled to the list's real width, keeping ~13% clear for the vertical
-' scrollbar so the last column never clips.
-Private Function RecordColumnWidths(ByVal listW As Long) As String
-    Dim w As Variant: w = RecordColumns()
-    Dim k As Single: k = (listW * 0.87) / SumOf(w)
-    Dim s As String, i As Long
-    For i = LBound(w) To UBound(w)
-        s = s & CStr(Int(w(i) * k)) & " pt" & IIf(i < UBound(w), ";", "")
-    Next i
-    RecordColumnWidths = s
-End Function
-
-Private Function SumOf(ByVal w As Variant) As Long
-    Dim i As Long
-    For i = LBound(w) To UBound(w): SumOf = SumOf + w(i): Next i
-End Function
-
-' A heading padded to sit over the columns. Consolas advances 0.55 em per
-' character, so a column w points wide holds Int(w / (size * 0.55)) of them.
-Private Function RecordHeader(ByVal fontSize As Single, ByVal listW As Long) As String
-    Dim w As Variant: w = RecordColumns()
-    Dim caps As Variant
-    caps = Array("DCN", "DCN NAME", "TYPE", "STATUS", "SUB", "DLR")
-
-    Dim k As Single: k = (listW * 0.87) / SumOf(w)
-    Dim charW As Single: charW = fontSize * 0.55
-    Dim s As String, i As Long, n As Long
-    For i = LBound(w) To UBound(w)
-        n = Int((w(i) * k) / charW)
-        s = s & Left$(CStr(caps(i)) & Space$(n), n)
-    Next i
-    RecordHeader = s
-End Function
 
 ' TRUE/FALSE -> Yes/No, and a dash when the API didn't return the field at
 ' all. Absent is not the same as No, so it must not read as one.
