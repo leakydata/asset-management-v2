@@ -58,14 +58,41 @@ Public Function AuditPath() As String
 End Function
 
 ' Ribbon: show someone the log without making them know where it is.
+'
+' Says WHY the log is empty rather than opening an empty folder. The log covers
+' writes only, and someone who has just done two lookups has every reason to
+' expect a "write log" to have something in it. An empty Explorer window
+' answers nothing - it reads as broken.
 Public Sub CatOpenAuditFolder()
     On Error GoTo Fail
-    Dim p As String: p = AuditFolder()
-    Shell "explorer.exe """ & p & """", vbNormalFocus
+
+    Dim p As String: p = AuditPath()
+
+    If Len(Dir$(p)) = 0 Then
+        MsgBox "Nothing has been logged yet this month." & vbCrLf & vbCrLf & _
+               "The write log records what RUN sends to CCAT - add / update, " & _
+               "expire and transfer. Lookups are deliberately not logged: a " & _
+               "search changes nothing, so there is nothing to record and " & _
+               "nothing to undo." & vbCrLf & vbCrLf & _
+               "The file appears the first time you Run a sheet:" & vbCrLf & _
+               p, _
+               vbInformation, "Cat Asset Tools - Write Log"
+        Exit Sub
+    End If
+
+    ' /select, opens the folder with the file already highlighted, which beats
+    ' dropping someone into a directory listing to go hunting.
+    Dim runs As Collection: Set runs = AuditRunIds()
+    Shell "explorer.exe /select,""" & p & """", vbNormalFocus
+
+    If runs.Count > 0 Then
+        Application.StatusBar = runs.Count & " run(s) logged this month - " & p
+    End If
     Exit Sub
+
 Fail:
     MsgBox "The write log lives in:" & vbCrLf & vbCrLf & AuditFolder() & vbCrLf & vbCrLf & _
-           "(Could not open the folder automatically: " & Err.Description & ")", _
+           "(Could not open it automatically: " & Err.Description & ")", _
            vbInformation, "Cat Asset Tools - Write Log"
 End Sub
 
