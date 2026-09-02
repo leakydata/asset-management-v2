@@ -81,7 +81,7 @@ The installer means colleagues get this soon. These are the difference between
 The two highest-value items here. Expire removes ownership records; today a
 bad batch is unrecoverable except from memory.
 
-- [ ] **2.1 Validate shows the diff, not just the shape** **[bas]**
+- [x] **2.1 Validate shows the diff, not just the shape** **[bas]**
   Validate already checks required fields. Have it also fetch the current
   record and report what would actually change:
   ```
@@ -98,6 +98,16 @@ bad batch is unrecoverable except from memory.
   slow, careful step by design.
   **Done when:** a sheet whose values match CCAT reports "no change" on every
   row, and a deliberately stale OwnershipType shows the arrow.
+  **DONE.** Verified against live CCAT: a row pasted from a fresh lookup gives
+  "no change", a stale one gives `CHANGES: OwnershipType RENTAL -> OWNED`.
+  Expire names the record it would remove; Transfer says when there is no
+  pending request to act on. Two rules it follows: it is **advisory only** — a
+  diff never turns an OK row into SKIPPED, because a row's fate must not depend
+  on a live call — and it **never fails the validation**, so Validate still
+  works with the proxy down. Only fields the row will actually send are
+  compared, since a blank cell is omitted from the request and can't change
+  anything. Results cached per serial per run, and sheets over 50 rows ask
+  first (one lookup per serial adds up).
 
 - [ ] **2.2 Snapshot every row before a write** **[bas]**
   Before Run sends anything, capture the current record for each row to a
@@ -143,10 +153,12 @@ bad batch is unrecoverable except from memory.
   **Done when:** a run interrupted at row 300 of 500 can be finished with one
   click and no duplicate sends.
 
-- [ ] **3.3 Progress in the status bar** **[bas]**
+- [x] **3.3 Progress in the status bar** **[bas]**
   Row n of N, and the serial currently in flight.
-  **Why:** a long Run currently looks like a hang. Small, but it's the
-  difference between waiting and worrying.
+  **ALREADY DONE — do not build twice.** `RunCore` has always set
+  `Application.StatusBar = OpLabel(op) & " " & done & " of " & nRows & " (" &
+  serial & ")"`. Found while implementing 2.1. Listing it as a goal was my
+  error, not a gap.
 
 ---
 

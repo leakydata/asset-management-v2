@@ -60,6 +60,16 @@ Private Const HEADER_ROW As Long = 1
 Private Const MAX_ATTEMPTS As Long = 3
 Private Const RETRY_WAIT_SECONDS As Long = 1
 
+' Above this many rows, Validate asks before comparing against CCAT - the
+' comparison costs one lookup per distinct serial, and on a 500-row sheet that
+' is minutes of waiting nobody asked for.
+Private Const DIFF_PROMPT_ROWS As Long = 50
+
+' serial -> Collection of RecordValues arrays, or Empty when that serial's
+' lookup failed. Per-run, so a sheet with the same serial on ten rows costs one
+' call, and a serial that errors is not retried ten times.
+Private mDiffCache As Object
+
 '==============================================================================
 ' PUBLIC: the two buttons
 '==============================================================================
@@ -139,6 +149,14 @@ Private Sub RunCore(ByVal dryRun As Boolean)
         If Not ConfirmRun(op, nRows) Then Exit Sub
     End If
 
+    ' Validate compares each row against what CCAT holds right now. Run does
+    ' not: it is about to fetch the truth by writing to it.
+    Dim compare As Boolean
+    If dryRun Then
+        compare = AskCompare(nRows)
+        ResetDiffCache
+    End If
+
     Dim nOk As Long, nFailed As Long, nSkipped As Long, done As Long
     Application.ScreenUpdating = False
 
@@ -159,7 +177,13 @@ Private Sub RunCore(ByVal dryRun As Boolean)
         End If
 
         If dryRun Then
-            WriteResult ws, r, cResult, "OK to send" & PreviewNote(ws, r, cols, op), 1
+            ' Built with If, NOT IIf. IIf evaluates BOTH arms, so an IIf here
+            ' would call DiffNote - and hit the API - even with comparison
+            ' turned off.
+            Dim note As String
+            note = "OK to send" & PreviewNote(ws, r, cols, op)
+            If compare Then note = note & DiffNote(ws, r, cols, op, serial)
+            WriteResult ws, r, cResult, note, 1
             nOk = nOk + 1
             GoTo NextRow
         End If
@@ -314,6 +338,191 @@ End Function
 
 ' Validate-pass detail: which optional fields carry a value, and which are
 ' being left out. Makes the omit-blanks rule visible before anything is sent.
+'==============================================================================
+' PRIVATE: what would actually change
+'
+' Validate used to check the SHAPE of a row - required fields present, values
+' in range. It could not tell you that a row was about to overwrite a correct
+' value with a stale one, because it never looked at what CCAT holds.
+'
+' That is the footgun this closes. Every Add/Update rewrites ownershipTypeCode,
+' so a sheet pasted from last week's lookup silently reverts a record somebody
+' fixed since. Nothing warned you. Now the Result cell says
+' "OwnershipType RENTAL -> OWNED" and you get to read it before you Run.
+'
+' TWO RULES THIS FOLLOWS.
+'
+' It is ADVISORY ONLY. The diff never changes a row's verdict from OK to
+' SKIPPED. Validate has always worked off the sheet alone, and making a row's
+' fate depend on a live call means an API hiccup silently skips good rows. The
+' note tells you an Expire has nothing to expire; deciding what to do about
+' that stays yours.
+'
+' It NEVER FAILS THE VALIDATION. If the lookup errors, the row still validates
+' and the note says the comparison was unavailable. Validate working while the
+' proxy is down is a property worth keeping.
+'==============================================================================
+
+' Asks before spending a lookup per serial on a big sheet.
+Private Function AskCompare(ByVal nRows As Long) As Boolean
+    If nRows <= DIFF_PROMPT_ROWS Then AskCompare = True: Exit Function
+
+    AskCompare = (MsgBox( _
+        "Compare each row against what CCAT holds now?" & vbCrLf & vbCrLf & _
+        "This is what shows you a row about to overwrite a good value with a " & _
+        "stale one - but it costs one lookup per serial, and there are " & _
+        nRows & " rows here." & vbCrLf & vbCrLf & _
+        "Yes - slower, and says exactly what would change" & vbCrLf & _
+        "No  - the usual field checks only", _
+        vbQuestion + vbYesNo, "Cat Asset Tools - Validate") = vbYes)
+End Function
+
+Private Sub ResetDiffCache()
+    Set mDiffCache = CreateObject("Scripting.Dictionary")
+    mDiffCache.CompareMode = vbTextCompare
+End Sub
+
+' Every ownership record on a serial, as RecordValues arrays. Nothing when the
+' lookup failed - cached either way, so a bad serial costs one call not ten.
+Private Function RecordsFor(ByVal serial As String) As Collection
+    If mDiffCache Is Nothing Then ResetDiffCache
+
+    If mDiffCache.Exists(serial) Then
+        If IsObject(mDiffCache(serial)) Then Set RecordsFor = mDiffCache(serial)
+        Exit Function
+    End If
+
+    Dim txt As String, recs As Object, out As Collection, i As Long
+    On Error GoTo Failed
+    txt = CatSearch(serial, "")
+    Set recs = OwnershipRecords(txt)
+    On Error GoTo 0
+    If recs Is Nothing Then GoTo Failed
+
+    Set out = New Collection
+    For i = 1 To recs.Count
+        out.Add RecordValues(recs(i))
+    Next i
+    mDiffCache.Add serial, out
+    Set RecordsFor = out
+    Exit Function
+
+Failed:
+    ' Remember the miss so the next nine rows on this serial do not retry it.
+    If Not mDiffCache.Exists(serial) Then mDiffCache.Add serial, Empty
+End Function
+
+' The record on this serial held by this DCN, if there is one.
+Private Function FindByDcn(ByVal recs As Collection, ByVal dcn As String, _
+                           ByRef found As Variant) As Boolean
+    Dim i As Long, v As Variant
+    For i = 1 To recs.Count
+        v = recs(i)
+        If StrComp(CStr(v(2)), dcn, vbTextCompare) = 0 Then
+            found = v
+            FindByDcn = True
+            Exit Function
+        End If
+    Next i
+End Function
+
+Private Function DiffNote(ByVal ws As Worksheet, ByVal r As Long, ByVal cols As Object, _
+                          ByVal op As String, ByVal serial As String) As String
+    Dim recs As Collection
+    Set recs = RecordsFor(serial)
+    If recs Is Nothing Then DiffNote = " - could not compare (lookup unavailable)": Exit Function
+
+    If recs.Count = 0 Then
+        Select Case op
+            Case OP_ADD: DiffNote = " - NEW: this serial is not in CCAT at all"
+            Case Else:   DiffNote = " - NOTHING TO DO: this serial is not in CCAT"
+        End Select
+        Exit Function
+    End If
+
+    Select Case op
+        Case OP_ADD: DiffNote = DiffAddUpdate(ws, r, cols, recs)
+        Case OP_EXP: DiffNote = DiffExpire(ws, r, cols, recs)
+        Case OP_TRF: DiffNote = DiffTransfer(recs)
+    End Select
+End Function
+
+' Only the fields this row will actually SEND are compared. A blank cell is
+' omitted from the request entirely, so it cannot change anything and must not
+' be reported as a change to blank.
+'
+' CustomAssetName is deliberately absent: the API returns assetName as a
+' coalesced custom-or-base value, so there is no field to compare it against
+' honestly, and a guess here would be worse than a gap.
+Private Function DiffAddUpdate(ByVal ws As Worksheet, ByVal r As Long, _
+                               ByVal cols As Object, ByVal recs As Collection) As String
+    Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+
+    Dim cur As Variant
+    If Not FindByDcn(recs, dcn, cur) Then
+        DiffAddUpdate = " - NEW record for this DCN (serial exists on " & _
+                        recs.Count & " other DCN(s))"
+        Exit Function
+    End If
+
+    Dim keys As Variant, labels As Variant, idx As Variant
+    keys = Array("ownershiptype", "model", "modelyear", "productfamilycode", _
+                 "productfamilyname", "baseassetname")
+    labels = Array("OwnershipType", "Model", "ModelYear", "ProductFamilyCode", _
+                   "ProductFamilyName", "BaseAssetName")
+    idx = Array(3, 4, 5, 18, 19, 21)
+
+    Dim changes As String, i As Long, sheetVal As String, ccatVal As String
+    For i = LBound(keys) To UBound(keys)
+        sheetVal = CellStr(ws, r, ColOf(cols, CStr(keys(i))))
+        If Len(sheetVal) > 0 Then
+            ccatVal = CStr(cur(idx(i)))
+            If StrComp(sheetVal, ccatVal, vbTextCompare) <> 0 Then
+                changes = changes & IIf(Len(changes) > 0, ", ", "") & _
+                          labels(i) & " " & IIf(Len(ccatVal) = 0, "(blank)", ccatVal) & _
+                          " -> " & sheetVal
+            End If
+        End If
+    Next i
+
+    If Len(changes) = 0 Then
+        DiffAddUpdate = " - no change"
+    Else
+        DiffAddUpdate = " - CHANGES: " & changes
+    End If
+End Function
+
+' Expire removes an ownership record. Saying which one, in what state, is the
+' last chance to notice it is not the one you meant.
+Private Function DiffExpire(ByVal ws As Worksheet, ByVal r As Long, _
+                            ByVal cols As Object, ByVal recs As Collection) As String
+    Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+
+    Dim cur As Variant
+    If Not FindByDcn(recs, dcn, cur) Then
+        DiffExpire = " - NO record on DCN " & dcn & " - nothing to expire, this will fail"
+        Exit Function
+    End If
+
+    DiffExpire = " - WILL EXPIRE " & CStr(cur(3)) & "/" & CStr(cur(6)) & _
+                 " held by " & CStr(cur(11))
+End Function
+
+' Transfer acts on a pending request. If there isn't one, the send fails - and
+' that is worth knowing before rather than after.
+Private Function DiffTransfer(ByVal recs As Collection) As String
+    Dim i As Long, v As Variant
+    For i = 1 To recs.Count
+        v = recs(i)
+        If Len(Trim$(CStr(v(9)))) > 0 Then
+            DiffTransfer = " - pending " & CStr(v(9)) & " on DCN " & CStr(v(2)) & _
+                           " (" & CStr(v(14)) & ")"
+            Exit Function
+        End If
+    Next i
+    DiffTransfer = " - NO pending request on this serial, this will fail"
+End Function
+
 Private Function PreviewNote(ByVal ws As Worksheet, ByVal r As Long, ByVal cols As Object, _
                              ByVal op As String) As String
     If op <> OP_ADD Then Exit Function
