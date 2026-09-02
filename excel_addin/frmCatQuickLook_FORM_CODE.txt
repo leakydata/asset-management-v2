@@ -91,20 +91,20 @@ clips exactly when a serial has enough records to need scrolling. If you
 resize lstRecords, change them in PinColumns rather than in the designer -
 the designer values would be overwritten on open.
 
-The optional labels are headings. lblFields is just:
+The two labels are headings, and their captions are NOT yours to type either -
+PinColumns sets them. Drop them on, name them lblRecords and lblFields, and
+leave the Caption saying Label1; it gets replaced on open.
 
-    lblFields     Caption           Record detail
+    lblFields     becomes           Record detail
+    lblRecords    becomes           the strip naming the record columns
 
-lblRecords is the strip that names the record columns. It lines up by being
-padded with spaces, so it only works in a monospaced font - set it to
-Consolas 9 to match the list, and paste this as the Caption (the spacing
-matters, copy it exactly):
+lblRecords is space-padded to sit over the columns, so it only lines up in a
+monospaced font - the code forces it to the LIST_FONT constants to match the
+list, and rebuilds the padding from the same six widths the columns use. That
+is the whole reason it is in code: the heading and the columns are two halves
+of one thing, and keeping them in step by hand is what went wrong before.
 
-    DCN           DCN NAME                        TYPE        STATUS    SUB   DLR
-
-If you resize lstRecords, redo ColumnWidths and this caption together - they
-are two halves of the same thing. Leave both labels off entirely if you would
-rather not bother; the code doesn't look for them.
+Both labels are still optional. Leave either off and nothing breaks.
 
     +- Cat Quick Look -----------------------------+
     | [txtSerial................]  [ btnLookup ]   |
