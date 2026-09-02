@@ -28,7 +28,7 @@ Legend: **[form]** touches a UserForm · **[bas]** module only ·
 The installer means colleagues get this soon. These are the difference between
 "it works" and a week of support calls.
 
-- [ ] **1.1 Test Connection button in Settings** **[bas]** **[xml]**
+- [x] **1.1 Test Connection button in Settings** **[bas]** **[xml]**
   Runs a known-good lookup and reports plainly: *no URL set* / *no key set* /
   *couldn't reach the proxy* / *key rejected (401/403)* / *worked — N records*.
   **Why:** the first support call will be "it doesn't work", and it'll be a
@@ -36,6 +36,12 @@ The installer means colleagues get this soon. These are the difference between
   **Done when:** each of the five states can be produced deliberately and each
   says something a non-technical user can act on.
   **Effort:** small. Best ratio on the whole list.
+  **DONE.** Ribbon button in Setup, and offered automatically after Settings
+  saves — a typo is cheapest to catch the second it is typed. Status codes were
+  measured against the live proxy, not assumed: unknown serial 200, bad/absent
+  key 401, wrong path 404, bad host no reply. The probe searches a serial that
+  deliberately does not exist, so the test never breaks because someone expired
+  the asset it was looking for.
 
 - [ ] **1.2 Plain-English API errors** **[bas]**
   Map the common proxy/CCAT failures to sentences. *"This DCN isn't ours —

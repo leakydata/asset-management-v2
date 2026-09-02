@@ -99,6 +99,10 @@ Public Sub CatSettings_Ribbon(control As IRibbonControl)
     CatSettings
 End Sub
 
+Public Sub CatTestConnection_Ribbon(control As IRibbonControl)
+    CatTestConnection
+End Sub
+
 '==============================================================================
 ' Per-user settings
 '==============================================================================
@@ -194,12 +198,140 @@ Private Function ImportSettingsFromRange() As Boolean
 End Function
 
 ' Shared confirmation - never echoes the key itself, only whether it is set.
+'
+' Offers the connection test rather than just reporting, because the moment
+' someone has just typed a key is the moment a typo is cheapest to find. Saying
+' "saved" and leaving them to discover it does not work is how a five-second
+' fix becomes a support call.
 Private Sub ReportSettings(ByVal headline As String)
-    MsgBox headline & vbCrLf & vbCrLf & _
-           "Proxy URL : " & GetSetting(REG_APP, REG_SECTION, "ProxyUrl", "(none)") & vbCrLf & _
-           "Key       : " & IIf(Len(GetSetting(REG_APP, REG_SECTION, "FunctionKey", "")) > 0, _
-                                "set", "NOT SET"), _
-           vbInformation, "Cat Asset Tools"
+    If MsgBox(headline & vbCrLf & vbCrLf & _
+              "Proxy URL : " & GetSetting(REG_APP, REG_SECTION, "ProxyUrl", "(none)") & vbCrLf & _
+              "Key       : " & IIf(Len(GetSetting(REG_APP, REG_SECTION, "FunctionKey", "")) > 0, _
+                                   "set", "NOT SET") & vbCrLf & vbCrLf & _
+              "Test the connection now?", _
+              vbQuestion + vbYesNo, "Cat Asset Tools") = vbYes Then
+        CatTestConnection
+    End If
+End Sub
+
+'==============================================================================
+' Connection test
+'
+' Answers "is this thing set up correctly" without needing anyone to read a
+' status code. Every outcome names what is wrong AND what to do about it,
+' because the person running this is usually the person who cannot fix it by
+' reading JSON.
+'
+' The probe is a search for a serial that deliberately does not exist. The
+' proxy answers 200 with an empty record list for an unknown serial - verified
+' against the live endpoint - so the test proves the URL, the key and the
+' network without depending on any particular asset still being in CCAT. A test
+' that fails because someone expired the machine it looked for is worse than no
+' test at all.
+'
+' The status codes below are measured, not assumed:
+'     unknown serial   -> 200 with ok:true
+'     bad or absent key -> 401
+'     wrong URL path    -> 404
+'     bad host          -> no reply at all, WinHttp raises
+'==============================================================================
+Public Sub CatTestConnection()
+    Const PROBE_SERIAL As String = "ZZ0000PROBE"
+
+    Dim url As String: url = GetSetting(REG_APP, REG_SECTION, "ProxyUrl", "")
+    Dim key As String: key = GetSetting(REG_APP, REG_SECTION, "FunctionKey", "")
+
+    ' Checked here rather than letting CatProxyCall raise, so the two most
+    ' common first-run states get their own plain answer.
+    If Len(url) = 0 Then
+        MsgBox "No proxy URL is set." & vbCrLf & vbCrLf & _
+               "Click CCAT > Settings and enter it. It looks like" & vbCrLf & _
+               "https://<app>.azurewebsites.net/api", _
+               vbExclamation, "Cat Asset Tools - Connection test"
+        Exit Sub
+    End If
+    If Len(key) = 0 Then
+        MsgBox "No function key is set." & vbCrLf & vbCrLf & _
+               "Click CCAT > Settings and paste it in. Treat it like a " & _
+               "password - it is stored under your Windows profile only, " & _
+               "never inside the add-in file.", _
+               vbExclamation, "Cat Asset Tools - Connection test"
+        Exit Sub
+    End If
+
+    Dim status As Long, txt As String
+    On Error GoTo NoReply
+    Application.Cursor = xlWait
+    txt = CatProxyCall("GET", "search", "serial=" & PROBE_SERIAL, "", status)
+    Application.Cursor = xlDefault
+    On Error GoTo 0
+
+    Select Case status
+        Case 200
+            MsgBox "Connection OK." & vbCrLf & vbCrLf & _
+                   "Proxy URL : " & url & vbCrLf & _
+                   "Key       : accepted" & vbCrLf & _
+                   "Response  : HTTP 200" & vbCrLf & vbCrLf & _
+                   "The URL, the key and the network are all working. This " & _
+                   "searched for a serial that does not exist on purpose, so " & _
+                   "it does not depend on any one asset.", _
+                   vbInformation, "Cat Asset Tools - Connection test"
+
+        Case 401, 403
+            MsgBox "The proxy answered, but rejected the key." & vbCrLf & vbCrLf & _
+                   "Proxy URL : " & url & vbCrLf & _
+                   "Response  : HTTP " & status & vbCrLf & vbCrLf & _
+                   "So the address and the network are fine - it is the " & _
+                   "function key. It is wrong, expired, or has a stray space " & _
+                   "on the end from being pasted. Click CCAT > Settings and " & _
+                   "enter it again.", _
+                   vbExclamation, "Cat Asset Tools - Connection test"
+
+        Case 404
+            MsgBox "Reached the server, but there is nothing at that address." & vbCrLf & vbCrLf & _
+                   "Proxy URL : " & url & vbCrLf & _
+                   "Response  : HTTP 404" & vbCrLf & vbCrLf & _
+                   "Usually the URL is missing the /api on the end, or has a " & _
+                   "typo. It should look like" & vbCrLf & _
+                   "https://<app>.azurewebsites.net/api", _
+                   vbExclamation, "Cat Asset Tools - Connection test"
+
+        Case 429
+            MsgBox "The proxy is rate-limiting requests (HTTP 429)." & vbCrLf & vbCrLf & _
+                   "Your URL and key are fine - this is a throttle, not a " & _
+                   "fault. Wait a minute and try again.", _
+                   vbInformation, "Cat Asset Tools - Connection test"
+
+        Case 500 To 599
+            MsgBox "Reached the proxy, but it returned an error." & vbCrLf & vbCrLf & _
+                   "Proxy URL : " & url & vbCrLf & _
+                   "Response  : HTTP " & status & vbCrLf & vbCrLf & _
+                   "Your URL and key look fine - the problem is server-side. " & _
+                   "The Azure Function may be restarting. If it keeps " & _
+                   "happening, it needs someone with access to the proxy.", _
+                   vbExclamation, "Cat Asset Tools - Connection test"
+
+        Case Else
+            MsgBox "Unexpected reply from the proxy." & vbCrLf & vbCrLf & _
+                   "Proxy URL : " & url & vbCrLf & _
+                   "Response  : HTTP " & status & vbCrLf & vbCrLf & _
+                   Left$(txt, 300), _
+                   vbExclamation, "Cat Asset Tools - Connection test"
+    End Select
+    Exit Sub
+
+NoReply:
+    ' Nothing answered - DNS, network, VPN or a mistyped host. Deliberately
+    ' does NOT mention the key: it was never reached, so blaming it sends
+    ' people off to re-paste a key that was fine all along.
+    Application.Cursor = xlDefault
+    MsgBox "Could not reach the proxy at all." & vbCrLf & vbCrLf & _
+           "Proxy URL : " & url & vbCrLf & _
+           "Error     : " & Err.Description & vbCrLf & vbCrLf & _
+           "Nothing answered, so this is the address or the network - not " & _
+           "the key. Check the URL is right, and that you are on the network " & _
+           "or VPN you need.", _
+           vbCritical, "Cat Asset Tools - Connection test"
 End Sub
 
 ' Clears this user's saved settings - useful on a shared machine.

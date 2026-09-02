@@ -83,6 +83,12 @@
                   onAction="CatSettings_Ribbon"
                   screentip="Set the proxy URL and function key"
                   supertip="Stored per-user in the Windows registry, not inside this add-in file. You can point at a two-column range on a sheet instead of typing them."/>
+          <button id="CatBtnTestConn" size="large"
+                  label="Test Connection"
+                  imageMso="ServerConnection" keytip="T"
+                  onAction="CatTestConnection_Ribbon"
+                  screentip="Check the proxy URL, key and network"
+                  supertip="Sends one harmless read for a serial that does not exist, so it proves the setup without depending on any asset. Says in plain English which part is wrong - no URL, no key, key rejected, wrong address, or nothing answering at all - and what to do about it."/>
         </group>
 
       </tab>
