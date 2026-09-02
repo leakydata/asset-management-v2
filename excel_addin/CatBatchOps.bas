@@ -85,6 +85,284 @@ Public Sub CatRunSheet()
 End Sub
 
 '==============================================================================
+' PUBLIC: undo a run
+'
+' Rebuilds what a past Run overwrote, from the before-images in the write log.
+' This is the reason the log captures them.
+'
+' IT BUILDS A SHEET AND STOPS. It does not send. An undo that sends is a second
+' unreviewed write on top of the first, at the moment someone is rattled and
+' least likely to check - which is how one bad batch becomes two. You get a
+' sheet, you Validate it, you Run it, exactly like any other work.
+'
+' WHAT IT CAN AND CANNOT PUT BACK:
+'
+'   BeforeState  What happened            Undo
+'   FOUND        a record was changed     restore the old values (Add/Update)
+'                or expired
+'   NONE         a record was CREATED     the reverse is an Expire, offered
+'                                         separately and confirmed on its own
+'   UNAVAILABLE  the lookup failed first  nothing - we never knew the old value
+'
+' UNAVAILABLE rows are reported, never silently dropped and never restored as
+' blanks. Writing emptiness over a live record because a lookup timed out is
+' exactly the accident this whole section exists to prevent.
+'
+' Failed rows are skipped too: a row that did not go through changed nothing,
+' so "restoring" it would push a stale value over whatever is there now.
+'==============================================================================
+Public Sub CatUndoRun()
+    On Error GoTo Fail
+
+    Dim runs As Collection: Set runs = AuditRunIds()
+    If runs.Count = 0 Then
+        MsgBox "No runs have been logged this month." & vbCrLf & vbCrLf & _
+               "Undo reads the write log, which gets a line for every row Run " & _
+               "sends. Nothing has been sent yet, so there is nothing to undo.", _
+               vbInformation, "Cat Asset Tools - Undo"
+        Exit Sub
+    End If
+
+    Dim runId As String
+    runId = PickRun(runs)
+    If Len(runId) = 0 Then Exit Sub
+
+    Dim lines As Collection: Set lines = AuditLinesFor(runId)
+    If lines.Count = 0 Then
+        MsgBox "No logged rows found for run " & runId & ".", vbExclamation, _
+               "Cat Asset Tools - Undo"
+        Exit Sub
+    End If
+
+    ' Sort the run's rows into what can be put back, what would need expiring,
+    ' and what we simply do not know.
+    Dim restorable As Collection: Set restorable = New Collection
+    Dim created As Collection:    Set created = New Collection
+    Dim unknown As Long, failed As Long
+
+    Dim i As Long, f As Variant
+    For i = 1 To lines.Count
+        f = lines(i)
+        If UBound(f) >= 32 Then
+            If Not OutcomeWasOk(CStr(f(9))) Then
+                failed = failed + 1
+            Else
+                Select Case CStr(f(10))
+                    Case BEFORE_FOUND:       restorable.Add f
+                    Case BEFORE_NONE:        created.Add f
+                    Case BEFORE_UNAVAILABLE: unknown = unknown + 1
+                End Select
+            End If
+        End If
+    Next i
+
+    If restorable.Count = 0 And created.Count = 0 Then
+        MsgBox "Nothing in run " & runId & " can be undone." & vbCrLf & vbCrLf & _
+               failed & " row(s) failed at the time, so they changed nothing." & vbCrLf & _
+               unknown & " row(s) had no before-image (the lookup failed first), " & _
+               "so the old values were never known.", _
+               vbExclamation, "Cat Asset Tools - Undo"
+        Exit Sub
+    End If
+
+    Dim built As String
+
+    If restorable.Count > 0 Then
+        built = BuildUndoSheet(runId, restorable)
+    End If
+
+    ' Records this run CREATED. Reversing those means expiring them, which is
+    ' destructive in its own right - so it is a separate question, asked
+    ' plainly, never bundled into "undo".
+    If created.Count > 0 Then
+        If MsgBox(created.Count & " row(s) in this run CREATED a record that did " & _
+                  "not exist before." & vbCrLf & vbCrLf & _
+                  "Undoing those means EXPIRING them - removing the ownership " & _
+                  "records this run added. That is a destructive operation in " & _
+                  "its own right, so it is a separate sheet and a separate " & _
+                  "decision." & vbCrLf & vbCrLf & _
+                  "Build an Expire sheet for them?", _
+                  vbExclamation + vbYesNo + vbDefaultButton2, _
+                  "Cat Asset Tools - Undo") = vbYes Then
+            built = built & IIf(Len(built) > 0, " and ", "") & _
+                    BuildUndoExpireSheet(runId, created)
+        End If
+    End If
+
+    If Len(built) = 0 Then Exit Sub
+
+    MsgBox "Built " & built & " from run " & runId & "." & vbCrLf & vbCrLf & _
+           "NOTHING HAS BEEN SENT. Check the sheet, then Validate, then Run - " & _
+           "the same as any other work." & vbCrLf & vbCrLf & _
+           IIf(unknown > 0, unknown & " row(s) left out: no before-image, so the " & _
+               "old values were never known." & vbCrLf, "") & _
+           IIf(failed > 0, failed & " row(s) left out: they failed at the time, " & _
+               "so they changed nothing." & vbCrLf, ""), _
+           vbInformation, "Cat Asset Tools - Undo"
+    Exit Sub
+
+Fail:
+    MsgBox "Error: " & Err.Description, vbCritical, "Cat Asset Tools - Undo"
+End Sub
+
+' SendRow returns "OK (200) ..." on success and "FAILED..." otherwise.
+Private Function OutcomeWasOk(ByVal outcome As String) As Boolean
+    OutcomeWasOk = (Left$(LTrim$(outcome), 2) = "OK")
+End Function
+
+' A numbered list in an InputBox. Not a UserForm on purpose: this is the one
+' module that must keep working when someone is mid-panic, and a .bas needs no
+' hand-pasting into the VBE to arrive.
+Private Function PickRun(ByVal runs As Collection) As String
+    Const SHOW As Long = 15
+
+    Dim prompt As String, i As Long, r As Variant
+    prompt = "Which run do you want to undo?" & vbCrLf & vbCrLf
+    For i = 1 To runs.Count
+        If i > SHOW Then Exit For
+        r = runs(i)
+        prompt = prompt & i & ".  " & r(1) & "   " & OpLabel(CStr(r(2))) & _
+                 "   on " & r(3) & vbCrLf
+    Next i
+    prompt = prompt & vbCrLf & "Type a number (1-" & _
+             IIf(runs.Count < SHOW, runs.Count, SHOW) & "):"
+
+    Dim answer As String
+    answer = InputBox(prompt, "Cat Asset Tools - Undo a Run")
+    If Len(Trim$(answer)) = 0 Then Exit Function
+
+    Dim n As Long
+    On Error Resume Next
+    n = CLng(Trim$(answer))
+    On Error GoTo 0
+    If n < 1 Or n > runs.Count Or n > SHOW Then
+        MsgBox "That is not one of the numbers listed.", vbExclamation, _
+               "Cat Asset Tools - Undo"
+        Exit Function
+    End If
+
+    r = runs(n)
+    PickRun = CStr(r(0))
+End Function
+
+' The restore sheet: an Add/Update carrying the values as they were.
+'
+' Written to its OWN sheet, never over 'Cat Add-Update'. Someone recovering
+' from a bad batch may well have work in progress there, and silently clearing
+' it while they are already having a bad afternoon is not on.
+Private Function BuildUndoSheet(ByVal runId As String, ByVal rows As Collection) As String
+    Dim ws As Worksheet
+    Set ws = FreshSheet("Cat Undo " & runId)
+
+    Dim nm As String, headers As Variant, notes As Variant, tiers As Variant
+    SheetSpec OP_ADD, nm, headers, notes, tiers
+    WriteHeaders ws, headers, tiers
+
+    ' Sheet column <- before-image index. CustomAssetName is deliberately
+    ' absent: the API returns assetName as a coalesced custom-or-base value, so
+    ' there is nothing to restore it from honestly, and a blank cell is omitted
+    ' from the request rather than overwriting anything. Dealer Make Code is
+    ' left blank too - Make Code is being supplied, and the API rejects both.
+    Dim keys As Variant, idx As Variant
+    keys = Array("serial", "makecode", "dcn", "ownershiptype", "model", _
+                 "modelyear", "productfamilycode", "productfamilyname", "baseassetname")
+    idx = Array(0, 1, 2, 3, 4, 5, 18, 19, 21)
+
+    Dim cols As Object: Set cols = HeaderMap(ws)
+    Dim i As Long, k As Long, c As Long, f As Variant
+    For i = 1 To rows.Count
+        f = rows(i)
+        For k = LBound(keys) To UBound(keys)
+            c = ColOf(cols, CStr(keys(k)))
+            If c > 0 Then
+                ws.Cells(HEADER_ROW + i, c).NumberFormat = "@"
+                ws.Cells(HEADER_ROW + i, c).Value = CStr(f(11 + idx(k)))
+            End If
+        Next k
+    Next i
+
+    ws.Columns.AutoFit
+    ws.Activate
+    BuildUndoSheet = "'" & ws.Name & "' (" & rows.Count & " row(s) to restore)"
+End Function
+
+' The reverse of an Add: expire what the run created.
+Private Function BuildUndoExpireSheet(ByVal runId As String, ByVal rows As Collection) As String
+    Dim ws As Worksheet
+    Set ws = FreshSheet("Cat Undo Expire " & runId)
+
+    Dim nm As String, headers As Variant, notes As Variant, tiers As Variant
+    SheetSpec OP_EXP, nm, headers, notes, tiers
+    WriteHeaders ws, headers, tiers
+
+    ' Expire needs Serial, Make Code and DCN, and those come from the LOG LINE
+    ' rather than the before-image - there was no before-image, that is the
+    ' whole point of this sheet.
+    Dim cols As Object: Set cols = HeaderMap(ws)
+    Dim cS As Long: cS = ColOf(cols, "serial", "serialnumber")
+    Dim cM As Long: cM = ColOf(cols, "makecode")
+    Dim cD As Long: cD = ColOf(cols, "dcn")
+
+    Dim i As Long, f As Variant
+    For i = 1 To rows.Count
+        f = rows(i)
+        If cS > 0 Then ws.Cells(HEADER_ROW + i, cS).NumberFormat = "@": ws.Cells(HEADER_ROW + i, cS).Value = CStr(f(7))
+        If cD > 0 Then ws.Cells(HEADER_ROW + i, cD).NumberFormat = "@": ws.Cells(HEADER_ROW + i, cD).Value = CStr(f(8))
+        ' Make Code was not logged separately; it is on the before-image only
+        ' when there was one. Left blank here for you to fill - Validate will
+        ' say so rather than letting it through.
+        If cM > 0 Then ws.Cells(HEADER_ROW + i, cM).NumberFormat = "@"
+    Next i
+
+    ws.Columns.AutoFit
+    BuildUndoExpireSheet = "'" & ws.Name & "' (" & rows.Count & " row(s) to expire - " & _
+                           "Make Code needs filling in)"
+End Function
+
+' A sheet with this name, emptied if it already exists. Undo sheets are named
+' after the run, so re-undoing the same run reuses its sheet rather than
+' littering the workbook with near-identical tabs.
+Private Function FreshSheet(ByVal nm As String) As Worksheet
+    Dim wb As Workbook: Set wb = TargetBook()
+    Dim ws As Worksheet, shp As Shape
+
+    ' Excel sheet names cap at 31 characters.
+    If Len(nm) > 31 Then nm = Left$(nm, 31)
+
+    On Error Resume Next
+    Set ws = wb.Worksheets(nm)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        Set ws = wb.Worksheets.Add(After:=wb.Worksheets(wb.Worksheets.Count))
+        ws.Name = nm
+    Else
+        ws.Cells.Clear
+        For Each shp In ws.Shapes: shp.Delete: Next shp
+    End If
+
+    Set FreshSheet = ws
+End Function
+
+Private Sub WriteHeaders(ByVal ws As Worksheet, ByVal headers As Variant, ByVal tiers As Variant)
+    Dim c As Long, bg As Long, fg As Long
+    For c = 0 To UBound(headers)
+        Select Case tiers(c)
+            Case 0: bg = RGB(31, 78, 121): fg = vbWhite
+            Case 1: bg = RGB(46, 117, 182): fg = vbWhite
+            Case 3: bg = RGB(89, 89, 89): fg = vbWhite
+            Case Else: bg = RGB(189, 215, 238): fg = RGB(31, 31, 31)
+        End Select
+        With ws.Cells(HEADER_ROW, c + 1)
+            .Value = headers(c)
+            .Font.Bold = True
+            .Font.Color = fg
+            .Interior.Color = bg
+        End With
+    Next c
+End Sub
+
+'==============================================================================
 ' PUBLIC: build the input sheets
 '==============================================================================
 Public Sub CatBuildAddUpdateSheet()
