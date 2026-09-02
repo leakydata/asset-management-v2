@@ -247,17 +247,109 @@ End Function
 
 ' Turn the proxy error envelope ({ ok:false, error:{ code, description } }) into a
 ' short message; falls back to the raw text.
+' Turns a failed call into a sentence a user can act on.
+'
+' Both callers - CatSearch, which raises, and SendRow, which writes the Result
+' cell - already prefix the status, so this does not repeat it.
+'
+' The statuses are measured against the live proxy, not assumed:
+'     unknown serial      200 with ok:true      (so 200 is never an error)
+'     bad or absent key   401
+'     wrong URL path      404
+'     bad host            no reply at all, WinHttp raises before we get here
+'
+' THE DISTINCTION WORTH HAVING is 401 against 502. A 401 means YOUR function
+' key was refused, and you can fix that in Settings. A 502 means the proxy
+' accepted your key, got as far as its own code, and then could not reach or
+' authenticate to Cat - which no user can fix and none should be sent off to
+' try. The old message sent both to the same place.
 Public Function ProxyError(ByVal txt As String, ByVal status As Long) As String
+    Dim detail As String
+    detail = ErrorDetail(txt)
+
+    Select Case status
+
+        Case 400
+            ' The proxy's own validation, or Cat rejecting the payload.
+            ProxyError = "Rejected as invalid. " & detail
+
+        Case 401
+            ProxyError = "Function key refused. Click CCAT > Test Connection - " & _
+                         "the key is usually wrong, expired, or has a stray " & _
+                         "space from being pasted."
+
+        Case 403
+            ProxyError = "Not permitted. Cat allows changes only to records " & _
+                         "held by our own dealer code. " & detail
+
+        Case 404
+            ProxyError = "Not found. Either the proxy URL is wrong - check " & _
+                         "CCAT > Test Connection - or that record does not " & _
+                         "exist in CCAT."
+
+        Case 429
+            ProxyError = "Rate limited. Nothing is wrong with this row; wait " & _
+                         "a minute and re-run the rows that failed."
+
+        Case 502
+            ' The proxy's two own failure modes, which it labels in the body.
+            ' Neither is anything the person running this can put right, so
+            ' say so rather than sending them to Settings.
+            If InStr(1, detail, "auth failed", vbTextCompare) > 0 Then
+                ProxyError = "The proxy could not sign in to Cat. This is the " & _
+                             "proxy's own credential, NOT your function key - " & _
+                             "it needs whoever administers the proxy."
+            ElseIf InStr(1, detail, "upstream request failed", vbTextCompare) > 0 Then
+                ProxyError = "The proxy could not reach Cat. Cat is down or " & _
+                             "unreachable; try again shortly."
+            Else
+                ProxyError = "The proxy could not complete the call to Cat. " & detail
+            End If
+
+        Case 500, 503, 504
+            ProxyError = "Server error - nothing wrong with this row. Try " & _
+                         "again; if it keeps happening it is proxy-side. " & detail
+
+        Case Else
+            ProxyError = detail
+
+    End Select
+
+    ProxyError = Trim$(ProxyError)
+End Function
+
+' Whatever the body actually says, from any of the shapes we see.
+'
+' The proxy emits a FLAT STRING - {"error": "auth failed: ..."} - which the
+' previous version could not read: it asked for error.code and error.description,
+' got Nothing because a string is not an object, and fell through to dumping
+' the raw JSON into the cell. Cat's own errors are passed through verbatim by
+' the proxy and use the nested shape, so both are handled here.
+Private Function ErrorDetail(ByVal txt As String) As String
+    Dim root As Object, er As Object, s As String
+
     On Error Resume Next
-    Dim root As Object: Set root = JsonConverter.ParseJson(txt)
+    If Len(Trim$(txt)) = 0 Then Exit Function
+
+    Set root = JsonConverter.ParseJson(txt)     ' raises on non-JSON; root stays Nothing
     If Not root Is Nothing Then
-        Dim er As Object: Set er = SafeObj(root, "error")
-        If Not er Is Nothing Then
-            If er.Exists("code") Then ProxyError = CStr(er("code")) & " "
-            If er.Exists("description") Then ProxyError = ProxyError & CStr(er("description"))
+        If root.Exists("error") Then
+            If IsObject(root("error")) Then
+                Set er = root("error")
+                If er.Exists("description") Then s = CStr(er("description"))
+                If er.Exists("code") Then s = Trim$(CStr(er("code")) & " " & s)
+            Else
+                s = CStr(root("error"))
+            End If
+        ElseIf root.Exists("message") Then
+            s = CStr(root("message"))
         End If
     End If
-    If Len(Trim$(ProxyError)) = 0 Then ProxyError = Left$(txt, 200)
+
+    ' Anything unrecognised still gets shown - truncated, but never swallowed.
+    ' A message we did not anticipate is worth more than a blank cell.
+    If Len(Trim$(s)) = 0 Then s = Left$(Trim$(txt), 200)
+    ErrorDetail = Trim$(s)
 End Function
 
 ' Normalize a pasted identifier (serial / DCN): convert non-breaking spaces,

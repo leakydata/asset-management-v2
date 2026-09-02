@@ -43,7 +43,7 @@ The installer means colleagues get this soon. These are the difference between
   deliberately does not exist, so the test never breaks because someone expired
   the asset it was looking for.
 
-- [ ] **1.2 Plain-English API errors** **[bas]**
+- [x] **1.2 Plain-English API errors** **[bas]**
   Map the common proxy/CCAT failures to sentences. *"This DCN isn't ours —
   Cat only returns DCNs for B150 records"* rather than a raw 403 body.
   **Why:** a red Result cell full of JSON teaches the user nothing and sends
@@ -51,6 +51,28 @@ The installer means colleagues get this soon. These are the difference between
   **Done when:** 401, 403, 404, 429, 5xx and a timeout each have a mapped
   message, with the raw text kept as a fallback for anything unmapped.
   **Effort:** small.
+  **DONE.** Rewrote `ProxyError` itself rather than adding a layer, so both
+  call sites — `CatSearch` and `SendRow`'s Result cell — improved with no
+  call-site changes. Fixed a real bug on the way: it read `error` as an object
+  with code/description, but the proxy emits a flat string, so every
+  proxy-generated error fell through to dumping raw JSON in the cell. Both
+  shapes now parse. The distinction worth having is **401 vs 502** — 401 is
+  your key and you can fix it; 502 means the proxy took your key fine and then
+  couldn't reach or sign in to Cat, which no user can fix and none should be
+  sent to Settings to try.
+
+---
+
+## Housekeeping — found along the way, not features
+
+- [ ] **H.1 `azure-function/` in this repo is stale**
+  It defines only the `search` route, but the add-in also calls `ownership`,
+  `expire` and `transfer`. The deployed function is ahead of the source here.
+  **Why it matters:** the repo is no longer the source of truth for the proxy,
+  so the next person to change it will be working from an incomplete copy — and
+  the error bodies for the three write routes can't be read from source.
+  **Done when:** the folder matches what's deployed, or says plainly that it
+  doesn't and points at where the real source lives.
 
 ---
 
