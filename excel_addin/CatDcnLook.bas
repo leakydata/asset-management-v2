@@ -2,7 +2,7 @@ Attribute VB_Name = "CatDcnLook"
 '==============================================================================
 ' Cat Asset Management V2 - single-DCN look up
 '
-' The mirror of CatQuickLook. That one asks "who owns this machine"; this one
+' The mirror of CatSerialLook. That one asks "who owns this machine"; this one
 ' asks "what does this customer own". Same window, same buttons, same paste
 ' behaviour - the only difference is which argument of CatSearch gets filled.
 '
@@ -20,9 +20,9 @@ Attribute VB_Name = "CatDcnLook"
 ' it in the .frm, and importing it back, then paste the code in.
 '
 ' Depends on CatAssetLookup (CatSearch, OwnershipRecords, RecordValues,
-' HeaderArray, CleanId) and on CatQuickLook for QuickLookPasteWidth /
-' QuickLookPasteAt - the paste rules are shared on purpose, so a change to how
-' many columns land on Cat Expire applies to both windows at once.
+' HeaderArray, CleanId) and on CatLookShared for QuickLookPasteWidth /
+' QuickLookPasteAt - the paste rules live there once so a change to how many
+' columns land on Cat Expire applies to both windows at once.
 '==============================================================================
 Option Explicit
 

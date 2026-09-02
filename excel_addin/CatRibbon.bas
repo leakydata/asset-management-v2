@@ -49,10 +49,10 @@ End Sub
 '==============================================================================
 
 ' --- read-only lookups -------------------------------------------------------
-Public Sub CatQuickLook_Ribbon(control As IRibbonControl)
+Public Sub CatSerialLook_Ribbon(control As IRibbonControl)
     ' Module-qualified for the same reason as CatBatchLookup below: the module
-    ' CatQuickLook also contains a Sub CatQuickLook.
-    CatQuickLook.CatQuickLook
+    ' CatSerialLook also contains a Sub CatSerialLook.
+    CatSerialLook.CatSerialLook
 End Sub
 
 Public Sub CatDcnLook_Ribbon(control As IRibbonControl)

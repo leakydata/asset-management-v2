@@ -8,26 +8,26 @@
       <tab id="CCATTab" label="CCAT" keytip="K">
 
         <group id="CatGrpLookup" label="Lookup">
-          <button id="CatBtnQuickLook" size="large"
-                  label="Quick Look"
+          <button id="CatBtnSerialLook" size="large"
+                  label="Serial Lookup"
                   imageMso="ZoomCurrent75" keytip="Q"
-                  onAction="CatQuickLook_Ribbon"
+                  onAction="CatSerialLook_Ribbon"
                   screentip="Look up one serial in a floating window"
                   supertip="Read-only. Shows every field for every ownership record on one serial, without spawning a sheet. The window floats, so you can keep clicking cells - Paste at Selection drops the row into the cell you have selected, as many columns as that sheet wants."/>
           <button id="CatBtnDcnLook" size="large"
-                  label="DCN Look"
+                  label="DCN Lookup"
                   imageMso="ZoomCurrent100" keytip="N"
                   onAction="CatDcnLook_Ribbon"
                   screentip="Look up one DCN in a floating window"
-                  supertip="Read-only. The mirror of Quick Look: everything one customer owns, rather than everyone who owns one machine. The list shows the asset - serial, make, model, year, type, status - because the DCN is the same on every row. Same floating window and same Paste at Selection."/>
+                  supertip="Read-only. The mirror of Serial Lookup: everything one customer owns, rather than everyone who owns one machine. The list shows the asset - serial, make, model, year, type, status - because the DCN is the same on every row. Same floating window and same Paste at Selection."/>
           <button id="CatBtnBatchSerial" size="large"
-                  label="Lookup by Serial"
+                  label="Batch Serials"
                   imageMso="FindDialog" keytip="S"
                   onAction="CatBatchLookup_Ribbon"
                   screentip="Look up a column of serial numbers"
                   supertip="Read-only. Select a column of serials - one is fine - and it writes an Asset Lookup Results sheet. Failed rows are shaded red: those are unknown, not empty. The results columns paste straight into the operation sheets."/>
           <button id="CatBtnBatchDcn" size="large"
-                  label="Lookup by DCN"
+                  label="Batch DCNs"
                   imageMso="Refresh" keytip="D"
                   onAction="CatBatchLookupDCN_Ribbon"
                   screentip="Look up a column of DCNs"

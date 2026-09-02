@@ -16,9 +16,12 @@ is no separate form.
 | `CatAssetLookup.bas` | proxy client, `=CatLookupSerial` / `=CatLookupDCN`, shared helpers, `TargetBook()` |
 | `CatBatchLookup.bas` | batch lookup by serial and by DCN |
 | `CatBatchOps.bas` | the three operation sheets — build, validate, run |
-| `CatQuickLook.bas` | single-serial floating lookup |
+| `CatSerialLook.bas` | single-serial floating lookup |
+| `CatDcnLook.bas` | single-DCN floating lookup — everything one customer owns |
+| `CatLookShared.bas` | the paste rules both lookup windows obey |
 | `CatRibbon.bas` | ribbon callbacks, per-user settings |
-| `frmCatQuickLook_FORM_CODE.txt` | the Quick Look UserForm — **built by hand once**, see below |
+| `frmCatQuickLook_FORM_CODE.txt` | the Serial Lookup UserForm — **built by hand once**, see below |
+| `frmCatDcnLook_FORM_CODE.txt` | the DCN Lookup UserForm — **cloned from the one above** |
 | `customUI14.xml` | the ribbon tab |
 
 `CatBatchOps` replaces both the old `CatActions` (the named-cell form) and
@@ -99,13 +102,13 @@ would otherwise look like an Add-Update sheet and Run would fire writes for
 every row. Its `QuerySerial` / `QueryDCN` column is the tell, and those sheets
 are refused outright.
 
-## Quick Look
+## Serial Lookup
 
 One serial, a floating window, no sheet. Batch lookup already handles a single
 serial but spends a whole sheet doing it — ten checks left you with ten
 results sheets.
 
-Select a cell holding a serial and click **Quick Look** and it pre-fills;
+Select a cell holding a serial and click **Serial Lookup** and it pre-fills;
 otherwise type one and press Enter. Every ownership record for that serial
 appears in the top list (your DUSHORE example gives two — same CCID, two
 DCNs), and picking one shows all 22 fields as field/value.
@@ -126,6 +129,27 @@ required fields land at A5. For one-off rows that beats the drag-select.
 Pasted cells are forced to text format — a serial like `00123`, or a DCN that
 looks numeric, would otherwise be silently converted to a number and stop
 matching CCAT.
+
+## DCN Lookup
+
+The same window, asking the opposite question. Serial Lookup asks *who owns
+this machine*; DCN Lookup asks *what does this customer own*. `CatSearch`
+already took both arguments, so it's the same call with the other one filled.
+
+Two things differ, both because the question inverts. A serial returns two or
+three ownership records; DCN `C00103757` returns **55 assets**.
+
+- **The list shows the asset** — serial, make, model, year, type, status —
+  because DCN and DCN Name would repeat identically down all 55 rows and spend
+  the two widest columns saying nothing. The customer name goes on the title
+  bar, where it's said once.
+- **The record list is taller** — fourteen rows against six. It takes the slack
+  the detail list wasn't using; that one still shows all 22 fields without
+  scrolling.
+
+Copy Row and Paste at Selection behave identically, and deliberately share
+their column rules with Serial Lookup via `CatLookShared` — pasting onto
+`Cat Expire` fills the same three columns from either window.
 
 ## Validation rules
 
@@ -149,15 +173,16 @@ overwrite what CCAT already holds.
 
 ## Build it
 
-1. Blank workbook → import the five `.bas` files plus `JsonConverter.bas`
+1. Blank workbook → import the seven `.bas` files plus `JsonConverter.bas`
    (VBA-JSON) → add the **Microsoft Scripting Runtime** reference.
-   Then build the Quick Look form — `frmCatQuickLook_FORM_CODE.txt` lists the
+   Then build the Serial Lookup form — `frmCatQuickLook_FORM_CODE.txt` lists the
    controls to drop on and the code to paste. **Drop them anywhere and name
    them**; the code sets the form's size, stretches the full-width controls to
    the edges, and sets both lists' `ColumnCount`/`ColumnWidths` and the column
-   heading. Each `Top` and each `Font` is still yours in the designer. Skip the
-   form entirely and everything else still works; only the Quick Look button
-   will error.
+   heading. Each `Top` and each `Font` is still yours in the designer.
+   Then clone it for DCN Lookup — `frmCatDcnLook_FORM_CODE.txt` has the
+   export/rename/import steps. Skip either form and everything else still
+   works; only that form's button will error.
 2. Delete any `Config` sheet — settings live in the registry now, and you don't
    want a key inside the file.
 3. **File ▸ Save As ▸ Excel Add-In (`.xlam`)**, named `CatAssetTools.xlam`.
