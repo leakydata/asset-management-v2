@@ -12,10 +12,16 @@ scaled to 125% or 150%, or a form drawn at a different DPI to the one it runs
 on). They are the FORM_W / FORM_H constants at the top of the code, and they
 match section 1 below - change them in one place if you resize the form.
 
-Nothing else is touched. No Left, no Top, no control Width or Height, no Font,
-no ColumnCount, no ColumnWidths. Every one of those is a property you set in
-the designer, and the controls stay exactly as you draw them. Move things
-around whenever you like; nothing in the code needs to change.
+IT ALSO SETS THE TWO LISTS' COLUMNS - ColumnCount and ColumnWidths, in
+PinColumns. A ListBox draws only as many columns as ColumnCount says, so at
+the default of 1 the record list shows DCNs and nothing else and the detail
+list shows field names with no values. Both are filled either way; only the
+drawing is missing.
+
+Nothing else is touched. No Left, no Top, no control Width or Height, no Font.
+Those stay properties you set in the designer, and the controls stay exactly
+where you draw them. Move things around whenever you like; nothing in the code
+needs to change.
 
 --------------------------------------------------------------------------------
 1. CREATE THE FORM
@@ -68,16 +74,22 @@ between the heading above it and the buttons below.
     txtSerial     Font              Consolas 11
 
     lstRecords    Font              Consolas 9
-                  ColumnCount       6
-                  ColumnWidths      71 pt;162 pt;60 pt;54 pt;31 pt;39 pt
     lstFields     Font              Consolas 9
-                  ColumnCount       2
+
+ColumnCount and ColumnWidths are NOT in this list - PinColumns sets them, so
+there is nothing to type. For the record, what it sets is:
+
+    lstRecords    ColumnCount       6
+                  ColumnWidths      71 pt;162 pt;60 pt;54 pt;31 pt;39 pt
+    lstFields     ColumnCount       2
                   ColumnWidths      154 pt;266 pt
 
 ColumnWidths must total LESS than the list is wide. The six above come to
 417 in a 484pt list, leaving room for the vertical scrollbar that appears
 once there are more records than fit - without that slack the last column
-clips exactly when a serial has enough records to need scrolling.
+clips exactly when a serial has enough records to need scrolling. If you
+resize lstRecords, change them in PinColumns rather than in the designer -
+the designer values would be overwritten on open.
 
 The optional labels are headings. lblFields is just:
 
@@ -143,6 +155,7 @@ Private Const FORM_H As Single = 498
 '==============================================================================
 Private Sub UserForm_Initialize()
     PinSize
+    PinColumns
     ResetDisplay
 End Sub
 
@@ -159,6 +172,30 @@ Private Sub PinSize()
     On Error Resume Next
     Me.Width = FORM_W
     Me.Height = FORM_H
+    On Error GoTo 0
+End Sub
+
+' The two lists' columns.
+'
+' A ListBox stores 10 columns internally no matter what ColumnCount says -
+' ColumnCount only controls how many get DRAWN. So at the default of 1 the
+' code below fills every column, no error is raised, and you see the first one
+' and nothing else. That is what "the list is jumbled" turns out to be.
+'
+' ColumnWidths must total LESS than the list is wide. The six below come to 417
+' in a 484pt list, leaving room for the vertical scrollbar that appears once
+' there are more records than fit - without that slack the last column clips at
+' exactly the moment a serial has enough records to need scrolling.
+'
+' If you resize either list in the designer, these are the numbers to redo -
+' and lblRecords' caption with them, since the heading and the columns are two
+' halves of the same thing.
+Private Sub PinColumns()
+    On Error Resume Next
+    lstRecords.ColumnCount = 6
+    lstRecords.ColumnWidths = "71 pt;162 pt;60 pt;54 pt;31 pt;39 pt"
+    lstFields.ColumnCount = 2
+    lstFields.ColumnWidths = "154 pt;266 pt"
     On Error GoTo 0
 End Sub
 
