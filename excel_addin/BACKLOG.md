@@ -140,7 +140,7 @@ bad batch is unrecoverable except from memory.
   **Done when:** every Run appends one line per row, and the log survives
   closing the workbook.
   **Note:** overlaps 2.2 — likely one storage mechanism serving both.
-  **DONE.** One mechanism, as predicted. `%APPDATA%\CatAssetTools  cat-write-log-YYYY-MM.csv` — outside the workbook, so it outlives the file
+  **DONE.** One mechanism, as predicted. `%APPDATA%\CatAssetTools\cat-write-log-YYYY-MM.csv` — outside the workbook, so it outlives the file
   that happened to be open. **CCAT > Write Log** opens the folder, and the run
   summary quotes the run id. Every field is quoted: a DCN name like "SMS RENTAL
   (WA) PTY LTD, INC" would shift every later column, and a naive `Split(",")`
