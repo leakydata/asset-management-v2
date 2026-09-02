@@ -147,6 +147,13 @@ Private mRows As Collection
 Private Const FORM_W As Single = 511
 Private Const FORM_H As Single = 498
 
+' The font lstRecords is set to in the designer. lblRecords is forced to match
+' it, because the heading lines its columns up with padded spaces and that only
+' works if the two are the same monospaced font at the same size. If you change
+' the list's font in the designer, change these to match.
+Private Const LIST_FONT      As String = "Consolas"
+Private Const LIST_FONT_SIZE As Single = 9
+
 '==============================================================================
 ' Setup
 '
@@ -241,17 +248,74 @@ End Sub
 ' there are more records than fit - without that slack the last column clips at
 ' exactly the moment a serial has enough records to need scrolling.
 '
-' If you resize either list in the designer, these are the numbers to redo -
-' and lblRecords' caption with them, since the heading and the columns are two
-' halves of the same thing.
+' The six numbers live in RecordColumns below, and BOTH the list's ColumnWidths
+' and lblRecords' heading are built from them - so the heading always sits over
+' the columns it names. Change a width there and the heading follows on its
+' own; there is no second place to remember.
 Private Sub PinColumns()
     On Error Resume Next
+    Dim w As Variant: w = RecordColumns()
+
     lstRecords.ColumnCount = 6
-    lstRecords.ColumnWidths = "71 pt;162 pt;60 pt;54 pt;31 pt;39 pt"
+    lstRecords.ColumnWidths = WidthsList(w)
     lstFields.ColumnCount = 2
     lstFields.ColumnWidths = "154 pt;266 pt"
+
+    ' The two headings. WordWrap off matters on lblRecords: a Label wraps by
+    ' default, and the heading is one long space-padded line that would fold
+    ' onto a second row and stop lining up with anything.
+    With Me.Controls("lblRecords")
+        .Caption = RecordHeading(w, LIST_FONT_SIZE)
+        .Font.Name = LIST_FONT
+        .Font.Size = LIST_FONT_SIZE
+        .WordWrap = False
+    End With
+    Me.Controls("lblFields").Caption = "Record detail"
+
     On Error GoTo 0
 End Sub
+
+' The record list's six columns, in points. The one definition.
+'                           DCN  name  type status sub dealer
+Private Function RecordColumns() As Variant
+    RecordColumns = Array(71, 162, 60, 54, 31, 39)
+End Function
+
+Private Function WidthsList(ByVal w As Variant) As String
+    Dim s As String, i As Long
+    For i = LBound(w) To UBound(w)
+        s = s & CStr(w(i)) & " pt" & IIf(i < UBound(w), ";", "")
+    Next i
+    WidthsList = s
+End Function
+
+' The heading, space-padded to sit over the columns. It only lines up in a
+' monospaced font, which is why lblRecords is set to the same Consolas the list
+' uses. Consolas advances 0.55 em per character, so a column starting p points
+' along starts Int(p / (size * 0.55)) characters along.
+'
+' Each caption is placed at the RUNNING TOTAL of the widths, not padded out to
+' its own column's width - rounding a column up to a whole character six times
+' over is how a heading ends up a column and a half adrift by the time it
+' reaches DLR.
+Private Function RecordHeading(ByVal w As Variant, ByVal fontSize As Single) As String
+    Dim caps As Variant
+    caps = Array("DCN", "DCN NAME", "TYPE", "STATUS", "SUB", "DLR")
+
+    Dim charW As Single: charW = fontSize * 0.55
+    Dim s As String, cum As Long, pos As Long, i As Long
+    For i = LBound(w) To UBound(w)
+        pos = Int(cum / charW)
+        If Len(s) < pos Then
+            s = s & Space$(pos - Len(s))
+        ElseIf Len(s) > 0 Then
+            s = s & " "               ' never let two headings run together
+        End If
+        s = s & CStr(caps(i))
+        cum = cum + w(i)
+    Next i
+    RecordHeading = s
+End Function
 
 ' Called by CatQuickLook before Show, so selecting a cell that holds a serial
 ' and clicking the button pre-fills it.
