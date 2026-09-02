@@ -1,0 +1,422 @@
+================================================================================
+frmCatDcnLook - clone the serial form, then paste the code below
+================================================================================
+
+This is frmCatQuickLook with one input changed: it searches by DCN instead of
+by serial, so one lookup returns every asset that DCN owns rather than every
+ownership record on one machine.
+
+--------------------------------------------------------------------------------
+1. CLONE THE FORM
+--------------------------------------------------------------------------------
+
+Do NOT rebuild it by hand. Copy the one that already works:
+
+  1. In the VBE, right-click frmCatQuickLook > Export File...
+     Save it as frmCatDcnLook.frm (it writes a .frx alongside - keep both).
+  2. Open frmCatDcnLook.frm in Notepad. Two lines carry the name:
+
+         Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} frmCatQuickLook
+         Attribute VB_Name = "frmCatQuickLook"
+
+     Change both to frmCatDcnLook. Save.
+  3. Back in the VBE: File > Import File... > frmCatDcnLook.frm
+
+Export/import rather than copy-paste: a UserForm is a .frm plus a binary .frx,
+and only the export carries both. Copy-pasting controls loses the .frx and you
+are back to placing things by hand.
+
+The control names stay EXACTLY as they are - txtSerial, btnLookup, lstRecords,
+lstFields, btnCopy, btnPaste, lblRecords, lblFields. txtSerial now holds a DCN,
+which reads oddly, but renaming a control means editing the .frm and every line
+that mentions it, for nothing that shows on screen. Leave it.
+
+--------------------------------------------------------------------------------
+2. PASTE THE CODE
+--------------------------------------------------------------------------------
+
+Right-click frmCatDcnLook > View Code, select all, delete, paste everything
+below the line. It is the serial form's code with four differences:
+
+    - CatSearch("", dcn) instead of CatSearch(serial, "")
+    - the record list shows the ASSET, not the DCN: one DCN owns many
+      machines, and DCN plus DCN Name would repeat identically on every row
+    - RECORDS_H makes the record list taller, since a DCN commonly returns
+      dozens of assets where a serial returns two or three
+    - the captions and the status line say DCN
+
+Everything else - PinSize, FitControls, PinColumns, the copy and paste
+buttons - is unchanged and behaves identically.
+
+================================================================================
+Option Explicit
+
+' One entry per ownership record; each item is the array RecordValues returns.
+Private mRows As Collection
+
+' Same two numbers as the serial form. FORM_W is final; FORM_H is a STARTING
+' height that FitControls trims up to just under the buttons.
+Private Const FORM_W As Single = 511
+Private Const FORM_H As Single = 498
+
+' The font lstRecords is set to in the designer. lblRecords is forced to match
+' it, because the heading lines its columns up with padded spaces and that only
+' works if the two are the same monospaced font at the same size.
+Private Const LIST_FONT      As String = "Consolas"
+Private Const LIST_FONT_SIZE As Single = 9
+
+' How tall the record list is. THIS IS THE ONE REAL DIFFERENCE FROM THE SERIAL
+' FORM. A serial returns two or three ownership records; a DCN returns every
+' asset it owns, which is routinely dozens - so the list that was six rows tall
+' becomes about eleven, and the detail list below gives up the slack it was not
+' using.
+'
+' The detail list then takes whatever is left down to the buttons, and it wants
+' to show all 22 fields without scrolling. A row is about 9.3pt at Consolas 9
+' (measured, not assumed - it is the font size plus a little, NOT the ~12.75pt
+' a text line would take), so 22 rows need roughly 205pt.
+'
+' That is the budget:
+'
+'     RECORDS_H   record rows   detail rows (22 needed)
+'         100          10             30
+'         140          14             25      <- here
+'         175          18             22      the edge
+'         200          21             19      detail starts scrolling
+'
+' 140 gives the record list more than double the six rows the serial form had,
+' and still leaves the detail list three spare rows. Past about 175 you are
+' buying rows up here by scrolling down there.
+Private Const RECORDS_H As Single = 140
+
+'==============================================================================
+' Setup
+'==============================================================================
+Private Sub UserForm_Initialize()
+    PinSize
+    FitControls
+    PinColumns
+    ResetDisplay
+End Sub
+
+' Called by CatDcnLook before Show, so selecting a cell that holds a DCN and
+' clicking the button pre-fills it.
+Public Sub SeedDcn(ByVal s As String)
+    txtSerial.Text = s
+End Sub
+
+Private Sub UserForm_Activate()
+    PinSize
+    FitControls
+    txtSerial.SetFocus
+    If Len(txtSerial.Text) > 0 Then txtSerial.SelStart = 0: txtSerial.SelLength = Len(txtSerial.Text)
+End Sub
+
+' Puts the form back to the size you drew it. Called from Activate as well as
+' Initialize: Initialize runs before the window exists, so a shrink applied
+' while the window is realised lands after it.
+Private Sub PinSize()
+    On Error Resume Next
+    Me.Width = FORM_W
+    Me.Height = FORM_H
+    On Error GoTo 0
+End Sub
+
+' Stretches what should reach the edges out to them, and divides the vertical
+' space between the two lists.
+'
+' The horizontal half is identical to the serial form. The vertical half is
+' the addition: lstRecords gets RECORDS_H, and lstFields is placed underneath
+' it and stretched down to the buttons - so the two lists always meet, whatever
+' RECORDS_H is set to.
+Private Sub FitControls()
+    Const MARGIN As Single = 8       ' clear space at the sides and the bottom
+    Const GAP    As Single = 6       ' between stacked controls
+
+    On Error Resume Next
+
+    Dim rightEdge As Single
+    rightEdge = Me.InsideWidth - MARGIN
+
+    ' Top row: Look Up sits on the right edge, the DCN box takes the rest.
+    txtSerial.Left = MARGIN
+    btnLookup.Left = rightEdge - btnLookup.Width
+    txtSerial.Width = btnLookup.Left - GAP - MARGIN
+
+    ' Bottom row: Copy keeps its width, Paste stretches to the right edge.
+    btnCopy.Left = MARGIN
+    btnPaste.Width = rightEdge - btnPaste.Left
+
+    ' Both lists span the full width.
+    lstRecords.Left = MARGIN
+    lstRecords.Width = rightEdge - MARGIN
+    lstFields.Left = MARGIN
+    lstFields.Width = rightEdge - MARGIN
+
+    ' Vertical: the record list gets its fixed height, the detail list follows
+    ' it down and fills what is left. IntegralHeight off first, or a ListBox
+    ' rounds its own height to whole rows and the two stop meeting.
+    lstRecords.IntegralHeight = False
+    lstFields.IntegralHeight = False
+
+    lstRecords.Height = RECORDS_H
+    lstFields.Top = lstRecords.Top + RECORDS_H + GAP
+
+    Dim fldH As Single
+    fldH = (btnCopy.Top - GAP) - lstFields.Top
+    If fldH < 60 Then fldH = 60          ' never collapse it to nothing
+    lstFields.Height = fldH
+
+    ' Headings line up with the lists AND span them. The Width matters as much
+    ' as the Left: a Label clips its caption at its own right edge with no
+    ' ellipsis and no complaint, so a narrow one loses the end of the heading.
+    ' One property per line, so each is skipped on its own if the label was
+    ' never added.
+    Me.Controls("lblRecords").Left = MARGIN
+    Me.Controls("lblRecords").Width = rightEdge - MARGIN
+    Me.Controls("lblFields").Left = MARGIN
+    Me.Controls("lblFields").Width = rightEdge - MARGIN
+    Me.Controls("lblFields").Top = lstFields.Top - 15
+
+    ' Trim the form's bottom to just below the buttons. Subtracting from Height
+    ' rather than assigning it keeps the border allowance out of the sum.
+    Me.Height = Me.Height - (Me.InsideHeight - (btnCopy.Top + btnCopy.Height + MARGIN))
+
+    On Error GoTo 0
+End Sub
+
+' A ListBox stores 10 columns internally no matter what ColumnCount says -
+' ColumnCount only controls how many get DRAWN. At the default of 1 the code
+' fills every column, no error is raised, and you see the first one and nothing
+' else.
+Private Sub PinColumns()
+    On Error Resume Next
+    Dim w As Variant: w = RecordColumns()
+
+    lstRecords.ColumnCount = 6
+    lstRecords.ColumnWidths = WidthsList(w)
+    lstFields.ColumnCount = 2
+    lstFields.ColumnWidths = "154 pt;266 pt"
+
+    With Me.Controls("lblRecords")
+        .Caption = RecordHeading(w, LIST_FONT_SIZE)
+        .Font.Name = LIST_FONT
+        .Font.Size = LIST_FONT_SIZE
+        .WordWrap = False
+    End With
+    Me.Controls("lblFields").Caption = "Record detail"
+
+    On Error GoTo 0
+End Sub
+
+' The record list's six columns, in points. The one definition - ColumnWidths
+' and the heading are both built from it.
+'
+' DIFFERENT FROM THE SERIAL FORM. There, every row is a different DCN holding
+' the same machine, so the columns name the DCN. Here every row is a different
+' machine held by the same DCN, so DCN and DCN Name would repeat identically
+' all the way down and the two widest columns would say nothing. The asset is
+' what varies, so the asset is what is shown.
+'                            serial make model year type status
+Private Function RecordColumns() As Variant
+    RecordColumns = Array(90, 40, 115, 40, 75, 57)
+End Function
+
+Private Function RecordCaptions() As Variant
+    RecordCaptions = Array("SERIAL", "MAKE", "MODEL", "YEAR", "TYPE", "STATUS")
+End Function
+
+Private Function WidthsList(ByVal w As Variant) As String
+    Dim s As String, i As Long
+    For i = LBound(w) To UBound(w)
+        s = s & CStr(w(i)) & " pt" & IIf(i < UBound(w), ";", "")
+    Next i
+    WidthsList = s
+End Function
+
+' The heading, space-padded to sit over the columns. Consolas advances 0.55 em
+' per character, so a column starting p points along starts Int(p / (size *
+' 0.55)) characters along. Each caption is placed at the RUNNING TOTAL of the
+' widths rather than padded to its own column, so rounding cannot accumulate.
+Private Function RecordHeading(ByVal w As Variant, ByVal fontSize As Single) As String
+    Dim caps As Variant: caps = RecordCaptions()
+
+    Dim charW As Single: charW = fontSize * 0.55
+    Dim s As String, cum As Long, pos As Long, i As Long
+    For i = LBound(w) To UBound(w)
+        pos = Int(cum / charW)
+        If Len(s) < pos Then
+            s = s & Space$(pos - Len(s))
+        ElseIf Len(s) > 0 Then
+            s = s & " "               ' never let two headings run together
+        End If
+        s = s & CStr(caps(i))
+        cum = cum + w(i)
+    Next i
+    RecordHeading = s
+End Function
+
+'==============================================================================
+' Look up
+'==============================================================================
+Private Sub btnLookup_Click()
+    Dim dcn As String
+    dcn = CleanId(txtSerial.Text)
+    If Len(dcn) = 0 Then
+        Me.Caption = "Cat DCN Look - enter a DCN"
+        Exit Sub
+    End If
+
+    ResetDisplay
+    Me.Caption = "Cat DCN Look - looking up " & dcn & " ..."
+    DoEvents
+
+    Dim txt As String
+    On Error GoTo Fail
+    Application.Cursor = xlWait
+    ' The ONE call that differs from the serial form. CatSearch already takes
+    ' both - passing the DCN in the second argument and an empty first is a
+    ' DCN search, no new plumbing needed.
+    txt = CatSearch("", dcn)              ' raises on a non-200
+    Application.Cursor = xlDefault
+    On Error GoTo 0
+
+    Dim recs As Object
+    Set recs = OwnershipRecords(txt)
+    If recs Is Nothing Then
+        Me.Caption = "Cat DCN Look - unexpected response"
+        Exit Sub
+    End If
+    If recs.Count = 0 Then
+        Me.Caption = "Cat DCN Look - nothing owned by " & dcn
+        Exit Sub
+    End If
+
+    Set mRows = New Collection
+    Dim i As Long, v As Variant
+    For i = 1 To recs.Count
+        v = RecordValues(recs(i))
+        mRows.Add v
+        ' The asset, not the DCN - see RecordColumns above.
+        lstRecords.AddItem CStr(v(0))                                       ' SerialNumber
+        lstRecords.List(lstRecords.ListCount - 1, 1) = CStr(v(1))           ' MakeCode
+        lstRecords.List(lstRecords.ListCount - 1, 2) = CStr(v(4))           ' Model
+        lstRecords.List(lstRecords.ListCount - 1, 3) = CStr(v(5))           ' ModelYear
+        lstRecords.List(lstRecords.ListCount - 1, 4) = CStr(v(3))           ' OwnershipType
+        lstRecords.List(lstRecords.ListCount - 1, 5) = CStr(v(6))           ' Status
+    Next i
+
+    ' The DCN name is the same on every row, so it belongs on the title bar
+    ' rather than in a column repeating itself all the way down.
+    Me.Caption = "Cat DCN Look - " & recs.Count & " asset(s) for " & dcn & _
+                 DcnNameSuffix()
+
+    lstRecords.ListIndex = 0
+    ShowRecord
+    Exit Sub
+
+Fail:
+    Application.Cursor = xlDefault
+    Me.Caption = "Cat DCN Look - FAILED: " & Err.Description
+End Sub
+
+' " - TROY CONSTRUCTION LLC" off the first record, or nothing when the API
+' didn't return a name.
+Private Function DcnNameSuffix() As String
+    On Error Resume Next
+    If mRows Is Nothing Then Exit Function
+    If mRows.Count = 0 Then Exit Function
+    Dim v As Variant: v = mRows(1)
+    If Len(CStr(v(11))) > 0 Then DcnNameSuffix = " - " & CStr(v(11))
+End Function
+
+Private Sub lstRecords_Click()
+    ShowRecord
+End Sub
+
+Private Sub ShowRecord()
+    lstFields.Clear
+    If mRows Is Nothing Then Exit Sub
+    If lstRecords.ListIndex < 0 Then Exit Sub
+
+    Dim v As Variant: v = mRows(lstRecords.ListIndex + 1)
+    Dim h As Variant: h = HeaderArray()
+
+    Dim i As Long
+    For i = LBound(h) To UBound(h)
+        lstFields.AddItem CStr(h(i))
+        lstFields.List(lstFields.ListCount - 1, 1) = CStr(v(i))
+    Next i
+End Sub
+
+Private Sub ResetDisplay()
+    Set mRows = Nothing
+    lstRecords.Clear
+    lstFields.Clear
+End Sub
+
+'==============================================================================
+' Copy / paste - identical to the serial form
+'==============================================================================
+
+' Whole record as two tab-separated lines (headers, then values) - drops into
+' Excel, an email or a ticket unchanged.
+Private Sub btnCopy_Click()
+    Dim v As Variant
+    If Not PickedRecord(v) Then Exit Sub
+
+    Dim h As Variant: h = HeaderArray()
+    Dim s As String, i As Long
+    For i = LBound(h) To UBound(h)
+        s = s & CStr(h(i)) & IIf(i < UBound(h), vbTab, "")
+    Next i
+    s = s & vbCrLf
+    For i = LBound(v) To UBound(v)
+        s = s & CStr(v(i)) & IIf(i < UBound(v), vbTab, "")
+    Next i
+
+    Dim d As Object
+    Set d = New MSForms.DataObject
+    d.SetText s
+    d.PutInClipboard
+
+    Me.Caption = "Cat DCN Look - copied all " & (UBound(h) + 1) & " columns"
+End Sub
+
+' Writes into whatever cell is selected RIGHT NOW - resolved at click time, so
+' it is never stale no matter how much you clicked around while this was open.
+Private Sub btnPaste_Click()
+    Dim v As Variant
+    If Not PickedRecord(v) Then Exit Sub
+
+    Dim c As Range
+    On Error Resume Next
+    Set c = Application.ActiveCell
+    On Error GoTo 0
+    If c Is Nothing Then
+        Me.Caption = "Cat DCN Look - select a cell in a workbook first"
+        Exit Sub
+    End If
+
+    Dim n As Long
+    n = QuickLookPasteWidth(c.Worksheet)
+    QuickLookPasteAt c, v, n
+
+    Me.Caption = "Cat DCN Look - pasted " & n & " cols to " & _
+                 c.Worksheet.Name & "!" & c.Address(0, 0)
+End Sub
+
+' Hands back the selected record, or reports why it can't.
+' NOT called Selected: UserForm already inherits a member of that name.
+Private Function PickedRecord(ByRef v As Variant) As Boolean
+    If mRows Is Nothing Then
+        Me.Caption = "Cat DCN Look - look up a DCN first"
+        Exit Function
+    End If
+    If lstRecords.ListIndex < 0 Then
+        Me.Caption = "Cat DCN Look - pick an asset from the list first"
+        Exit Function
+    End If
+    v = mRows(lstRecords.ListIndex + 1)
+    PickedRecord = True
+End Function

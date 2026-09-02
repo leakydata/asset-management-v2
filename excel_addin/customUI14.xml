@@ -14,6 +14,12 @@
                   onAction="CatQuickLook_Ribbon"
                   screentip="Look up one serial in a floating window"
                   supertip="Read-only. Shows every field for every ownership record on one serial, without spawning a sheet. The window floats, so you can keep clicking cells - Paste at Selection drops the row into the cell you have selected, as many columns as that sheet wants."/>
+          <button id="CatBtnDcnLook" size="large"
+                  label="DCN Look"
+                  imageMso="ZoomCurrent100" keytip="N"
+                  onAction="CatDcnLook_Ribbon"
+                  screentip="Look up one DCN in a floating window"
+                  supertip="Read-only. The mirror of Quick Look: everything one customer owns, rather than everyone who owns one machine. The list shows the asset - serial, make, model, year, type, status - because the DCN is the same on every row. Same floating window and same Paste at Selection."/>
           <button id="CatBtnBatchSerial" size="large"
                   label="Lookup by Serial"
                   imageMso="FindDialog" keytip="S"

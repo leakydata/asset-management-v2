@@ -55,6 +55,12 @@ Public Sub CatQuickLook_Ribbon(control As IRibbonControl)
     CatQuickLook.CatQuickLook
 End Sub
 
+Public Sub CatDcnLook_Ribbon(control As IRibbonControl)
+    ' Module-qualified for the same reason - module CatDcnLook contains a
+    ' Sub CatDcnLook, and in a compile-time reference the module name wins.
+    CatDcnLook.CatDcnLook
+End Sub
+
 Public Sub CatBatchLookup_Ribbon(control As IRibbonControl)
     ' Module-qualified deliberately: the module CatBatchLookup also contains a
     ' Sub CatBatchLookup, and in a compile-time reference the MODULE name wins -
