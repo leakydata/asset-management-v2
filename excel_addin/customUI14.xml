@@ -58,6 +58,12 @@
                     onAction="CatBuildTransferSheet_Ribbon"
                     screentip="Build the Cat Transfer sheet"
                     supertip="Columns: Serial, Make Code, Status, Reason, then Dealer Make Code. The first two are lookup columns B:C. Status is APPROVED or REJECTED; a reason is required to reject. Filter a lookup on OwnershipRequestType = RECEIVED to find the ones waiting on you."/>
+            <button id="CatBtnUndoRun"
+                    label="Undo a Run..."
+                    imageMso="Undo"
+                    onAction="CatUndoRun_Ribbon"
+                    screentip="Rebuild what a past Run overwrote"
+                    supertip="Reads the write log and builds a sheet that puts the old values back. IT SENDS NOTHING - you get a sheet, you Validate it, you Run it, like any other work. Rows whose before-image was never captured are reported, never restored as blanks. Records the run CREATED are offered as a separate Expire sheet, because reversing those is destructive in its own right."/>
           </menu>
         </group>
 

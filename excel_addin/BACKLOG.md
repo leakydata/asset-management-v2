@@ -136,7 +136,7 @@ bad batch is unrecoverable except from memory.
   Costs one lookup per distinct serial (shared with 2.1's cache) — always on,
   never prompted: a safety net you opt into is a safety net that is off.
 
-- [ ] **2.3 Rebuild an undo sheet from a snapshot** **[bas]** **[xml]**
+- [x] **2.3 Rebuild an undo sheet from a snapshot** **[bas]** **[xml]**
   "Undo run &lt;id&gt;" produces a Cat Add-Update sheet that restores the before
   values. It does **not** auto-send — it hands you a sheet you Validate and Run
   yourself.
@@ -144,6 +144,21 @@ bad batch is unrecoverable except from memory.
   feature that lets people use it without flinching.
   **Done when:** expiring a test record and then running the generated undo
   sheet restores it.
+  **DONE.** **CCAT > Build Sheet > Undo a Run...** lists recent runs, and
+  builds `Cat Undo <runid>` — its own sheet, never over `Cat Add-Update`, since
+  someone recovering from a bad batch may have work in progress there. It
+  **sends nothing**: an undo that sends is a second unreviewed write on top of
+  the first, at the moment the person is rattled and least likely to check.
+  Three cases handled honestly — FOUND restores, NONE (the run *created* the
+  record) is offered as a separate Expire sheet behind its own confirmation
+  because reversing it is destructive, and UNAVAILABLE is reported and never
+  restored as blanks. Rows that failed at the time are skipped: they changed
+  nothing, so restoring them would push a stale value over whatever is there
+  now. Round-trip verified on live data — 22-field before-image through the CSV
+  and back into the right sheet columns.
+
+**§2 complete.** The destructive path now warns before, records during, and can
+be reversed after.
 
 - [x] **2.4 Write log** **[bas]**
   Timestamp, user, operation, request, response, result — appended for every

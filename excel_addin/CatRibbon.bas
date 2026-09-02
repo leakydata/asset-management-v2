@@ -85,6 +85,10 @@ Public Sub CatBuildTransferSheet_Ribbon(control As IRibbonControl)
     CatBuildTransferSheet
 End Sub
 
+Public Sub CatUndoRun_Ribbon(control As IRibbonControl)
+    CatUndoRun
+End Sub
+
 ' --- act on whatever sheet is in front of you --------------------------------
 Public Sub CatValidateSheet_Ribbon(control As IRibbonControl)
     CatValidateSheet
