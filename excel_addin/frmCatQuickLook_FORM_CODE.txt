@@ -140,21 +140,24 @@ Private mRows As Collection
 ' Excel re-sizes a UserForm as it opens on some display setups and the drawn
 ' size does not survive - so it is set again here, where nothing can undo it.
 '
-' Change these together with the designer values if you resize the form. They
-' are the form only: every control keeps the Left, Top, Width and Height you
-' gave it, so the layout is still entirely yours.
+' FORM_W is final. FORM_H is a STARTING height - FitControls then trims the
+' bottom up to just under the buttons, so the form ends up as tall as your
+' controls actually need and no taller. Setting FORM_H larger than you need is
+' therefore harmless; setting it too small is what would clip the buttons.
 Private Const FORM_W As Single = 511
 Private Const FORM_H As Single = 498
 
 '==============================================================================
 ' Setup
 '
-' Apart from PinSize, nothing here touches how the form LOOKS. No Left, no Top,
-' no control Width or Height, no Font, no ColumnCount, no ColumnWidths - those
-' are all designer properties, listed in the notes above.
+' PinSize sets the form's size, FitControls stretches the spanning controls out
+' to it, PinColumns sets the two lists' columns. Everything else - every Top,
+' every Font, the order things sit in - stays a designer property, listed in
+' the notes above, and none of it is touched here.
 '==============================================================================
 Private Sub UserForm_Initialize()
     PinSize
+    FitControls
     PinColumns
     ResetDisplay
 End Sub
@@ -172,6 +175,57 @@ Private Sub PinSize()
     On Error Resume Next
     Me.Width = FORM_W
     Me.Height = FORM_H
+    On Error GoTo 0
+End Sub
+
+' Stretches what should reach the edges, out to the edges.
+'
+' This does NOT lay the form out. Every control keeps the Top you gave it in
+' the designer, and the order things appear in is entirely yours. All it does
+' is the two things that cannot be got right by hand, because they depend on
+' the form's real inside size at runtime:
+'
+'   - the full-width controls all end at one right edge, MARGIN in from the
+'     side, instead of stopping short and leaving a band of grey
+'   - the form's bottom is pulled up to just under the buttons, so there is no
+'     dead space below them
+'
+' Move a control up or down, make it taller, reorder them - none of that is
+' touched. Only Left/Width on the things that span, and the form's Height.
+Private Sub FitControls()
+    Const MARGIN As Single = 8       ' clear space at the sides and the bottom
+    Const GAP    As Single = 6       ' between the serial box and Look Up
+
+    On Error Resume Next
+
+    Dim rightEdge As Single
+    rightEdge = Me.InsideWidth - MARGIN
+
+    ' The two lists span the full width.
+    lstRecords.Left = MARGIN
+    lstRecords.Width = rightEdge - MARGIN
+    lstFields.Left = MARGIN
+    lstFields.Width = rightEdge - MARGIN
+
+    ' Top row: Look Up sits on the right edge, the serial box takes the rest.
+    txtSerial.Left = MARGIN
+    btnLookup.Left = rightEdge - btnLookup.Width
+    txtSerial.Width = btnLookup.Left - GAP - MARGIN
+
+    ' Bottom row: Copy keeps its width, Paste stretches to the right edge.
+    btnCopy.Left = MARGIN
+    btnPaste.Width = rightEdge - btnPaste.Left
+
+    ' Headings, if you added them, line up with the lists.
+    Me.Controls("lblRecords").Left = MARGIN
+    Me.Controls("lblFields").Left = MARGIN
+
+    ' Trim the form's bottom to just below the buttons. Subtracting from Height
+    ' rather than assigning it keeps the border allowance out of the sum - the
+    ' difference between Height and InsideHeight is the chrome, whatever it is
+    ' on this machine, and it stays untouched.
+    Me.Height = Me.Height - (Me.InsideHeight - (btnCopy.Top + btnCopy.Height + MARGIN))
+
     On Error GoTo 0
 End Sub
 
@@ -207,6 +261,7 @@ End Sub
 
 Private Sub UserForm_Activate()
     PinSize
+    FitControls
     txtSerial.SetFocus
     If Len(txtSerial.Text) > 0 Then txtSerial.SelStart = 0: txtSerial.SelLength = Len(txtSerial.Text)
 End Sub
