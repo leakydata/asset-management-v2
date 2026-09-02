@@ -103,6 +103,10 @@ Public Sub CatTestConnection_Ribbon(control As IRibbonControl)
     CatTestConnection
 End Sub
 
+Public Sub CatOpenAuditFolder_Ribbon(control As IRibbonControl)
+    CatAudit.CatOpenAuditFolder
+End Sub
+
 '==============================================================================
 ' Per-user settings
 '==============================================================================

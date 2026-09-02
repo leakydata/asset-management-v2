@@ -89,6 +89,12 @@
                   onAction="CatTestConnection_Ribbon"
                   screentip="Check the proxy URL, key and network"
                   supertip="Sends one harmless read for a serial that does not exist, so it proves the setup without depending on any asset. Says in plain English which part is wrong - no URL, no key, key rejected, wrong address, or nothing answering at all - and what to do about it."/>
+          <button id="CatBtnWriteLog" size="large"
+                  label="Write Log"
+                  imageMso="FileVersionHistory" keytip="L"
+                  onAction="CatOpenAuditFolder_Ribbon"
+                  screentip="Open the folder holding the write log"
+                  supertip="Every row that Run sends is logged: who, when, which workbook and sheet, what came back, and the state of the record BEFORE it was touched. One CSV a month under your own profile. This is what answers who expired a record on Tuesday, and what Undo reads to put one back."/>
         </group>
 
       </tab>

@@ -149,13 +149,19 @@ Private Sub RunCore(ByVal dryRun As Boolean)
         If Not ConfirmRun(op, nRows) Then Exit Sub
     End If
 
-    ' Validate compares each row against what CCAT holds right now. Run does
-    ' not: it is about to fetch the truth by writing to it.
+    ' Validate compares each row against what CCAT holds right now.
     Dim compare As Boolean
-    If dryRun Then
-        compare = AskCompare(nRows)
-        ResetDiffCache
-    End If
+    If dryRun Then compare = AskCompare(nRows)
+
+    ' Both paths use the per-serial cache: Validate to diff, Run to capture the
+    ' before-image it logs.
+    ResetDiffCache
+
+    ' A Run is logged. Not optional and not prompted for - the run you would
+    ' most want a record of is the one nobody expected to go wrong, and a
+    ' safety net you are asked to opt into is a safety net that is off.
+    Dim runId As String
+    If Not dryRun Then runId = AuditBegin()
 
     Dim nOk As Long, nFailed As Long, nSkipped As Long, done As Long
     Application.ScreenUpdating = False
@@ -188,10 +194,20 @@ Private Sub RunCore(ByVal dryRun As Boolean)
             GoTo NextRow
         End If
 
+        ' Capture what the record looks like BEFORE the send. Has to happen
+        ' here: after SendRow the old values are gone, and on an Expire the
+        ' whole record is.
+        Dim beforeState As String, before As Variant
+        beforeState = CaptureBefore(ws, r, cols, serial, before)
+
         Dim outcome As String, kind As Long
         outcome = SendRow(ws, r, cols, op, serial, kind)
         WriteResult ws, r, cResult, outcome, kind
         If kind = 1 Then nOk = nOk + 1 Else nFailed = nFailed + 1
+
+        AuditRow runId, ws, r, op, serial, _
+                 CleanId(CellStr(ws, r, ColOf(cols, "dcn"))), _
+                 outcome, beforeState, before
 NextRow:
     Next r
 
@@ -199,11 +215,20 @@ NextRow:
     Application.StatusBar = False
     Application.ScreenUpdating = True
 
+    ' The run id is quoted here because it is what Undo asks for. Telling
+    ' someone afterwards where the record of what they just did lives is the
+    ' difference between having a log and having a log anyone uses.
+    Dim tail As String
+    If Not dryRun Then
+        tail = vbCrLf & vbCrLf & "Logged as run " & runId & vbCrLf & _
+               "(CCAT > Write Log, or Undo Run to put these back)"
+    End If
+
     MsgBox IIf(dryRun, "VALIDATION ONLY - nothing was sent." & vbCrLf & vbCrLf, "") & _
            done & " row(s) " & IIf(dryRun, "checked", "processed") & ":" & vbCrLf & _
            "  - " & nOk & IIf(dryRun, " ready to send (green)", " OK (green)") & vbCrLf & _
            IIf(dryRun, "", "  - " & nFailed & " failed (red)" & vbCrLf) & _
-           "  - " & nSkipped & " skipped (yellow - missing or invalid fields)", _
+           "  - " & nSkipped & " skipped (yellow - missing or invalid fields)" & tail, _
            IIf(nFailed > 0 Or nSkipped > 0, vbExclamation, vbInformation), _
            OpLabel(op) & IIf(dryRun, " - Validate", "")
     Exit Sub
@@ -424,6 +449,45 @@ Private Function FindByDcn(ByVal recs As Collection, ByVal dcn As String, _
             Exit Function
         End If
     Next i
+End Function
+
+' The state of this row's record immediately before it is sent, for the log.
+'
+' Returns FOUND / NONE / UNAVAILABLE and fills `before` on FOUND. Those three
+' are kept apart deliberately: an Undo that cannot tell "there was no record"
+' from "the lookup failed" would happily write blanks over a live one.
+'
+' Costs one lookup per distinct serial, shared with the Validate cache. That
+' roughly doubles a Run's calls, and it buys the only route back from an
+' Expire - which is a trade worth making without asking.
+Private Function CaptureBefore(ByVal ws As Worksheet, ByVal r As Long, _
+                               ByVal cols As Object, ByVal serial As String, _
+                               ByRef before As Variant) As String
+    before = Empty
+
+    Dim recs As Collection
+    Set recs = RecordsFor(serial)
+    If recs Is Nothing Then CaptureBefore = BEFORE_UNAVAILABLE: Exit Function
+    If recs.Count = 0 Then CaptureBefore = BEFORE_NONE: Exit Function
+
+    Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+
+    ' Transfer sheets carry no DCN, and a serial can sit on several. With no
+    ' DCN to match on, record the first - it is the whole record either way,
+    ' and the log line keeps the serial so nothing is ambiguous later.
+    Dim cur As Variant
+    If Len(dcn) = 0 Then
+        before = recs(1)
+        CaptureBefore = BEFORE_FOUND
+        Exit Function
+    End If
+
+    If FindByDcn(recs, dcn, cur) Then
+        before = cur
+        CaptureBefore = BEFORE_FOUND
+    Else
+        CaptureBefore = BEFORE_NONE
+    End If
 End Function
 
 Private Function DiffNote(ByVal ws As Worksheet, ByVal r As Long, ByVal cols As Object, _

@@ -109,13 +109,18 @@ bad batch is unrecoverable except from memory.
   anything. Results cached per serial per run, and sheets over 50 rows ask
   first (one lookup per serial adds up).
 
-- [ ] **2.2 Snapshot every row before a write** **[bas]**
+- [x] **2.2 Snapshot every row before a write** **[bas]**
   Before Run sends anything, capture the current record for each row to a
   hidden sheet (or a CSV under `%APPDATA%`), keyed by run id + timestamp.
   **Why:** this is what makes 2.3 possible. Cheap on its own, transformative
   with the next item.
   **Done when:** a Run leaves behind a retrievable before-image of every row it
   touched, including rows that then failed.
+  **DONE**, in `CatAudit.bas`, as one line per row shared with 2.4. Records
+  three states, not two: FOUND / NONE / UNAVAILABLE. Undo must tell "there was
+  no record" from "the lookup failed", or it writes blanks over a live record.
+  Costs one lookup per distinct serial (shared with 2.1's cache) — always on,
+  never prompted: a safety net you opt into is a safety net that is off.
 
 - [ ] **2.3 Rebuild an undo sheet from a snapshot** **[bas]** **[xml]**
   "Undo run &lt;id&gt;" produces a Cat Add-Update sheet that restores the before
@@ -126,7 +131,7 @@ bad batch is unrecoverable except from memory.
   **Done when:** expiring a test record and then running the generated undo
   sheet restores it.
 
-- [ ] **2.4 Write log** **[bas]**
+- [x] **2.4 Write log** **[bas]**
   Timestamp, user, operation, request, response, result — appended for every
   write. Hidden sheet or `%APPDATA%` file.
   **Why:** the README names this gap outright: *"nothing here writes a
@@ -135,6 +140,11 @@ bad batch is unrecoverable except from memory.
   **Done when:** every Run appends one line per row, and the log survives
   closing the workbook.
   **Note:** overlaps 2.2 — likely one storage mechanism serving both.
+  **DONE.** One mechanism, as predicted. `%APPDATA%\CatAssetTools  cat-write-log-YYYY-MM.csv` — outside the workbook, so it outlives the file
+  that happened to be open. **CCAT > Write Log** opens the folder, and the run
+  summary quotes the run id. Every field is quoted: a DCN name like "SMS RENTAL
+  (WA) PTY LTD, INC" would shift every later column, and a naive `Split(",")`
+  gave 17 fields where 15 were written — verified by round-trip test.
 
 ---
 
