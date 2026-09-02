@@ -151,12 +151,12 @@ overwrite what CCAT already holds.
 
 1. Blank workbook → import the five `.bas` files plus `JsonConverter.bas`
    (VBA-JSON) → add the **Microsoft Scripting Runtime** reference.
-   Then build the Quick Look form — `frmCatQuickLook_FORM_CODE.txt` has every
-   property to type into the designer and the code to paste. **The code
-   contains no sizes at all** — it never reads or writes Width, Height, Left,
-   Top, Font, ColumnCount or ColumnWidths, so the form looks exactly as you
-   draw it and stays that way. Skip the form entirely and everything else
-   still works; only the Quick Look button will error.
+   Then build the Quick Look form — `frmCatQuickLook_FORM_CODE.txt` has the
+   controls to drop on and the code to paste. **You set one property in the
+   designer, the form's name** — sizes, positions, captions, fonts and column
+   widths are all set by the code on open, so wherever you drag a control is
+   where it stops mattering. Skip the form entirely and everything else still
+   works; only the Quick Look button will error.
 2. Delete any `Config` sheet — settings live in the registry now, and you don't
    want a key inside the file.
 3. **File ▸ Save As ▸ Excel Add-In (`.xlam`)**, named `CatAssetTools.xlam`.
