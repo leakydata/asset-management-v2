@@ -6,10 +6,16 @@ A UserForm is a .frm plus a binary .frx companion, so it can't be handed over
 as importable text the way a .bas can. Building it by hand takes a couple of
 minutes and only happens once.
 
-THE CODE CONTAINS NO SIZES. It never reads or writes Width, Height, Left, Top,
-Font, ColumnCount or ColumnWidths on anything. Every one of those is a
-property you set in the designer, and the form stays exactly as you draw it.
-Move things around whenever you like; nothing in the code needs to change.
+THE CODE SETS TWO NUMBERS: the form's own Width and Height, and only because
+Excel shrinks a UserForm on open on some display setups (usually a machine
+scaled to 125% or 150%, or a form drawn at a different DPI to the one it runs
+on). They are the FORM_W / FORM_H constants at the top of the code, and they
+match section 1 below - change them in one place if you resize the form.
+
+Nothing else is touched. No Left, no Top, no control Width or Height, no Font,
+no ColumnCount, no ColumnWidths. Every one of those is a property you set in
+the designer, and the controls stay exactly as you draw them. Move things
+around whenever you like; nothing in the code needs to change.
 
 --------------------------------------------------------------------------------
 1. CREATE THE FORM
@@ -117,15 +123,43 @@ Option Explicit
 ' One entry per ownership record; each item is the array RecordValues returns.
 Private mRows As Collection
 
+' THE ONLY TWO SIZES IN THIS FILE. The form's outer Width and Height, matching
+' what section 1 of the notes says to set in the designer. They exist because
+' Excel re-sizes a UserForm as it opens on some display setups and the drawn
+' size does not survive - so it is set again here, where nothing can undo it.
+'
+' Change these together with the designer values if you resize the form. They
+' are the form only: every control keeps the Left, Top, Width and Height you
+' gave it, so the layout is still entirely yours.
+Private Const FORM_W As Single = 511
+Private Const FORM_H As Single = 498
+
 '==============================================================================
 ' Setup
 '
-' Nothing here touches how the form LOOKS. No Width, no Height, no Left, no
-' Top, no Font, no ColumnCount, no ColumnWidths - those are all designer
-' properties, listed in the notes above. This code only does behaviour.
+' Apart from PinSize, nothing here touches how the form LOOKS. No Left, no Top,
+' no control Width or Height, no Font, no ColumnCount, no ColumnWidths - those
+' are all designer properties, listed in the notes above.
 '==============================================================================
 Private Sub UserForm_Initialize()
+    PinSize
     ResetDisplay
+End Sub
+
+' Puts the form back to the size you drew it.
+'
+' Called from Activate as well as Initialize on purpose. Initialize runs before
+' the window actually exists, so a shrink applied while the window is being
+' realised happens AFTER it - setting the size there alone can be silently
+' undone. Activate runs once the window is real, which is where it sticks.
+'
+' Assigning a size a form is already at is a no-op, so the second call costs
+' nothing when the first one worked.
+Private Sub PinSize()
+    On Error Resume Next
+    Me.Width = FORM_W
+    Me.Height = FORM_H
+    On Error GoTo 0
 End Sub
 
 ' Called by CatQuickLook before Show, so selecting a cell that holds a serial
@@ -135,6 +169,7 @@ Public Sub SeedSerial(ByVal s As String)
 End Sub
 
 Private Sub UserForm_Activate()
+    PinSize
     txtSerial.SetFocus
     If Len(txtSerial.Text) > 0 Then txtSerial.SelStart = 0: txtSerial.SelLength = Len(txtSerial.Text)
 End Sub
