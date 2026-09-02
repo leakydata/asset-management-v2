@@ -223,9 +223,20 @@ Private Sub FitControls()
     btnCopy.Left = MARGIN
     btnPaste.Width = rightEdge - btnPaste.Left
 
-    ' Headings, if you added them, line up with the lists.
+    ' Headings, if you added them, line up with the lists AND span them.
+    '
+    ' The Width matters as much as the Left. A Label clips its caption at its
+    ' own right edge with no ellipsis and no complaint, so lblRecords drawn
+    ' narrower than the list simply loses the end of the heading - it was
+    ' stopping mid-word at the S of SUB. Given the full width it cannot.
+    '
+    ' Set one property per line rather than in a With block: each is then
+    ' skipped on its own if the label was never added, which is what makes the
+    ' two labels genuinely optional.
     Me.Controls("lblRecords").Left = MARGIN
+    Me.Controls("lblRecords").Width = rightEdge - MARGIN
     Me.Controls("lblFields").Left = MARGIN
+    Me.Controls("lblFields").Width = rightEdge - MARGIN
 
     ' Trim the form's bottom to just below the buttons. Subtracting from Height
     ' rather than assigning it keeps the border allowance out of the sum - the
