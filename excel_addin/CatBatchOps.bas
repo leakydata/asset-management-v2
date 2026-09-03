@@ -220,7 +220,18 @@ Public Sub CatReconcile()
                                 " records on this serial, no DCN column to say which")
                 nAmbig = nAmbig + 1
             Case "NONE"
-                diffs.Add Array(r, serial, Empty, "NEW for this DCN")
+                ' The serial is in CCAT, but under a DIFFERENT DCN. That is
+                ' the discrepancy worth finding: NAXT has the machine at a
+                ' customer while CCAT still shows it wherever it was.
+                '
+                ' Say where CCAT holds it, because the fix is TWO operations,
+                ' not one. DCN is part of a record's identity - writing this
+                ' row CREATES the customer's record, it does not move the
+                ' machine, and the old record stays until somebody expires it.
+                ' Someone who does not know that leaves the asset owned twice.
+                diffs.Add Array(r, serial, Empty, _
+                                "NEW for this DCN - CCAT still holds it under " & _
+                                HeldUnder(recs) & "; that record stays until expired")
                 nNew = nNew + 1
             Case Else
                 why = DifferenceText(ws, r, cols, cur)
@@ -283,7 +294,8 @@ Private Function ColFor(ByVal cols As Object, ByVal canonical As String) As Long
         Case "serial":       names = Array("serial", "serialnumber", "queryserial", _
                                            "equipmentserialnumber", "assetserialnumber")
         Case "makecode":     names = Array("makecode", "make")
-        Case "dcn":          names = Array("dcn", "dealercustomernumber")
+        Case "dcn":          names = Array("dcn", "customernumber", "custnumber", _
+                                           "dealercustomernumber")
         Case "ownershiptype": names = Array("ownershiptype", "ownershiptypecode")
         Case "model":        names = Array("model")
         Case "modelyear":    names = Array("modelyear")
@@ -294,6 +306,19 @@ Private Function ColFor(ByVal cols As Object, ByVal canonical As String) As Long
     For i = LBound(names) To UBound(names)
         If cols.Exists(CStr(names(i))) Then ColFor = cols(CStr(names(i))): Exit Function
     Next i
+End Function
+
+' Where CCAT currently has this serial, for the note on a moved machine.
+Private Function HeldUnder(ByVal recs As Collection) As String
+    Dim i As Long, v As Variant, out As String, dcn As String
+    For i = 1 To recs.Count
+        If i > 3 Then out = out & ", ...": Exit For      ' a note, not a report
+        v = recs(i)
+        dcn = CStr(v(2))
+        out = out & IIf(Len(out) > 0, ", ", "") & _
+              IIf(Len(dcn) = 0, "(DCN withheld)", dcn) & " (" & CStr(v(11)) & ")"
+    Next i
+    HeldUnder = out
 End Function
 
 ' Which of a serial's ownership records this row is about.
