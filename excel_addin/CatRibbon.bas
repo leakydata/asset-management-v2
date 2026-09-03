@@ -151,6 +151,10 @@ Public Sub CatUndoRun_Ribbon(control As IRibbonControl)
     CatUndoRun
 End Sub
 
+Public Sub CatReconcile_Ribbon(control As IRibbonControl)
+    CatReconcile
+End Sub
+
 ' --- act on whatever sheet is in front of you --------------------------------
 Public Sub CatValidateSheet_Ribbon(control As IRibbonControl)
     CatValidateSheet

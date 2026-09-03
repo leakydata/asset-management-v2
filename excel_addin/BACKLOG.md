@@ -299,7 +299,7 @@ rule was for.
 
 ## 5. Bigger, later
 
-- [ ] **5.0 Reconcile a NAXT sheet against CCAT**  ← the actual job **[bas]** **[xml]**
+- [x] **5.0 Reconcile a NAXT sheet against CCAT**  ← the actual job **[bas]** **[xml]**
   Point it at a sheet of NAXT values. It looks each serial up in CCAT and
   writes back **only the rows that disagree**, pre-filled with the NAXT values
   in Add/Update shape, ready to Validate and Run. Rows that already match are
@@ -317,9 +317,20 @@ rule was for.
   **Mostly parts we already have:** the batch sweep, the field comparison from
   2.1, the sheet writer from 4.2, and header matching that already ignores
   case, spaces and punctuation.
-  **Open:** which columns a NAXT export actually carries — specifically whether
-  it has a DCN, which decides how a serial with several ownership records is
-  matched.
+  **DONE.** **CCAT > Compare to CCAT**, acting on the active sheet. Reads
+  whatever recognised columns are there, compares only cells that are filled
+  in (a blank is omitted from the request, so calling it a difference would be
+  a lie), and writes only the rows that disagree.
+  **The DCN question answered itself in testing, and the answer matters:**
+  both test serials sit on **two** ownership records, so without a DCN column
+  almost every row is ambiguous — and dealer code doesn't rescue it, since both
+  records are B150 too. That is the data, not the code. So a NAXT export
+  **wants a DCN column**; without one the feature only handles single-record
+  serials and brand-new ones.
+  Ambiguous rows go **onto the sheet** with the DCN blank rather than into a
+  footnote — Validate then marks them SKIPPED with a reason, turning a dead end
+  into a list of rows needing a DCN. A number in a dialog is not actionable; a
+  yellow row is.
 
 - [ ] **5.2 Snowflake reconciliation in the lookup window** **[?]** **[form]**
   Show *"CCAT says OWNED, our records say RENTAL"* beside the record, from the

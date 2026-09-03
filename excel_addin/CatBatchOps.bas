@@ -103,6 +103,279 @@ Public Sub CatRunSheet()
 End Sub
 
 '==============================================================================
+' PUBLIC: compare a NAXT sheet against CCAT
+'
+' The job this add-in exists for. Someone has NAXT's view of a fleet and needs
+' CCAT to match it. Until now that meant looking every serial up, reading two
+' sets of columns side by side, and hand-building a sheet of the ones that
+' disagreed - which is slow, and gets worse the more serials there are, which
+' is exactly backwards.
+'
+' This does the comparing. It reads whatever recognised columns your sheet has,
+' looks each serial up, and writes out ONLY the rows CCAT disagrees with -
+' already in Add/Update shape, already carrying the NAXT values, ready to
+' Validate and Run. Rows that already match never appear: reviewing them is the
+' work being removed.
+'
+' NO NEW PLUMBING. The NAXT data arrives as a sheet you already have open, so
+' there is no second system to connect to, no service account and nothing to
+' ask permission for.
+'
+' WHAT IT COMPARES: only columns your sheet actually has, and only cells that
+' are filled in. A blank cell is omitted from an Add/Update request entirely -
+' it cannot change anything - so reporting it as a difference would be a lie.
+' Column headers match the same way the operation sheets do: case, spaces and
+' punctuation ignored.
+'
+' HOW IT PICKS THE RECORD: a serial can sit on several ownership records under
+' different DCNs, so the right one has to be chosen, never guessed.
+'
+'     sheet has a DCN column  -> match on it. Definitive.
+'     exactly one record      -> that one.
+'     several, no DCN         -> AMBIGUOUS. Reported, never guessed at.
+'
+' Guessing here would quietly rewrite the wrong customer's record, which is the
+' one outcome worse than doing nothing.
+'==============================================================================
+Public Sub CatReconcile()
+    On Error GoTo Fail
+
+    Dim ws As Worksheet: Set ws = ActiveSheet
+    If ws Is Nothing Then Err.Raise vbObjectError + 40, , "No active sheet."
+
+    Dim cols As Object: Set cols = HeaderMap(ws)
+    Dim cSerial As Long: cSerial = ColOf(cols, "serial", "serialnumber", "queryserial")
+    If cSerial = 0 Then
+        MsgBox "No 'Serial' column found in row " & HEADER_ROW & " of '" & ws.Name & "'." & vbCrLf & vbCrLf & _
+               "Point this at a sheet of NAXT values with a Serial column, and " & _
+               "any of these alongside it:" & vbCrLf & vbCrLf & _
+               "   Make Code, DCN, Ownership Type, Model, Model Year," & vbCrLf & _
+               "   Product Family Code / Name, Base Asset Name" & vbCrLf & vbCrLf & _
+               "Whatever is there gets compared; whatever is missing is left alone.", _
+               vbExclamation, "Cat Asset Tools - Compare to CCAT"
+        Exit Sub
+    End If
+
+    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cSerial).End(xlUp).Row
+    Dim nRows As Long: nRows = CountRows(ws, cSerial, lastRow)
+    If nRows = 0 Then
+        MsgBox "No serial numbers found under the headers.", vbExclamation, _
+               "Cat Asset Tools - Compare to CCAT"
+        Exit Sub
+    End If
+
+    If MsgBox("Compare " & nRows & " serial(s) on '" & ws.Name & "' against CCAT?" & vbCrLf & vbCrLf & _
+              "SENDS NOTHING. One lookup per serial, then a sheet of only the " & _
+              "rows that disagree." & vbCrLf & vbCrLf & _
+              "Esc stops it.", _
+              vbQuestion + vbYesNo, "Cat Asset Tools - Compare to CCAT") <> vbYes Then Exit Sub
+
+    ResetDiffCache
+    ClearCancelKey
+
+    Dim diffs As Collection: Set diffs = New Collection
+    Dim nSame As Long, nNew As Long, nAmbig As Long, nFailed As Long, done As Long
+    Dim cancelled As Boolean
+
+    Application.ScreenUpdating = False
+
+    Dim r As Long
+    For r = HEADER_ROW + 1 To lastRow
+        Dim serial As String: serial = CleanId(CStr(ws.Cells(r, cSerial).Value))
+        If Len(serial) = 0 Then GoTo NextRow
+
+        If EscPressed() Then cancelled = True: Exit For
+
+        done = done + 1
+        Application.StatusBar = "Comparing " & done & " of " & nRows & _
+                                "  (" & serial & ")   [Esc to stop]"
+
+        Dim recs As Collection
+        Set recs = RecordsFor(serial)
+
+        If recs Is Nothing Then
+            nFailed = nFailed + 1
+            GoTo NextRow
+        End If
+
+        If recs.Count = 0 Then
+            ' CCAT has never heard of it. That is an ADD, and the most valuable
+            ' row on the sheet - it is the one that is missing entirely.
+            diffs.Add Array(r, serial, Empty, "NEW - not in CCAT")
+            nNew = nNew + 1
+            GoTo NextRow
+        End If
+
+        Dim cur As Variant, why As String
+        Select Case PickRecord(ws, r, cols, recs, cur)
+            Case "AMBIGUOUS"
+                ' Onto the sheet, not into a footnote. These are real work:
+                ' the serial exists on several DCNs and the source sheet has
+                ' nothing to say which one it means. DCN is left blank, so
+                ' Validate marks the row SKIPPED with a reason rather than
+                ' letting it through - it becomes a list of rows needing a DCN
+                ' filled in, which is actionable, instead of a number in a
+                ' dialog, which is not.
+                diffs.Add Array(r, serial, Empty, "AMBIGUOUS - " & recs.Count & _
+                                " records on this serial, no DCN column to say which")
+                nAmbig = nAmbig + 1
+            Case "NONE"
+                diffs.Add Array(r, serial, Empty, "NEW for this DCN")
+                nNew = nNew + 1
+            Case Else
+                why = DifferenceText(ws, r, cols, cur)
+                If Len(why) = 0 Then
+                    nSame = nSame + 1
+                Else
+                    diffs.Add Array(r, serial, cur, why)
+                End If
+        End Select
+NextRow:
+    Next r
+
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+
+    Dim built As String
+    If diffs.Count > 0 Then built = WriteReconcileSheet(ws, cols, diffs)
+
+    MsgBox IIf(cancelled, "STOPPED at row " & r & " - Esc." & vbCrLf & vbCrLf, "") & _
+           "COMPARED ONLY - nothing was sent." & vbCrLf & vbCrLf & _
+           done & " serial(s) checked:" & vbCrLf & _
+           "  - " & nSame & " already match CCAT (left out)" & vbCrLf & _
+           "  - " & (diffs.Count - nNew - nAmbig) & " differ" & vbCrLf & _
+           "  - " & nNew & " not in CCAT yet (ADD)" & vbCrLf & _
+           IIf(nAmbig > 0, "  - " & nAmbig & " need a DCN: the serial is on several " & _
+               "records" & vbCrLf, "") & _
+           IIf(nFailed > 0, "  - " & nFailed & " lookup failed" & vbCrLf, "") & _
+           vbCrLf & _
+           IIf(nAmbig > 0, "A serial can sit on several ownership records under " & _
+               "different DCNs, and nothing in your sheet says which one is meant. " & _
+               "Those rows are on the sheet with the DCN blank - Validate will " & _
+               "mark them so. Adding a DCN column to the source is what removes " & _
+               "them for good." & vbCrLf & vbCrLf, "") & _
+           IIf(Len(built) > 0, "Written to '" & built & "'. Check it, then " & _
+               "Validate, then Run.", "Nothing to do - CCAT already agrees with " & _
+               "every row that could be checked."), _
+           vbInformation, "Cat Asset Tools - Compare to CCAT"
+    Exit Sub
+
+Fail:
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+    MsgBox "Error: " & Err.Description, vbCritical, "Cat Asset Tools - Compare to CCAT"
+End Sub
+
+' Which of a serial's ownership records this row is about.
+' Returns "OK" (cur filled), "NONE" (no record on that DCN), or "AMBIGUOUS".
+Private Function PickRecord(ByVal ws As Worksheet, ByVal r As Long, ByVal cols As Object, _
+                            ByVal recs As Collection, ByRef cur As Variant) As String
+    Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+
+    If Len(dcn) > 0 Then
+        If FindByDcn(recs, dcn, cur) Then PickRecord = "OK" Else PickRecord = "NONE"
+        Exit Function
+    End If
+
+    If recs.Count = 1 Then
+        cur = recs(1)
+        PickRecord = "OK"
+        Exit Function
+    End If
+
+    PickRecord = "AMBIGUOUS"
+End Function
+
+' What this row would change, in words. Empty when CCAT already agrees.
+'
+' Only filled cells count. A blank is omitted from the request and cannot
+' change anything, so calling it a difference would send people chasing a
+' change that was never going to happen.
+Private Function DifferenceText(ByVal ws As Worksheet, ByVal r As Long, _
+                                ByVal cols As Object, ByVal cur As Variant) As String
+    Dim keys As Variant, labels As Variant, idx As Variant
+    keys = Array("makecode", "ownershiptype", "model", "modelyear", _
+                 "productfamilycode", "productfamilyname", "baseassetname")
+    labels = Array("MakeCode", "OwnershipType", "Model", "ModelYear", _
+                   "ProductFamilyCode", "ProductFamilyName", "BaseAssetName")
+    idx = Array(1, 3, 4, 5, 18, 19, 21)
+
+    Dim out As String, i As Long, mine As String, theirs As String
+    For i = LBound(keys) To UBound(keys)
+        mine = CellStr(ws, r, ColOf(cols, CStr(keys(i))))
+        If Len(mine) > 0 Then
+            theirs = CStr(cur(idx(i)))
+            If StrComp(mine, theirs, vbTextCompare) <> 0 Then
+                out = out & IIf(Len(out) > 0, "; ", "") & labels(i) & " " & _
+                      IIf(Len(theirs) = 0, "(blank)", theirs) & " -> " & mine
+            End If
+        End If
+    Next i
+    DifferenceText = out
+End Function
+
+' The Add/Update sheet of everything that disagreed.
+'
+' Carries the NAXT values, because those are what CCAT is being asked to
+' become. The DCN comes from the matched CCAT record when the source sheet had
+' none - Add/Update requires one, and CCAT's own is the right answer. On a NEW
+' row there is nothing to take it from, so it is left blank and Validate says
+' so rather than this quietly inventing one.
+Private Function WriteReconcileSheet(ByVal src As Worksheet, ByVal cols As Object, _
+                                     ByVal diffs As Collection) As String
+    Dim ws As Worksheet
+    Set ws = FreshSheet("Cat Reconcile")
+
+    Dim nm As String, headers As Variant, notes As Variant, tiers As Variant
+    SheetSpec OP_ADD, nm, headers, notes, tiers
+    WriteHeaders ws, headers, tiers
+
+    ' One extra column, past everything SheetSpec defines, saying what differs.
+    ' Extra columns are harmless to header matching, and this is the column the
+    ' person actually reads before pressing Run.
+    Dim cNote As Long: cNote = UBound(headers) + 2
+    With ws.Cells(HEADER_ROW, cNote)
+        .Value = "NAXT vs CCAT"
+        .Font.Bold = True
+        .Interior.Color = RGB(89, 89, 89)
+        .Font.Color = vbWhite
+    End With
+
+    Dim out As Object: Set out = HeaderMap(ws)
+    Dim keys As Variant, srcIdx As Variant
+    keys = Array("serial", "makecode", "dcn", "ownershiptype", "model", "modelyear", _
+                 "productfamilycode", "productfamilyname", "baseassetname")
+    ' Where to fall back to on the CCAT record when the source sheet lacks the
+    ' column. -1 means "no fallback, leave it blank".
+    srcIdx = Array(0, 1, 2, 3, 4, 5, 18, 19, 21)
+
+    Dim i As Long, k As Long, c As Long, d As Variant, sr As Long, cur As Variant
+    For i = 1 To diffs.Count
+        d = diffs(i)
+        sr = d(0): cur = d(2)
+
+        For k = LBound(keys) To UBound(keys)
+            c = ColOf(out, CStr(keys(k)))
+            If c > 0 Then
+                Dim v As String
+                v = CellStr(src, sr, ColOf(cols, CStr(keys(k))))
+                ' DCN is the exception: if the source sheet has none, take
+                ' CCAT's, because Add/Update cannot go without one.
+                If Len(v) = 0 And CStr(keys(k)) = "dcn" And IsArray(cur) Then v = CStr(cur(2))
+                ws.Cells(HEADER_ROW + i, c).NumberFormat = "@"
+                ws.Cells(HEADER_ROW + i, c).Value = v
+            End If
+        Next k
+
+        ws.Cells(HEADER_ROW + i, cNote).Value = CStr(d(3))
+    Next i
+
+    ws.Columns.AutoFit
+    ws.Activate
+    WriteReconcileSheet = ws.Name
+End Function
+
+'==============================================================================
 ' PUBLIC: undo a run
 '
 ' Rebuilds what a past Run overwrote, from the before-images in the write log.
