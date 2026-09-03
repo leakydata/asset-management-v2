@@ -299,46 +299,53 @@ rule was for.
 
 ## 5. Bigger, later
 
-- [ ] **5.1 "Waiting on me" — pending transfers** **[bas]**
-  `OwnershipRequestType = RECEIVED` means another dealer is blocked on your
-  approval. One button that surfaces them turns a chore into a prompt.
-
-  **OPEN QUESTION RESOLVED — 2026-09-03.** The answer changes the shape of the
-  feature, so it is worth stating plainly.
-
-  **You cannot ask the API "what is pending for B150."** Not from the add-in,
-  and not from a new proxy route either — Cat does not offer the query. From
-  the OpenAPI spec, `/ownershipRecords/search` takes `stringEquals` filters,
-  **at most two**, over **DCN / asset name / serial number / make code** only.
-  There is no filter on `ownershipRequestType`, dealer code or status. Probing
-  the live proxy agrees: `?status=PENDING` alone gives 400, and
-  `?dcn=…&status=PENDING` returns exactly the same records as `?dcn=…` —
-  unknown parameters are ignored, not rejected. No `/pending`-style route
-  exists either (all 404).
-
-  **But the feature is still buildable, and with no proxy change.** Search
-  returns **ACTIVE and PENDING records both** — the spec says so — and
-  `ownershipRequestType` is populated on the pending ones. So:
-
-  > Sweep a known list of DCNs (or serials), keep only the rows where
-  > `OwnershipRequestType` is non-empty, and write those to a sheet.
-
-  That is a variation on Batch DCNs, which already does the sweep and the
-  sheet. The new parts are a saved watch-list of DCNs and the filter.
-  **Cost:** one call per DCN, so it is a periodic check rather than something
-  you leave running.
-  **Still to decide:** where the watch-list lives — a sheet you maintain, or
-  HKCU like the other per-user settings.
+- [ ] **5.0 Reconcile a NAXT sheet against CCAT**  ← the actual job **[bas]** **[xml]**
+  Point it at a sheet of NAXT values. It looks each serial up in CCAT and
+  writes back **only the rows that disagree**, pre-filled with the NAXT values
+  in Add/Update shape, ready to Validate and Run. Rows that already match are
+  dropped rather than reviewed. Serials CCAT has never heard of come out as
+  ADD rows.
+  **Why this is now first:** the add-in exists for people who check serials and
+  either add them to CCAT or correct CCAT to match NAXT. Nothing built so far
+  does the *comparing* — 2.1 tells you a row differs after you have decided to
+  send it; this decides which rows are worth sending at all. It collapses
+  export → Batch Serials → eyeball two sets of columns → build a sheet → paste
+  → Validate → Run into two steps.
+  **Needs no new infrastructure**, which is the point: the NAXT data arrives as
+  a sheet the user already has open, so there is no Snowflake connection, no
+  new Azure Function, no service account and no permission to seek.
+  **Mostly parts we already have:** the batch sweep, the field comparison from
+  2.1, the sheet writer from 4.2, and header matching that already ignores
+  case, spaces and punctuation.
+  **Open:** which columns a NAXT export actually carries — specifically whether
+  it has a DCN, which decides how a serial with several ownership records is
+  matched.
 
 - [ ] **5.2 Snowflake reconciliation in the lookup window** **[?]** **[form]**
-  Show *"CCAT says OWNED, our records say RENTAL"* right beside the record,
-  from the `STD_UMT` tracking tables and the discrepancy sweep.
-  **Why:** nothing else at the company does this — it's the difference between
-  a lookup tool and the authoritative one.
-  **Open question:** the add-in only talks to the proxy today. Snowflake access
-  from VBA means ODBC and a second set of credentials, or a new proxy route
-  that fronts it. The second is almost certainly right.
-  **This is a next-version item**, not a next-week one. Listed so it isn't lost.
+  Show *"CCAT says OWNED, our records say RENTAL"* beside the record, from the
+  `STD_UMT` tracking tables and the discrepancy sweep.
+  **BLOCKED, and not on engineering.** Confirmed 2026-09-03: it needs
+  permission to expose Snowflake data outward, a new Azure Function to serve
+  it, and a service account so the access is not tied to one person's role.
+  That is an organisational sequence, not a sprint item.
+  **5.0 delivers most of the same value without any of it**, because the user
+  brings the comparison data themselves. Revisit only if the reconcile proves
+  the round trip through a spreadsheet is the bottleneck.
+
+---
+
+## Dropped
+
+- **5.1 "Waiting on me" — pending transfers.** `OwnershipRequestType =
+  RECEIVED` means another dealer wants ownership moved, and approving those is
+  a different role from reconciling NAXT. A button these users never press is
+  worse than no button. Bring it back if the same people do handle transfers.
+  The research is not wasted and is worth keeping: **Cat cannot be asked "what
+  is pending for us" at all** — `/ownershipRecords/search` takes at most two
+  `stringEquals` filters over DCN / asset name / serial number / make code, and
+  offers nothing on `ownershipRequestType`, dealer or status. Not from the
+  add-in, and not from a new proxy route either. Any future version of this
+  must sweep a known list and filter client-side.
 
 ---
 
