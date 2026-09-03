@@ -31,15 +31,22 @@ lstFields, btnCopy, btnPaste, lblRecords, lblFields. txtSerial now holds a DCN,
 which reads oddly, but renaming a control means editing the .frm and every line
 that mentions it, for nothing that shows on screen. Leave it.
 
-ONE CONTROL TO ADD, after importing:
+TWO CONTROLS TO ADD, after importing:
 
+    CommandButton    btnPasteAll    Caption: Paste All
     CommandButton    btnToSheet     Caption: Send List to Sheet
 
-Drop it on the bottom row between btnCopy and btnPaste - anywhere on that row
-is fine, FitControls lines all three up left to right and gives Paste whatever
-is left. Give it about the same width as btnCopy.
+Drop them on the bottom row between btnCopy and btnPaste - anywhere on that
+row is fine, FitControls lines all four up left to right and gives Paste at
+Selection whatever is left. Give each about the same width as btnCopy.
 
-It is optional: leave it off and the rest of the form works exactly as before.
+Both are optional: leave either off and the rest of the form works exactly as
+before.
+
+Paste All is the one that matters here. A DCN commonly returns dozens of
+assets, and Paste at Selection drops one record at a time - fifty-five clicks
+for one customer. Paste All writes the whole list into the sheet you are on, at
+that sheet's column count, after confirming the range.
 
 --------------------------------------------------------------------------------
 2. PASTE THE CODE
@@ -158,7 +165,9 @@ Private Sub FitControls()
     ' anyone having to line them up by hand: Copy and To Sheet keep the widths
     ' you drew, Paste takes whatever is left.
     btnCopy.Left = MARGIN
-    Me.Controls("btnToSheet").Left = btnCopy.Left + btnCopy.Width + GAP
+    Me.Controls("btnPasteAll").Left = btnCopy.Left + btnCopy.Width + GAP
+    Me.Controls("btnToSheet").Left = Me.Controls("btnPasteAll").Left + _
+                                     Me.Controls("btnPasteAll").Width + GAP
     btnPaste.Left = Me.Controls("btnToSheet").Left + Me.Controls("btnToSheet").Width + GAP
     btnPaste.Width = rightEdge - btnPaste.Left
 
@@ -425,6 +434,37 @@ Private Sub btnPaste_Click()
 
     Me.Caption = "Cat DCN Look - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
+End Sub
+
+' Every record on screen, into the sheet you are sitting on. The bulk version
+' of Paste at Selection, and the reason this window needed one: a DCN commonly
+' returns dozens of assets, and pasting them one at a time is dozens of clicks.
+' LookupPasteAll confirms and names the range before writing anything.
+Private Sub btnPasteAll_Click()
+    Me.Caption = "Cat DCN Look - " & LookupPasteAll(mRows)
+End Sub
+
+' Everything on screen, into a NEW sheet. The data is already in mRows, so this
+' is a write-out rather than a second round trip to the API.
+'
+' The sheet comes out shaped like a batch results sheet, which also means
+' Validate and Run refuse it - a results sheet must never be mistaken for an
+' operation sheet.
+Private Sub btnToSheet_Click()
+    If mRows Is Nothing Then
+        Me.Caption = "Cat DCN Look - look up a DCN first"
+        Exit Sub
+    End If
+    If mRows.Count = 0 Then Exit Sub
+
+    Dim nm As String
+    nm = LookupListToSheet(mRows, "DCN", CleanId(txtSerial.Text))
+
+    If Len(nm) = 0 Then
+        Me.Caption = "Cat DCN Look - could not write the sheet"
+    Else
+        Me.Caption = "Cat DCN Look - " & mRows.Count & " asset(s) written to '" & nm & "'"
+    End If
 End Sub
 
 ' Hands back the selected record, or reports why it can't.

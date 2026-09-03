@@ -56,7 +56,8 @@ then type these in. Nothing here is sacred; it is one arrangement that fits.
     Label            lblFields        8   137     484      13   (optional)
     ListBox          lstFields        8   152     484     278
     CommandButton    btnCopy          8   436     110      26
-    CommandButton    btnPaste       124   436     368      26
+    CommandButton    btnPasteAll    124   436     110      26
+    CommandButton    btnPaste       240   436     252      26
 
 Why those numbers, if you want to move things: 8 all round is the margin.
 484 = 500 - 16, so everything full-width ends at 492. btnLookup ends there too
@@ -70,7 +71,11 @@ between the heading above it and the buttons below.
     btnLookup     Caption           Look Up
                   Default           True          <- Enter in the serial box
     btnCopy       Caption           Copy Row
+    btnPasteAll   Caption           Paste All
     btnPaste      Caption           Paste at Selection
+
+btnPasteAll is OPTIONAL. Leave it off and the other two work exactly as they
+do now - FitControls positions whatever is there.
     txtSerial     Font              Consolas 11
                   Style             0 - fmStyleDropDownCombo   (the default)
 
@@ -230,8 +235,13 @@ Private Sub FitControls()
     btnLookup.Left = rightEdge - btnLookup.Width
     txtSerial.Width = btnLookup.Left - GAP - MARGIN
 
-    ' Bottom row: Copy keeps its width, Paste stretches to the right edge.
+    ' Bottom row, laid out left to right so buttons can be added without
+    ' anyone lining them up by hand: Copy and Paste All keep the widths you
+    ' drew, Paste at Selection takes whatever is left.
     btnCopy.Left = MARGIN
+    Me.Controls("btnPasteAll").Left = btnCopy.Left + btnCopy.Width + GAP
+    btnPaste.Left = Me.Controls("btnPasteAll").Left + _
+                    Me.Controls("btnPasteAll").Width + GAP
     btnPaste.Width = rightEdge - btnPaste.Left
 
     ' Headings, if you added them, line up with the lists AND span them.
@@ -495,6 +505,13 @@ Private Sub btnPaste_Click()
 
     Me.Caption = "Cat Quick Look - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
+End Sub
+
+' Every record on screen, into the sheet you are sitting on. The bulk version
+' of Paste at Selection - see LookupPasteAll, which confirms and names the
+' range before writing anything.
+Private Sub btnPasteAll_Click()
+    Me.Caption = "Cat Quick Look - " & LookupPasteAll(mRows)
 End Sub
 
 ' TRUE/FALSE -> Yes/No, and a dash when the API didn't return the field at

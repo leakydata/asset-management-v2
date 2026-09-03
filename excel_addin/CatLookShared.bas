@@ -123,6 +123,73 @@ Private Function MruKey(ByVal kind As String) As String
 End Function
 
 '==============================================================================
+' PUBLIC: paste EVERY result, not just the selected one
+'
+' Paste at Selection drops the one record you picked. Fine for a serial with
+' two ownership records; useless for a DCN with fifty-five, where doing it one
+' at a time is fifty-five clicks and a mistake waiting to happen.
+'
+' Same contextual width as the single paste - 2 columns on Cat Transfer, 3 on
+' Cat Expire, 6 on Cat Add-Update, all 22 anywhere else - so a whole DCN's
+' fleet lands ready to Validate.
+'
+' IT CONFIRMS FIRST, and names the exact range. This is the only thing either
+' window does that writes over a block of somebody's sheet rather than a single
+' row, and fifty-five rows of silent overwrite is not a thing to discover
+' afterwards. If the target is not empty it says so, with the count.
+'==============================================================================
+Public Function LookupPasteAll(ByVal rows As Collection) As String
+    If rows Is Nothing Then LookupPasteAll = "look something up first": Exit Function
+    If rows.Count = 0 Then LookupPasteAll = "nothing to paste": Exit Function
+
+    Dim c As Range
+    On Error Resume Next
+    Set c = Application.ActiveCell
+    On Error GoTo 0
+    If c Is Nothing Then LookupPasteAll = "select a cell in a workbook first": Exit Function
+
+    Dim n As Long
+    n = QuickLookPasteWidth(c.Worksheet)
+
+    Dim block As Range
+    Set block = c.Resize(rows.Count, n)
+
+    ' How much of what is about to be overwritten is not empty.
+    Dim used As Long
+    On Error Resume Next
+    used = Application.WorksheetFunction.CountA(block)
+    On Error GoTo 0
+
+    Dim warn As String
+    If used > 0 Then
+        warn = vbCrLf & vbCrLf & "That range is NOT empty - " & used & " cell(s) " & _
+               "already have something in them and will be overwritten."
+    End If
+
+    If MsgBox("Paste all " & rows.Count & " record(s) into " & c.Worksheet.Name & "!" & _
+              block.Address(0, 0) & "?" & vbCrLf & vbCrLf & _
+              rows.Count & " row(s) x " & n & " column(s), which is what a " & _
+              c.Worksheet.Name & " sheet takes." & warn, _
+              vbQuestion + vbYesNo + IIf(used > 0, vbDefaultButton2, 0), _
+              "Cat Asset Tools - Paste All") <> vbYes Then
+        LookupPasteAll = "paste all cancelled"
+        Exit Function
+    End If
+
+    Dim i As Long
+    Application.ScreenUpdating = False
+    For i = 1 To rows.Count
+        ' One row at a time through the same writer the single paste uses, so
+        ' the text-format rule cannot drift between the two.
+        QuickLookPasteAt c.Offset(i - 1, 0), rows(i), n
+    Next i
+    Application.ScreenUpdating = True
+
+    LookupPasteAll = "pasted " & rows.Count & " row(s) x " & n & " cols to " & _
+                     c.Worksheet.Name & "!" & block.Address(0, 0)
+End Function
+
+'==============================================================================
 ' PUBLIC: send a window's result list to a sheet
 '
 ' You look up a DCN, see 55 assets, and want them in a sheet. Until now that

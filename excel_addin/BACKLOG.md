@@ -347,6 +347,28 @@ rule was for.
 
 ## Also done
 
+- [x] **4.5 Paste All — every result, not one at a time**
+  Paste at Selection drops the one record you picked. Fine for a serial with
+  two ownership records; useless for a DCN with fifty-five, where it is
+  fifty-five clicks. Paste All writes the whole list into the sheet you are on,
+  at that sheet's column count, so a customer's fleet lands ready to Validate.
+  On **both** windows — a serial with several ownership records has the same
+  problem, just smaller.
+  **It confirms and names the exact range**, and says how many non-empty cells
+  it would overwrite. It is the only thing either window does that writes over
+  a block rather than a single row, and fifty-five rows of silent overwrite is
+  not something to find out about afterwards.
+  Logic lives in `CatLookShared`, so each form gained one line.
+
+- [x] **H.3 4.2's handler was never actually in the DCN form**
+  Found while adding Paste All. The §4 edit that was supposed to add
+  `btnToSheet_Click` anchored on a comment the DCN form does not contain — it
+  has no `YesNo` function — so the replace matched nothing, silently, and 4.2
+  was reported done with the button wired to a handler that did not exist.
+  **Fixed**, and the lesson is recorded: a scripted edit that finds no anchor
+  has to be checked, not assumed. Both form files are now audited for
+  handler-to-control coverage as part of the standard check.
+
 - [x] **5.0a Cat Model Mismatches sheet**
   Cat's model spelling is the authoritative one, so a NAXT model that
   disagrees is a **NAXT** defect and there is nothing to change in CCAT. The
