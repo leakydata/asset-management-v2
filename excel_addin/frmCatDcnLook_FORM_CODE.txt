@@ -287,12 +287,12 @@ Private Sub btnLookup_Click()
     Dim dcn As String
     dcn = CleanId(txtSerial.Text)
     If Len(dcn) = 0 Then
-        Me.Caption = "Cat DCN Look - enter a DCN"
+        Me.Caption = "DCN Lookup - enter a DCN"
         Exit Sub
     End If
 
     ResetDisplay
-    Me.Caption = "Cat DCN Look - looking up " & dcn & " ..."
+    Me.Caption = "DCN Lookup - looking up " & dcn & " ..."
     DoEvents
 
     Dim txt As String
@@ -308,13 +308,13 @@ Private Sub btnLookup_Click()
     Dim recs As Object
     Set recs = OwnershipRecords(txt)
     If recs Is Nothing Then
-        Me.Caption = "Cat DCN Look - unexpected response"
+        Me.Caption = "DCN Lookup - unexpected response"
         Exit Sub
     End If
     If recs.Count = 0 Then
         ' Said in the LIST as well as the caption - an empty list plus small
         ' text on the title bar reads as a failure rather than as an answer.
-        Me.Caption = "Cat DCN Look - nothing owned by " & dcn
+        Me.Caption = "DCN Lookup - nothing owned by " & dcn
         lstRecords.AddItem "No assets - " & dcn & " owns nothing right now"
         Exit Sub
     End If
@@ -338,7 +338,7 @@ Private Sub btnLookup_Click()
 
     ' The DCN name is the same on every row, so it belongs on the title bar
     ' rather than in a column repeating itself all the way down.
-    Me.Caption = "Cat DCN Look - " & recs.Count & " asset(s) for " & dcn & _
+    Me.Caption = "DCN Lookup - " & recs.Count & " asset(s) for " & dcn & _
                  DcnNameSuffix()
 
     lstRecords.ListIndex = 0
@@ -347,7 +347,7 @@ Private Sub btnLookup_Click()
 
 Fail:
     Application.Cursor = xlDefault
-    Me.Caption = "Cat DCN Look - FAILED: " & Err.Description
+    Me.Caption = "DCN Lookup - FAILED: " & Err.Description
 End Sub
 
 ' " - TROY CONSTRUCTION LLC" off the first record, or nothing when the API
@@ -410,7 +410,7 @@ Private Sub btnCopy_Click()
     d.SetText s
     d.PutInClipboard
 
-    Me.Caption = "Cat DCN Look - copied all " & (UBound(h) + 1) & " columns"
+    Me.Caption = "DCN Lookup - copied all " & (UBound(h) + 1) & " columns"
 End Sub
 
 ' Writes into whatever cell is selected RIGHT NOW - resolved at click time, so
@@ -424,7 +424,7 @@ Private Sub btnPaste_Click()
     Set c = Application.ActiveCell
     On Error GoTo 0
     If c Is Nothing Then
-        Me.Caption = "Cat DCN Look - select a cell in a workbook first"
+        Me.Caption = "DCN Lookup - select a cell in a workbook first"
         Exit Sub
     End If
 
@@ -432,7 +432,7 @@ Private Sub btnPaste_Click()
     n = QuickLookPasteWidth(c.Worksheet)
     QuickLookPasteAt c, v, n
 
-    Me.Caption = "Cat DCN Look - pasted " & n & " cols to " & _
+    Me.Caption = "DCN Lookup - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
 End Sub
 
@@ -441,7 +441,7 @@ End Sub
 ' returns dozens of assets, and pasting them one at a time is dozens of clicks.
 ' LookupPasteAll confirms and names the range before writing anything.
 Private Sub btnPasteAll_Click()
-    Me.Caption = "Cat DCN Look - " & LookupPasteAll(mRows)
+    Me.Caption = "DCN Lookup - " & LookupPasteAll(mRows)
 End Sub
 
 ' Everything on screen, into a NEW sheet. The data is already in mRows, so this
@@ -452,7 +452,7 @@ End Sub
 ' operation sheet.
 Private Sub btnToSheet_Click()
     If mRows Is Nothing Then
-        Me.Caption = "Cat DCN Look - look up a DCN first"
+        Me.Caption = "DCN Lookup - look up a DCN first"
         Exit Sub
     End If
     If mRows.Count = 0 Then Exit Sub
@@ -461,9 +461,9 @@ Private Sub btnToSheet_Click()
     nm = LookupListToSheet(mRows, "DCN", CleanId(txtSerial.Text))
 
     If Len(nm) = 0 Then
-        Me.Caption = "Cat DCN Look - could not write the sheet"
+        Me.Caption = "DCN Lookup - could not write the sheet"
     Else
-        Me.Caption = "Cat DCN Look - " & mRows.Count & " asset(s) written to '" & nm & "'"
+        Me.Caption = "DCN Lookup - " & mRows.Count & " asset(s) written to '" & nm & "'"
     End If
 End Sub
 
@@ -471,11 +471,11 @@ End Sub
 ' NOT called Selected: UserForm already inherits a member of that name.
 Private Function PickedRecord(ByRef v As Variant) As Boolean
     If mRows Is Nothing Then
-        Me.Caption = "Cat DCN Look - look up a DCN first"
+        Me.Caption = "DCN Lookup - look up a DCN first"
         Exit Function
     End If
     If lstRecords.ListIndex < 0 Then
-        Me.Caption = "Cat DCN Look - pick an asset from the list first"
+        Me.Caption = "DCN Lookup - pick an asset from the list first"
         Exit Function
     End If
     v = mRows(lstRecords.ListIndex + 1)

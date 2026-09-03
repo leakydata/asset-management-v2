@@ -32,7 +32,7 @@ In the VBE:  Insert > UserForm
 In the Properties window (F4):
 
     (Name)      frmCatQuickLook
-    Caption     Cat Quick Look
+    Caption     Serial Lookup
     Width       511
     Height      498
 
@@ -121,7 +121,7 @@ of one thing, and keeping them in step by hand is what went wrong before.
 
 Both labels are still optional. Leave either off and nothing breaks.
 
-    +- Cat Quick Look -----------------------------+
+    +- Serial Lookup -----------------------------+
     | [txtSerial................]  [ btnLookup ]   |
     | DCN      DCN NAME        TYPE STATUS SUB DLR |
     | +- lstRecords ----------------------------+  |
@@ -369,12 +369,12 @@ Private Sub btnLookup_Click()
     Dim serial As String
     serial = CleanId(txtSerial.Text)
     If Len(serial) = 0 Then
-        Me.Caption = "Cat Quick Look - enter a serial number"
+        Me.Caption = "Serial Lookup - enter a serial number"
         Exit Sub
     End If
 
     ResetDisplay
-    Me.Caption = "Cat Quick Look - looking up " & serial & " ..."
+    Me.Caption = "Serial Lookup - looking up " & serial & " ..."
     DoEvents
 
     Dim txt As String
@@ -387,7 +387,7 @@ Private Sub btnLookup_Click()
     Dim recs As Object
     Set recs = OwnershipRecords(txt)
     If recs Is Nothing Then
-        Me.Caption = "Cat Quick Look - unexpected response"
+        Me.Caption = "Serial Lookup - unexpected response"
         Exit Sub
     End If
     If recs.Count = 0 Then
@@ -397,7 +397,7 @@ Private Sub btnLookup_Click()
         ' Said in the LIST as well as the caption. Two empty lists and a line of
         ' small text on the title bar reads as "it broke", not as "the answer is
         ' none" - which is exactly how it was read.
-        Me.Caption = "Cat Quick Look - " & serial & " is NOT in CCAT"
+        Me.Caption = "Serial Lookup - " & serial & " is NOT in CCAT"
         lstRecords.AddItem "No records - " & serial & " is not in CCAT"
         Exit Sub
     End If
@@ -421,13 +421,13 @@ Private Sub btnLookup_Click()
     MruAdd "SERIAL", serial
     MruLoad txtSerial, "SERIAL"
 
-    Me.Caption = "Cat Quick Look - " & recs.Count & " record(s) for " & serial
+    Me.Caption = "Serial Lookup - " & recs.Count & " record(s) for " & serial
     lstRecords.ListIndex = 0             ' fires lstRecords_Click -> ShowRecord
     Exit Sub
 
 Fail:
     Application.Cursor = xlDefault
-    Me.Caption = "Cat Quick Look - FAILED: " & Err.Description
+    Me.Caption = "Serial Lookup - FAILED: " & Err.Description
 End Sub
 
 Private Sub lstRecords_Click()
@@ -481,7 +481,7 @@ Private Sub btnCopy_Click()
     d.SetText s
     d.PutInClipboard
 
-    Me.Caption = "Cat Quick Look - copied all " & (UBound(h) + 1) & " columns"
+    Me.Caption = "Serial Lookup - copied all " & (UBound(h) + 1) & " columns"
 End Sub
 
 ' Writes into whatever cell is selected RIGHT NOW - resolved at click time, so
@@ -495,7 +495,7 @@ Private Sub btnPaste_Click()
     Set c = Application.ActiveCell
     On Error GoTo 0
     If c Is Nothing Then
-        Me.Caption = "Cat Quick Look - select a cell in a workbook first"
+        Me.Caption = "Serial Lookup - select a cell in a workbook first"
         Exit Sub
     End If
 
@@ -503,7 +503,7 @@ Private Sub btnPaste_Click()
     n = QuickLookPasteWidth(c.Worksheet)
     QuickLookPasteAt c, v, n
 
-    Me.Caption = "Cat Quick Look - pasted " & n & " cols to " & _
+    Me.Caption = "Serial Lookup - pasted " & n & " cols to " & _
                  c.Worksheet.Name & "!" & c.Address(0, 0)
 End Sub
 
@@ -511,7 +511,7 @@ End Sub
 ' of Paste at Selection - see LookupPasteAll, which confirms and names the
 ' range before writing anything.
 Private Sub btnPasteAll_Click()
-    Me.Caption = "Cat Quick Look - " & LookupPasteAll(mRows)
+    Me.Caption = "Serial Lookup - " & LookupPasteAll(mRows)
 End Sub
 
 ' TRUE/FALSE -> Yes/No, and a dash when the API didn't return the field at
@@ -530,11 +530,11 @@ End Function
 ' which this object module derives".
 Private Function PickedRecord(ByRef v As Variant) As Boolean
     If mRows Is Nothing Then
-        Me.Caption = "Cat Quick Look - look up a serial first"
+        Me.Caption = "Serial Lookup - look up a serial first"
         Exit Function
     End If
     If lstRecords.ListIndex < 0 Then
-        Me.Caption = "Cat Quick Look - pick a record from the list first"
+        Me.Caption = "Serial Lookup - pick a record from the list first"
         Exit Function
     End If
     v = mRows(lstRecords.ListIndex + 1)
