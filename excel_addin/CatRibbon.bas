@@ -37,6 +37,14 @@ Public Const REG_SECTION As String = "Proxy"
 ' (e.g. showing whether the key is configured). Nothing uses it yet.
 Private ribbonUI As IRibbonUI
 
+' Marks the right-click entries this add-in owns, so they can be swept without
+' touching anyone else's. Declared HERE, not next to the code that uses it:
+' every module-level Const, Dim and Private must sit in the declarations
+' section before the first procedure. Put one between two procedures and VBA
+' refuses the module with "Only comments may appear after End Sub, End
+' Function, or End Property".
+Private Const CTX_TAG As String = "CatAssetToolsCtx"
+
 '==============================================================================
 ' Ribbon load
 '==============================================================================
@@ -61,8 +69,6 @@ End Sub
 ' handles the other case - a reload inside one Excel session, which would
 ' otherwise stack up duplicates every time.
 '==============================================================================
-Private Const CTX_TAG As String = "CatAssetToolsCtx"
-
 Public Sub CatInstallContextMenu()
     On Error Resume Next
 
