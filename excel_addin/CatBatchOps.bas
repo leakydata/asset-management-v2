@@ -174,7 +174,9 @@ Public Sub CatReconcile()
     ClearCancelKey
 
     Dim diffs As Collection: Set diffs = New Collection
+    Dim mismatches As Collection: Set mismatches = New Collection
     Dim nSame As Long, nNew As Long, nAmbig As Long, nFailed As Long, done As Long
+    Dim mSheet As String, mCcat As String
     Dim cancelled As Boolean
 
     Application.ScreenUpdating = False
@@ -234,6 +236,19 @@ Public Sub CatReconcile()
                                 HeldUnder(recs) & "; that record stays until expired")
                 nNew = nNew + 1
             Case Else
+                ' Model is not a difference worth proposing - Cat's spelling is
+                ' the authoritative one, so CCAT is already right. But a row
+                ' whose model disagrees is a NAXT defect, and throwing it away
+                ' silently loses a real finding. Collected separately, for a
+                ' sheet that reports and cannot write.
+                mSheet = CellStr(ws, r, ColFor(cols, "model"))
+                mCcat = CStr(cur(4))
+                If Len(mSheet) > 0 And Len(mCcat) > 0 Then
+                    If StrComp(mSheet, mCcat, vbTextCompare) <> 0 Then
+                        mismatches.Add Array(r, serial, CStr(cur(2)), mCcat, mSheet)
+                    End If
+                End If
+
                 why = DifferenceText(ws, r, cols, cur)
                 If Len(why) = 0 Then
                     nSame = nSame + 1
@@ -249,6 +264,9 @@ NextRow:
 
     Dim built As String
     If diffs.Count > 0 Then built = WriteReconcileSheet(ws, cols, diffs)
+
+    Dim mmSheet As String
+    If mismatches.Count > 0 Then mmSheet = WriteModelMismatchSheet(mismatches)
 
     MsgBox IIf(cancelled, "STOPPED at row " & r & " - Esc." & vbCrLf & vbCrLf, "") & _
            "COMPARED ONLY - nothing was sent." & vbCrLf & vbCrLf & _
@@ -267,7 +285,11 @@ NextRow:
                "them for good." & vbCrLf & vbCrLf, "") & _
            IIf(Len(built) > 0, "Written to '" & built & "'. Check it, then " & _
                "Validate, then Run.", "Nothing to do - CCAT already agrees with " & _
-               "every row that could be checked."), _
+               "every row that could be checked.") & _
+           IIf(Len(mmSheet) > 0, vbCrLf & vbCrLf & mismatches.Count & " model(s) " & _
+               "spelled differently to Cat's - listed on '" & mmSheet & "'. " & _
+               "Cat's spelling is the right one, so those are NAXT records to " & _
+               "correct, not CCAT. Nothing on that sheet can be sent.", ""), _
            vbInformation, "Cat Asset Tools - Compare to CCAT"
     Exit Sub
 
@@ -400,6 +422,51 @@ Private Function DifferenceText(ByVal ws As Worksheet, ByVal r As Long, _
         End If
     Next i
     DifferenceText = out
+End Function
+
+' Models that disagree with Cat's, as a list to fix NAXT from.
+'
+' Cat's spelling is authoritative, so there is nothing to change in CCAT and
+' nothing here should ever be sendable. Two things make sure of that:
+'
+'   - no Result column and no operation headers, so there is nothing to Run
+'   - the serial column is called QuerySerial, which trips the guard that
+'     already refuses batch-lookup results sheets outright. Without that, a
+'     sheet carrying Serial and DCN would be read as an EXPIRE sheet - the
+'     single worst thing this list could be mistaken for.
+'
+' The DCN column is "DCN (CCAT)" rather than "DCN" for the same reason: a bare
+' DCN header is half of what makes a sheet look like an Expire.
+Private Function WriteModelMismatchSheet(ByVal rows As Collection) As String
+    Dim ws As Worksheet
+    Set ws = FreshSheet("Cat Model Mismatches")
+
+    Dim hdr As Variant
+    hdr = Array("QuerySerial", "DCN (CCAT)", "Model (CCAT - correct)", _
+                "Model (your sheet)", "Source row")
+
+    Dim c As Long
+    For c = 0 To UBound(hdr)
+        With ws.Cells(HEADER_ROW, c + 1)
+            .Value = hdr(c)
+            .Font.Bold = True
+            .Interior.Color = RGB(89, 89, 89)
+            .Font.Color = vbWhite
+        End With
+    Next c
+
+    Dim i As Long, d As Variant
+    For i = 1 To rows.Count
+        d = rows(i)
+        ws.Cells(HEADER_ROW + i, 1).NumberFormat = "@": ws.Cells(HEADER_ROW + i, 1).Value = CStr(d(1))
+        ws.Cells(HEADER_ROW + i, 2).NumberFormat = "@": ws.Cells(HEADER_ROW + i, 2).Value = CStr(d(2))
+        ws.Cells(HEADER_ROW + i, 3).NumberFormat = "@": ws.Cells(HEADER_ROW + i, 3).Value = CStr(d(3))
+        ws.Cells(HEADER_ROW + i, 4).NumberFormat = "@": ws.Cells(HEADER_ROW + i, 4).Value = CStr(d(4))
+        ws.Cells(HEADER_ROW + i, 5).Value = CLng(d(0))
+    Next i
+
+    ws.Columns.AutoFit
+    WriteModelMismatchSheet = ws.Name
 End Function
 
 ' The Add/Update sheet of everything that disagreed.

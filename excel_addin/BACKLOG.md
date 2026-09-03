@@ -345,6 +345,24 @@ rule was for.
 
 ---
 
+## Also done
+
+- [x] **5.0a Cat Model Mismatches sheet**
+  Cat's model spelling is the authoritative one, so a NAXT model that
+  disagrees is a **NAXT** defect and there is nothing to change in CCAT. The
+  reconcile therefore does not compare or write Model — but throwing those rows
+  away silently loses a real finding: five of ten sample rows had one.
+  **DONE.** They now land on their own `Cat Model Mismatches` sheet — serial,
+  DCN, Cat's model, yours, and the source row — as a list to correct D365 from.
+  **Made unsendable on purpose, twice over:** no Result column or operation
+  headers, and the serial column is named `QuerySerial`, which trips the guard
+  that already refuses batch-lookup results sheets. Without that, a sheet
+  carrying Serial and DCN would be read as an **Expire** sheet, which is the
+  worst thing this particular list could be mistaken for. The DCN column is
+  `DCN (CCAT)` for the same reason.
+
+---
+
 ## Dropped
 
 - **5.1 "Waiting on me" — pending transfers.** `OwnershipRequestType =
