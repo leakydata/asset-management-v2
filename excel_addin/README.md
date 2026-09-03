@@ -29,9 +29,9 @@ Run sends anything. A single asset is just a batch of one.
 Right-clicking a cell also offers *Cat: Look up this serial* and *Cat: Look up
 this DCN*.
 
-Everything that reads is safe to press. The only two that write to CCAT are
-**Run**, and nothing else — Validate, Compare to CCAT and Undo all stop at
-producing a sheet for you to check.
+Everything that reads is safe to press. **Run is the only button that writes to
+CCAT** — Validate, Compare to CCAT and Undo a Run all stop at producing a sheet
+for you to check first.
 
 ## The pieces
 
