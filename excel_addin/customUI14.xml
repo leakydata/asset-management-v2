@@ -37,7 +37,7 @@
         <group id="CatGrpReconcile" label="Reconcile">
           <button id="CatBtnReconcile" size="large"
                   label="Compare to CCAT"
-                  imageMso="ReviewCompareTwoDocuments" keytip="C"
+                  imageMso="Copy" keytip="C"
                   onAction="CatReconcile_Ribbon"
                   screentip="Compare this sheet of NAXT values against CCAT"
                   supertip="SENDS NOTHING. Reads whatever recognised columns the active sheet has - Serial plus any of Make Code, DCN, Ownership Type, Model, Model Year, Product Family, Base Asset Name - looks each serial up, and writes a sheet of ONLY the rows CCAT disagrees with, already filled in and ready to Validate and Run. Rows that already match never appear. Serials CCAT has never heard of come out as ADD rows."/>
