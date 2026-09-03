@@ -144,7 +144,7 @@ Public Sub CatReconcile()
     If ws Is Nothing Then Err.Raise vbObjectError + 40, , "No active sheet."
 
     Dim cols As Object: Set cols = HeaderMap(ws)
-    Dim cSerial As Long: cSerial = ColOf(cols, "serial", "serialnumber", "queryserial")
+    Dim cSerial As Long: cSerial = ColFor(cols, "serial")
     If cSerial = 0 Then
         MsgBox "No 'Serial' column found in row " & HEADER_ROW & " of '" & ws.Name & "'." & vbCrLf & vbCrLf & _
                "Point this at a sheet of NAXT values with a Serial column, and " & _
@@ -266,11 +266,41 @@ Fail:
     MsgBox "Error: " & Err.Description, vbCritical, "Cat Asset Tools - Compare to CCAT"
 End Sub
 
+' A column, under any of the names a real export calls it.
+'
+' The operation sheets are ours and use our headers. A NAXT export is not ours
+' and does not - it says MAKE where we say Make Code, and SERIAL NUMBER where
+' we say Serial. Matching only our own spelling would silently skip columns
+' that are sitting right there, and a comparison that quietly ignores a column
+' is worse than one that refuses to run.
+'
+' Used by the reconcile only. The operation sheets keep matching exactly as
+' they did - widening those risks a stray column being read as a real one on a
+' sheet that WRITES.
+Private Function ColFor(ByVal cols As Object, ByVal canonical As String) As Long
+    Dim names As Variant
+    Select Case canonical
+        Case "serial":       names = Array("serial", "serialnumber", "queryserial", _
+                                           "equipmentserialnumber", "assetserialnumber")
+        Case "makecode":     names = Array("makecode", "make")
+        Case "dcn":          names = Array("dcn", "dealercustomernumber")
+        Case "ownershiptype": names = Array("ownershiptype", "ownershiptypecode")
+        Case "model":        names = Array("model")
+        Case "modelyear":    names = Array("modelyear")
+        Case Else:           names = Array(canonical)
+    End Select
+
+    Dim i As Long
+    For i = LBound(names) To UBound(names)
+        If cols.Exists(CStr(names(i))) Then ColFor = cols(CStr(names(i))): Exit Function
+    Next i
+End Function
+
 ' Which of a serial's ownership records this row is about.
 ' Returns "OK" (cur filled), "NONE" (no record on that DCN), or "AMBIGUOUS".
 Private Function PickRecord(ByVal ws As Worksheet, ByVal r As Long, ByVal cols As Object, _
                             ByVal recs As Collection, ByRef cur As Variant) As String
-    Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+    Dim dcn As String: dcn = CleanId(CellStr(ws, r, ColFor(cols, "dcn")))
 
     If Len(dcn) > 0 Then
         If FindByDcn(recs, dcn, cur) Then PickRecord = "OK" Else PickRecord = "NONE"
@@ -302,7 +332,7 @@ Private Function DifferenceText(ByVal ws As Worksheet, ByVal r As Long, _
 
     Dim out As String, i As Long, mine As String, theirs As String
     For i = LBound(keys) To UBound(keys)
-        mine = CellStr(ws, r, ColOf(cols, CStr(keys(i))))
+        mine = CellStr(ws, r, ColFor(cols, CStr(keys(i))))
         If Len(mine) > 0 Then
             theirs = CStr(cur(idx(i)))
             If StrComp(mine, theirs, vbTextCompare) <> 0 Then
@@ -358,7 +388,7 @@ Private Function WriteReconcileSheet(ByVal src As Worksheet, ByVal cols As Objec
             c = ColOf(out, CStr(keys(k)))
             If c > 0 Then
                 Dim v As String
-                v = CellStr(src, sr, ColOf(cols, CStr(keys(k))))
+                v = CellStr(src, sr, ColFor(cols, CStr(keys(k))))
                 ' DCN is the exception: if the source sheet has none, take
                 ' CCAT's, because Add/Update cannot go without one.
                 If Len(v) = 0 And CStr(keys(k)) = "dcn" And IsArray(cur) Then v = CStr(cur(2))
