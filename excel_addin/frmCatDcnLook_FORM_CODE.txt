@@ -31,6 +31,16 @@ lstFields, btnCopy, btnPaste, lblRecords, lblFields. txtSerial now holds a DCN,
 which reads oddly, but renaming a control means editing the .frm and every line
 that mentions it, for nothing that shows on screen. Leave it.
 
+ONE CONTROL TO ADD, after importing:
+
+    CommandButton    btnToSheet     Caption: Send List to Sheet
+
+Drop it on the bottom row between btnCopy and btnPaste - anywhere on that row
+is fine, FitControls lines all three up left to right and gives Paste whatever
+is left. Give it about the same width as btnCopy.
+
+It is optional: leave it off and the rest of the form works exactly as before.
+
 --------------------------------------------------------------------------------
 2. PASTE THE CODE
 --------------------------------------------------------------------------------
@@ -96,6 +106,7 @@ Private Sub UserForm_Initialize()
     PinSize
     FitControls
     PinColumns
+    MruLoad txtSerial, "DCN"         ' fills the dropdown; harmless on a TextBox
     ResetDisplay
 End Sub
 
@@ -143,8 +154,12 @@ Private Sub FitControls()
     btnLookup.Left = rightEdge - btnLookup.Width
     txtSerial.Width = btnLookup.Left - GAP - MARGIN
 
-    ' Bottom row: Copy keeps its width, Paste stretches to the right edge.
+    ' Bottom row, laid out left to right so a third button can join it without
+    ' anyone having to line them up by hand: Copy and To Sheet keep the widths
+    ' you drew, Paste takes whatever is left.
     btnCopy.Left = MARGIN
+    Me.Controls("btnToSheet").Left = btnCopy.Left + btnCopy.Width + GAP
+    btnPaste.Left = Me.Controls("btnToSheet").Left + Me.Controls("btnToSheet").Width + GAP
     btnPaste.Width = rightEdge - btnPaste.Left
 
     ' Both lists span the full width.
@@ -288,7 +303,10 @@ Private Sub btnLookup_Click()
         Exit Sub
     End If
     If recs.Count = 0 Then
+        ' Said in the LIST as well as the caption - an empty list plus small
+        ' text on the title bar reads as a failure rather than as an answer.
         Me.Caption = "Cat DCN Look - nothing owned by " & dcn
+        lstRecords.AddItem "No assets - " & dcn & " owns nothing right now"
         Exit Sub
     End If
 
@@ -305,6 +323,9 @@ Private Sub btnLookup_Click()
         lstRecords.List(lstRecords.ListCount - 1, 4) = CStr(v(3))           ' OwnershipType
         lstRecords.List(lstRecords.ListCount - 1, 5) = CStr(v(6))           ' Status
     Next i
+
+    MruAdd "DCN", dcn
+    MruLoad txtSerial, "DCN"
 
     ' The DCN name is the same on every row, so it belongs on the title bar
     ' rather than in a column repeating itself all the way down.

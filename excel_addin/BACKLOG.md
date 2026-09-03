@@ -219,7 +219,7 @@ be reversed after.
 
 All of the **[form]** work lives here. Do it in one sitting.
 
-- [ ] **4.1 Recent lookups dropdown** **[form]** **[bas]**
+- [x] **4.1 Recent lookups dropdown** **[form]** **[bas]**
   Replace `txtSerial` with a **ComboBox** — type a value as now, or pick from
   the last 25 searched.
   **The detail that makes this cheap:** an MSForms ComboBox supports `.Text`,
@@ -235,16 +235,25 @@ All of the **[form]** work lives here. Do it in one sitting.
     serials don't silt up the list
   **Done when:** looking up five serials, closing Excel, reopening and clicking
   the arrow shows those five, newest first, no duplicates.
+  **DONE.** Storage and loading live in `CatLookShared`, so the form gained two
+  lines. `MruLoad` takes the control as `Object` and swallows errors, so it does
+  nothing at all to a plain TextBox — the code is safe whether or not the
+  control has been swapped yet.
 
-- [ ] **4.2 "Send this list to a sheet"** **[form]** **[bas]**
+- [x] **4.2 "Send this list to a sheet"** **[form]** **[bas]**
   A button on the DCN window that writes the current result list to a results
   sheet.
   **Why:** you look up a DCN, see 55 assets, and today you have to go run Batch
   DCNs separately to get them into a sheet. The data is already in `mRows`.
   **Done when:** the sheet it writes is identical to what Batch DCNs produces
   for that DCN.
+  **DONE** — same *shape* rather than byte-identical (`QueryDCN` + the 22
+  fields + `Note`), which matters for more than tidiness: Validate and Run
+  refuse any sheet carrying a QuerySerial/QueryDCN column, so matching the
+  shape inherits that refusal and a results sheet can't be fired off as an
+  operation sheet.
 
-- [ ] **4.4 Say "not found" where the eye actually is** **[form]**
+- [x] **4.4 Say "not found" where the eye actually is** **[form]**
   When a lookup returns zero records, both floating windows say so **only on
   the title bar** while the two lists go blank. Blank lists read as "it broke",
   not "the answer is none" — and the title bar is the smallest text on the
@@ -263,12 +272,23 @@ All of the **[form]** work lives here. Do it in one sitting.
   and it clears on the next successful search.
   **Batches with 4.1 and 4.2** — all three are form-code, so they get pasted
   into the VBE once, not three times.
+  **DONE.** One line into the record list on both windows, alongside the
+  caption.
 
-- [ ] **4.3 Right-click a cell ▸ "Cat: look up this serial"** **[bas]**
+**§4 complete.** One VBE paste covered all of it, which is what the batching
+rule was for.
+
+- [x] **4.3 Right-click a cell ▸ "Cat: look up this serial"** **[bas]**
   Context-menu entry, seeded from the clicked cell.
   **Why:** beats travelling to the ribbon for the most common action.
   **Note:** needs the menu torn down on add-in unload or it lingers in Excel
   after the add-in is gone.
+  **DONE, and it needed no form change at all.** Installed from
+  `CatRibbonOnLoad`, which fires when the .xlam loads and is the only startup
+  hook shippable in a `.bas`. `Temporary:=True` answers the teardown note —
+  Excel drops the controls on close, so an uninstalled add-in can't leave an
+  entry pointing at a missing macro. A tagged sweep before adding handles the
+  other case, a reload inside one session stacking duplicates.
 
 ---
 

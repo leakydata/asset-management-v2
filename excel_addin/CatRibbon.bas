@@ -42,6 +42,62 @@ Private ribbonUI As IRibbonUI
 '==============================================================================
 Public Sub CatRibbonOnLoad(ribbon As IRibbonUI)
     Set ribbonUI = ribbon
+
+    ' Doubles as the add-in's startup hook. onLoad fires when the ribbon is
+    ' built, which is when the .xlam loads - and an .xlam has no Workbook_Open
+    ' we can ship in a .bas, so this is the one place to hang startup work.
+    CatInstallContextMenu
+End Sub
+
+'==============================================================================
+' Right-click a cell > look it up
+'
+' The most common action in the add-in, one click from where the data already
+' is, instead of a trip to the ribbon.
+'
+' Temporary:=True is what makes this safe: Excel drops the controls when it
+' closes, so an add-in that is uninstalled cannot leave a menu entry behind
+' pointing at a macro that no longer exists. The tagged sweep before adding
+' handles the other case - a reload inside one Excel session, which would
+' otherwise stack up duplicates every time.
+'==============================================================================
+Private Const CTX_TAG As String = "CatAssetToolsCtx"
+
+Public Sub CatInstallContextMenu()
+    On Error Resume Next
+
+    CatRemoveContextMenu
+
+    AddCellItem "Cat: Look up this &serial", "CatCtxSerial"
+    AddCellItem "Cat: Look up this &DCN", "CatCtxDcn"
+End Sub
+
+Public Sub CatRemoveContextMenu()
+    On Error Resume Next
+    Dim bar As Object, i As Long
+    Set bar = Application.CommandBars("Cell")
+    For i = bar.Controls.Count To 1 Step -1
+        If bar.Controls(i).Tag = CTX_TAG Then bar.Controls(i).Delete
+    Next i
+End Sub
+
+Private Sub AddCellItem(ByVal caption As String, ByVal macro As String)
+    On Error Resume Next
+    Dim btn As Object
+    Set btn = Application.CommandBars("Cell").Controls.Add(Type:=1, Temporary:=True)
+    btn.Caption = caption
+    btn.OnAction = macro
+    btn.Tag = CTX_TAG
+End Sub
+
+' Both windows already seed themselves from the active cell, and right-clicking
+' a cell selects it first - so these need do nothing but open the right one.
+Public Sub CatCtxSerial()
+    CatSerialLook.CatSerialLook
+End Sub
+
+Public Sub CatCtxDcn()
+    CatDcnLook.CatDcnLook
 End Sub
 
 '==============================================================================

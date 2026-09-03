@@ -49,7 +49,7 @@ then type these in. Nothing here is sacred; it is one arrangement that fits.
 
     Control          (Name)        Left   Top   Width  Height
     ---------------------------------------------------------
-    TextBox          txtSerial        8     8     386      22
+    ComboBox         txtSerial        8     8     386      22
     CommandButton    btnLookup      400     8      92      22
     Label            lblRecords       8    42     484      13   (optional)
     ListBox          lstRecords       8    57     484      74
@@ -72,6 +72,16 @@ between the heading above it and the buttons below.
     btnCopy       Caption           Copy Row
     btnPaste      Caption           Paste at Selection
     txtSerial     Font              Consolas 11
+                  Style             0 - fmStyleDropDownCombo   (the default)
+
+txtSerial is a COMBOBOX, not a TextBox - type a serial as before, or pick one
+of the last 25 you searched for from the dropdown. Keep the NAME txtSerial: a
+ComboBox has .Text, .SetFocus, .SelStart and .SelLength just as a TextBox does,
+which is every member the code touches, so swapping only the control's type
+leaves every line of code below working untouched.
+
+If you would rather not bother, leave it a TextBox. MruLoad does nothing to a
+control that has no list and the box keeps behaving exactly as it always has.
 
     lstRecords    Font              Consolas 9
     lstFields     Font              Consolas 9
@@ -166,6 +176,7 @@ Private Sub UserForm_Initialize()
     PinSize
     FitControls
     PinColumns
+    MruLoad txtSerial, "SERIAL"      ' fills the dropdown; harmless on a TextBox
     ResetDisplay
 End Sub
 
@@ -372,7 +383,12 @@ Private Sub btnLookup_Click()
     If recs.Count = 0 Then
         ' The call succeeded and returned nothing - that is a real answer, not
         ' a failure, and worth saying differently.
+        '
+        ' Said in the LIST as well as the caption. Two empty lists and a line of
+        ' small text on the title bar reads as "it broke", not as "the answer is
+        ' none" - which is exactly how it was read.
         Me.Caption = "Cat Quick Look - " & serial & " is NOT in CCAT"
+        lstRecords.AddItem "No records - " & serial & " is not in CCAT"
         Exit Sub
     End If
 
@@ -389,6 +405,11 @@ Private Sub btnLookup_Click()
         lstRecords.List(lstRecords.ListCount - 1, 4) = YesNo(CStr(v(10)))   ' HasSubscription
         lstRecords.List(lstRecords.ListCount - 1, 5) = CStr(v(14))          ' DealerCode
     Next i
+
+    ' Only remembered now it is known to have found something - a typo that
+    ' returned nothing is not worth offering back tomorrow.
+    MruAdd "SERIAL", serial
+    MruLoad txtSerial, "SERIAL"
 
     Me.Caption = "Cat Quick Look - " & recs.Count & " record(s) for " & serial
     lstRecords.ListIndex = 0             ' fires lstRecords_Click -> ShowRecord
