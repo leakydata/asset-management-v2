@@ -1,11 +1,48 @@
-# Cat Asset Management — read-only broker (Azure Function)
+# Cat Asset Management — broker (Azure Function)
 
-A small HTTP Function that holds the Cat API credentials server-side and exposes
-a single read-only `/api/search` endpoint. Excel (and anything else) calls this
-instead of Cat, so the client secret is never distributed.
+> ## ⚠ THIS SOURCE IS BEHIND WHAT IS DEPLOYED
+>
+> `function_app.py` here defines **one route: `search`**. The Excel add-in also
+> calls **`ownership`**, **`expire`** and **`transfer`**, and they work — so the
+> deployed Function has at least three routes that are not in this folder.
+>
+> **Do not treat this folder as the source of truth**, and do not redeploy from
+> it: doing so would remove the three write routes and break every operation
+> sheet. Get the current source from the deployed Function App
+> (`asset-management-proxy-…` in Azure) before changing anything.
+>
+> Verified 2026-09-03 by calling the live endpoint.
+
+A small HTTP Function that holds the Cat API credentials server-side, so the
+client secret is never distributed. Excel calls this instead of Cat.
 
 `function_app.py` reuses the same OAuth client-credentials + search logic as the
-MCP server. Only search is exposed — there are no write routes.
+MCP server.
+
+## What Cat's search can and cannot filter on
+
+Worth knowing before designing anything that needs to *find* records, because it
+is the constraint that shapes what is possible:
+
+From `catDigitalPlatform-assetManagement-v2-oas_prod.yaml`, `/ownershipRecords/search`:
+
+- filters are `stringEquals` only, **maximum two of them**
+- searchable on **DCN, asset name, serial number, make code** — and make code
+  alone is not enough, it needs a second filter
+- **no filter on `ownershipRequestType`, dealer code, or record status**
+
+So there is **no way to ask "everything pending for our dealer code"** — not
+from the add-in, and not from a new proxy route either. The API simply does not
+offer that query.
+
+What *does* work: search returns **ACTIVE and PENDING records both**, and
+`ownershipRequestType` is populated on the pending ones. So "what is waiting on
+me" is answerable by sweeping a known list of DCNs or serials and filtering the
+results client-side — no proxy change needed.
+
+Confirmed against the live endpoint: `?status=PENDING` alone returns 400, and
+`?dcn=…&status=PENDING` returns exactly the same records as `?dcn=…` — unknown
+parameters are silently ignored rather than rejected.
 
 ---
 

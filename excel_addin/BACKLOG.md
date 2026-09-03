@@ -79,7 +79,7 @@ The installer means colleagues get this soon. These are the difference between
   person. Failed lookups are logged before the raise, since "I searched and got
   a 401" is exactly the line you want afterwards.
 
-- [ ] **H.1 `azure-function/` in this repo is stale**
+- [x] **H.1 `azure-function/` in this repo is stale**
   It defines only the `search` route, but the add-in also calls `ownership`,
   `expire` and `transfer`. The deployed function is ahead of the source here.
   **Why it matters:** the repo is no longer the source of truth for the proxy,
@@ -87,6 +87,11 @@ The installer means colleagues get this soon. These are the difference between
   the error bodies for the three write routes can't be read from source.
   **Done when:** the folder matches what's deployed, or says plainly that it
   doesn't and points at where the real source lives.
+  **DONE** — the second way. `azure-function/README.md` now opens with a
+  warning that the folder is behind the deployment, names the three missing
+  routes, and says **do not redeploy from it** (that would delete the write
+  routes and break every operation sheet). Recovering the real source is a
+  separate job for whoever next needs to change the proxy.
 
 ---
 
@@ -294,15 +299,36 @@ rule was for.
 
 ## 5. Bigger, later
 
-- [ ] **5.1 "Waiting on me" — pending transfers** **[?]** **[bas]** **[xml]**
+- [ ] **5.1 "Waiting on me" — pending transfers** **[bas]**
   `OwnershipRequestType = RECEIVED` means another dealer is blocked on your
   approval. One button that surfaces them turns a chore into a prompt.
-  **Open question, resolve before promising anything:** `/search` takes a
-  serial or a DCN, so there may be no way to ask *"everything pending for
-  B150"* in one call. Options if not: a stored watch-list of DCNs, a scheduled
-  sweep, a new proxy route, or source it from Snowflake.
-  **First step:** check the proxy and the CCAT API for a by-dealer or
-  by-status query. That answer decides the whole shape of this.
+
+  **OPEN QUESTION RESOLVED — 2026-09-03.** The answer changes the shape of the
+  feature, so it is worth stating plainly.
+
+  **You cannot ask the API "what is pending for B150."** Not from the add-in,
+  and not from a new proxy route either — Cat does not offer the query. From
+  the OpenAPI spec, `/ownershipRecords/search` takes `stringEquals` filters,
+  **at most two**, over **DCN / asset name / serial number / make code** only.
+  There is no filter on `ownershipRequestType`, dealer code or status. Probing
+  the live proxy agrees: `?status=PENDING` alone gives 400, and
+  `?dcn=…&status=PENDING` returns exactly the same records as `?dcn=…` —
+  unknown parameters are ignored, not rejected. No `/pending`-style route
+  exists either (all 404).
+
+  **But the feature is still buildable, and with no proxy change.** Search
+  returns **ACTIVE and PENDING records both** — the spec says so — and
+  `ownershipRequestType` is populated on the pending ones. So:
+
+  > Sweep a known list of DCNs (or serials), keep only the rows where
+  > `OwnershipRequestType` is non-empty, and write those to a sheet.
+
+  That is a variation on Batch DCNs, which already does the sweep and the
+  sheet. The new parts are a saved watch-list of DCNs and the filter.
+  **Cost:** one call per DCN, so it is a periodic check rather than something
+  you leave running.
+  **Still to decide:** where the watch-list lives — a sheet you maintain, or
+  HKCU like the other per-user settings.
 
 - [ ] **5.2 Snowflake reconciliation in the lookup window** **[?]** **[form]**
   Show *"CCAT says OWNED, our records say RENTAL"* right beside the record,
