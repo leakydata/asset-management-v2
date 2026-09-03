@@ -48,6 +48,24 @@ Attribute VB_Name = "CatBatchOps"
 '==============================================================================
 Option Explicit
 
+' Esc, read as a live key state rather than through Application.EnableCancelKey.
+'
+' EnableCancelKey would let Esc interrupt anywhere - including halfway through
+' an HTTP call, which on a write means the request may have gone through with
+' nothing recorded about it. Disabling it around the send closes that hole but
+' opens another: the keypress is swallowed, so pressing Esc during a slow call
+' does nothing and you have to catch the gap between rows.
+'
+' GetAsyncKeyState has neither problem. It reports whether the key has been
+' pressed SINCE THE LAST CALL, so a press during a request is still waiting to
+' be found at the top of the next row. The cancel then happens exactly where we
+' choose, and never mid-request.
+#If VBA7 Then
+    Private Declare PtrSafe Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
+#Else
+    Private Declare Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
+#End If
+
 Public Const SH_ADD As String = "Cat Add-Update"
 Public Const SH_EXP As String = "Cat Expire"
 Public Const SH_TRF As String = "Cat Transfer"
@@ -205,9 +223,56 @@ Fail:
     MsgBox "Error: " & Err.Description, vbCritical, "Cat Asset Tools - Undo"
 End Sub
 
-' SendRow returns "OK (200) ..." on success and "FAILED..." otherwise.
+' SendRow returns "OK (200) ..." on success and "FAILED..." otherwise. Used
+' both to read the log back and to read a Result column back - the text is the
+' same either way, which is why resume matches on it rather than on the cell
+' colour. Colour is presentation; someone re-formatting a sheet should not
+' change what gets re-sent.
 Private Function OutcomeWasOk(ByVal outcome As String) As Boolean
     OutcomeWasOk = (Left$(LTrim$(outcome), 2) = "OK")
+End Function
+
+'==============================================================================
+' PRIVATE: stopping, and picking up where you left off
+'==============================================================================
+
+' True when Esc has been pressed since the last time we asked. Reading the key
+' directly means a press DURING a request is still there to be found at the top
+' of the next row, so nothing is lost and nothing is interrupted.
+Private Function EscPressed() As Boolean
+    On Error Resume Next
+    EscPressed = (GetAsyncKeyState(27) <> 0)      ' 27 = VK_ESCAPE
+End Function
+
+' Drains a stale press so a run does not stop before it starts - someone who
+' hit Esc to dismiss something a moment ago has not asked to cancel this.
+Private Sub ClearCancelKey()
+    On Error Resume Next
+    GetAsyncKeyState 27
+End Sub
+
+' Offers to skip rows that already came back OK.
+'
+' Asked only when there is something to skip, so a fresh sheet never sees it.
+' Defaults to Yes: the reason you are looking at a sheet with successful rows
+' on it is almost always that something stopped partway.
+Private Function AskResume(ByVal ws As Worksheet, ByVal cSerial As Long, _
+                           ByVal cResult As Long, ByVal lastRow As Long) As Boolean
+    Dim r As Long, nDone As Long
+    For r = HEADER_ROW + 1 To lastRow
+        If Len(CleanId(CStr(ws.Cells(r, cSerial).Value))) > 0 Then
+            If OutcomeWasOk(CellStr(ws, r, cResult)) Then nDone = nDone + 1
+        End If
+    Next r
+
+    If nDone = 0 Then Exit Function
+
+    AskResume = (MsgBox( _
+        nDone & " row(s) on this sheet already came back OK." & vbCrLf & vbCrLf & _
+        "Skip them and send only the rest?" & vbCrLf & vbCrLf & _
+        "Yes - send only rows that have not succeeded yet" & vbCrLf & _
+        "No  - send every row again", _
+        vbQuestion + vbYesNo, "Cat Asset Tools - " & ws.Name) = vbYes)
 End Function
 
 ' A numbered list in an InputBox. Not a UserForm on purpose: this is the one
@@ -441,16 +506,36 @@ Private Sub RunCore(ByVal dryRun As Boolean)
     Dim runId As String
     If Not dryRun Then runId = AuditBegin()
 
-    Dim nOk As Long, nFailed As Long, nSkipped As Long, done As Long
+    ' Resume: a run interrupted at row 300 of 500 should not re-send the first
+    ' 299. Offered only when there is something to skip, so it never appears on
+    ' a fresh sheet.
+    Dim skipDone As Boolean
+    If Not dryRun Then skipDone = AskResume(ws, cSerial, cResult, lastRow)
+
+    Dim nOk As Long, nFailed As Long, nSkipped As Long, done As Long, nAlready As Long
+    Dim cancelled As Boolean
     Application.ScreenUpdating = False
+
+    ClearCancelKey        ' drop any stray Esc from before the run started
 
     Dim r As Long
     For r = HEADER_ROW + 1 To lastRow
         Dim serial As String: serial = CleanId(CStr(ws.Cells(r, cSerial).Value))
         If Len(serial) = 0 Then GoTo NextRow
 
+        ' Between rows, never mid-request. See GetAsyncKeyState at the top.
+        If EscPressed() Then cancelled = True: Exit For
+
+        If skipDone Then
+            If OutcomeWasOk(CellStr(ws, r, cResult)) Then
+                nAlready = nAlready + 1
+                GoTo NextRow
+            End If
+        End If
+
         done = done + 1
-        Application.StatusBar = OpLabel(op) & " " & done & " of " & nRows & "  (" & serial & ")"
+        Application.StatusBar = OpLabel(op) & " " & done & " of " & nRows & _
+                                "  (" & serial & ")   [Esc to stop]"
 
         Dim why As String
         why = ValidateRow(ws, r, cols, op, serial)
@@ -499,15 +584,30 @@ NextRow:
     Dim tail As String
     If Not dryRun Then
         tail = vbCrLf & vbCrLf & "Logged as run " & runId & vbCrLf & _
-               "(CCAT > Write Log, or Undo Run to put these back)"
+               "(CCAT > Logs, or Build Sheet > Undo a Run to put these back)"
     End If
 
-    MsgBox IIf(dryRun, "VALIDATION ONLY - nothing was sent." & vbCrLf & vbCrLf, "") & _
+    ' A cancelled run says so FIRST and says where it stopped. "17 rows
+    ' processed" on a 500-row sheet is not the headline; "you stopped it, and
+    ' rows 18 onward were never sent" is.
+    Dim head As String
+    If cancelled Then
+        head = "STOPPED at row " & r & " - Esc." & vbCrLf & vbCrLf & _
+               "Rows below that were not " & IIf(dryRun, "checked", "sent") & _
+               " at all." & IIf(dryRun, "", " Run again and choose to skip the " & _
+               "rows that already succeeded.") & vbCrLf & vbCrLf
+    ElseIf dryRun Then
+        head = "VALIDATION ONLY - nothing was sent." & vbCrLf & vbCrLf
+    End If
+
+    MsgBox head & _
            done & " row(s) " & IIf(dryRun, "checked", "processed") & ":" & vbCrLf & _
            "  - " & nOk & IIf(dryRun, " ready to send (green)", " OK (green)") & vbCrLf & _
            IIf(dryRun, "", "  - " & nFailed & " failed (red)" & vbCrLf) & _
-           "  - " & nSkipped & " skipped (yellow - missing or invalid fields)" & tail, _
-           IIf(nFailed > 0 Or nSkipped > 0, vbExclamation, vbInformation), _
+           "  - " & nSkipped & " skipped (yellow - missing or invalid fields)" & _
+           IIf(nAlready > 0, vbCrLf & "  - " & nAlready & " left alone (already " & _
+               "succeeded on an earlier run)", "") & tail, _
+           IIf(cancelled Or nFailed > 0 Or nSkipped > 0, vbExclamation, vbInformation), _
            OpLabel(op) & IIf(dryRun, " - Validate", "")
     Exit Sub
 Fail:
