@@ -291,14 +291,31 @@ End Sub
 Private Function ColFor(ByVal cols As Object, ByVal canonical As String) As Long
     Dim names As Variant
     Select Case canonical
-        Case "serial":       names = Array("serial", "serialnumber", "queryserial", _
-                                           "equipmentserialnumber", "assetserialnumber")
-        Case "makecode":     names = Array("makecode", "make")
+        ' Taken from real NAXT exports. Deliberately NOT included:
+        '   DEALEREQUIPMENTSERIALNUMBER and EQUIPMENTSERIALNUMBER - nobody
+        '     looks an asset up by those, and matching one would send every
+        '     lookup to a serial CCAT has never heard of
+        '   ENGINE/TRANSMISSION/GENERATOR SERIALNUMBER - same trap, and these
+        '     ARE present in the export sitting right beside the real one
+        Case "serial":       names = Array("serial", "serialnumber", "serialno", _
+                                           "assetserial", "queryserial")
+
+        ' THREE_DIGIT_CAT_MAKE_CODE first: it is explicitly Cat's code, which
+        ' is what CCAT holds. MAKE is the same value in practice but is D365's
+        ' own field and need not stay that way.
+        Case "makecode":     names = Array("threedigitcatmakecode", "makecode", "make")
+
+        ' CUSTOMERNUMBER is the DCN - confirmed against live CCAT, where five
+        ' of ten sample rows matched an ownership record on it exactly.
         Case "dcn":          names = Array("dcn", "customernumber", "custnumber", _
                                            "dealercustomernumber")
+
         Case "ownershiptype": names = Array("ownershiptype", "ownershiptypecode")
         Case "model":        names = Array("model")
-        Case "modelyear":    names = Array("modelyear")
+
+        ' MANUFACTURERYEAR is what the export calls it, and it agreed with
+        ' CCAT's modelYear on every sample row.
+        Case "modelyear":    names = Array("modelyear", "manufactureryear")
         Case Else:           names = Array(canonical)
     End Select
 
@@ -315,8 +332,13 @@ Private Function HeldUnder(ByVal recs As Collection) As String
         If i > 3 Then out = out & ", ...": Exit For      ' a note, not a report
         v = recs(i)
         dcn = CStr(v(2))
+        ' A blank DCN is not missing data - Cat returns the DCN only on our
+        ' own dealer's records. Blank means ANOTHER dealer holds this machine,
+        ' which is a different problem from it sitting on the wrong DCN of
+        ' ours, and the note should not blur the two.
         out = out & IIf(Len(out) > 0, ", ", "") & _
-              IIf(Len(dcn) = 0, "(DCN withheld)", dcn) & " (" & CStr(v(11)) & ")"
+              IIf(Len(dcn) = 0, "another dealer's DCN", dcn) & _
+              " (" & CStr(v(11)) & ")"
     Next i
     HeldUnder = out
 End Function
@@ -348,12 +370,23 @@ End Function
 ' change that was never going to happen.
 Private Function DifferenceText(ByVal ws As Worksheet, ByVal r As Long, _
                                 ByVal cols As Object, ByVal cur As Variant) As String
+    ' MODEL IS DELIBERATELY NOT COMPARED, and this is measured rather than
+    ' cautious. On a ten-row NAXT export, five rows matched their CCAT record
+    ' on DCN and differed on nothing except the model string - every one of
+    ' them "303.5E2CR -> 303.5ECR". D365 and Cat spell the same machine
+    ' differently, so comparing Model turns five clean rows into five rows
+    ' proposing to overwrite Cat's own model name with ours. Five false
+    ' positives out of ten is not a comparison, it is noise.
+    '
+    ' Put "model" back in both arrays below if a department's export is known
+    ' to carry Cat's spelling - the label and index are already lined up for
+    ' it (Model, index 4).
     Dim keys As Variant, labels As Variant, idx As Variant
-    keys = Array("makecode", "ownershiptype", "model", "modelyear", _
+    keys = Array("makecode", "ownershiptype", "modelyear", _
                  "productfamilycode", "productfamilyname", "baseassetname")
-    labels = Array("MakeCode", "OwnershipType", "Model", "ModelYear", _
+    labels = Array("MakeCode", "OwnershipType", "ModelYear", _
                    "ProductFamilyCode", "ProductFamilyName", "BaseAssetName")
-    idx = Array(1, 3, 4, 5, 18, 19, 21)
+    idx = Array(1, 3, 5, 18, 19, 21)
 
     Dim out As String, i As Long, mine As String, theirs As String
     For i = LBound(keys) To UBound(keys)
@@ -414,9 +447,17 @@ Private Function WriteReconcileSheet(ByVal src As Worksheet, ByVal cols As Objec
             If c > 0 Then
                 Dim v As String
                 v = CellStr(src, sr, ColFor(cols, CStr(keys(k))))
-                ' DCN is the exception: if the source sheet has none, take
-                ' CCAT's, because Add/Update cannot go without one.
+                ' DCN: if the source sheet has none, take CCAT's - Add/Update
+                ' cannot go without one.
                 If Len(v) = 0 And CStr(keys(k)) = "dcn" And IsArray(cur) Then v = CStr(cur(2))
+
+                ' MODEL: written on a NEW record, where any model beats none,
+                ' and left BLANK when CCAT already holds this record. A blank
+                ' is omitted from the request, so Cat's own spelling survives.
+                ' Not comparing Model but still sending it would overwrite it
+                ' anyway on any row emitted for some other reason - the same
+                ' bug, one step downstream.
+                If CStr(keys(k)) = "model" And IsArray(cur) Then v = ""
                 ws.Cells(HEADER_ROW + i, c).NumberFormat = "@"
                 ws.Cells(HEADER_ROW + i, c).Value = v
             End If
