@@ -230,6 +230,10 @@ Private Sub PinColumns()
     End With
     Me.Controls("lblFields").Caption = "Record detail"
 
+    ' Which window am I in - see the serial form. The title bar becomes a
+    ' status line the moment a lookup runs; this does not.
+    btnLookup.Caption = "Look Up DCN"
+
     On Error GoTo 0
 End Sub
 

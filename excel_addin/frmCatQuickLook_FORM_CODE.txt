@@ -57,25 +57,36 @@ then type these in. Nothing here is sacred; it is one arrangement that fits.
     ListBox          lstFields        8   152     484     278
     CommandButton    btnCopy          8   436     110      26
     CommandButton    btnPasteAll    124   436     110      26
-    CommandButton    btnPaste       240   436     252      26
+    CommandButton    btnToSheet     240   436     110      26
+    CommandButton    btnPaste       356   436     136      26
 
 Why those numbers, if you want to move things: 8 all round is the margin.
 484 = 500 - 16, so everything full-width ends at 492. btnLookup ends there too
-(400 + 92) and so does btnPaste (124 + 368). lstFields just fills what is left
-between the heading above it and the buttons below.
+(400 + 92), and so does the bottom row (356 + 136). lstFields just fills what
+is left between the heading above it and the buttons below.
+
+The bottom row's positions barely matter - FitControls lines those four up
+left to right on open and gives btnPaste whatever is left over. Only their
+Top is read from the designer, so keep them on the same line.
 
 --------------------------------------------------------------------------------
 3. THE REST OF THE PROPERTIES
 --------------------------------------------------------------------------------
 
-    btnLookup     Caption           Look Up
-                  Default           True          <- Enter in the serial box
+    btnLookup     Default           True          <- Enter in the serial box
     btnCopy       Caption           Copy Row
     btnPasteAll   Caption           Paste All
+    btnToSheet    Caption           Send List to Sheet
     btnPaste      Caption           Paste at Selection
 
-btnPasteAll is OPTIONAL. Leave it off and the other two work exactly as they
-do now - FitControls positions whatever is there.
+btnLookup has no Caption to type: the code sets it to "Look Up Serial", so the
+window says which one it is at a glance. The title bar says so too, but it is
+also the status line - one lookup in it reads "2 record(s) for KR416089" and
+the answer is gone.
+
+btnPasteAll and btnToSheet are OPTIONAL. Leave either off and the rest work
+exactly as they do now - FitControls positions whatever is there.
+
     txtSerial     Font              Consolas 11
                   Style             0 - fmStyleDropDownCombo   (the default)
 
@@ -134,7 +145,7 @@ Both labels are still optional. Leave either off and nothing breaks.
     | | MakeCode          CAT                   |  |
     | | ...                                     |  |
     | +-----------------------------------------+  |
-    | [ btnCopy ]   [ btnPaste                  ]  |
+    | [Copy Row][Paste All][To Sheet][Paste at Sel] |
     +----------------------------------------------+
 
 --------------------------------------------------------------------------------
@@ -240,8 +251,9 @@ Private Sub FitControls()
     ' drew, Paste at Selection takes whatever is left.
     btnCopy.Left = MARGIN
     Me.Controls("btnPasteAll").Left = btnCopy.Left + btnCopy.Width + GAP
-    btnPaste.Left = Me.Controls("btnPasteAll").Left + _
-                    Me.Controls("btnPasteAll").Width + GAP
+    Me.Controls("btnToSheet").Left = Me.Controls("btnPasteAll").Left + _
+                                     Me.Controls("btnPasteAll").Width + GAP
+    btnPaste.Left = Me.Controls("btnToSheet").Left + Me.Controls("btnToSheet").Width + GAP
     btnPaste.Width = rightEdge - btnPaste.Left
 
     ' Headings, if you added them, line up with the lists AND span them.
@@ -303,6 +315,11 @@ Private Sub PinColumns()
         .WordWrap = False
     End With
     Me.Controls("lblFields").Caption = "Record detail"
+
+    ' Which window am I in. The title bar says so too, but it is also the
+    ' status line - the moment a lookup runs it reads "2 record(s) for
+    ' KR416089" and the answer is gone. This one does not move.
+    btnLookup.Caption = "Look Up Serial"
 
     On Error GoTo 0
 End Sub
@@ -512,6 +529,30 @@ End Sub
 ' range before writing anything.
 Private Sub btnPasteAll_Click()
     Me.Caption = "Serial Lookup - " & LookupPasteAll(mRows)
+End Sub
+
+' Everything on screen, into a NEW sheet. The data is already in mRows, so this
+' is a write-out rather than a second round trip to the API.
+'
+' Kind is passed as "Serial" so the sheet is 'Cat Serial KR416089' and its query
+' column is QuerySerial - which is also what makes the sheet unrunnable, since
+' Validate and Run refuse anything carrying a Query* column. A results sheet
+' must never be mistaken for an operation sheet.
+Private Sub btnToSheet_Click()
+    If mRows Is Nothing Then
+        Me.Caption = "Serial Lookup - look up a serial first"
+        Exit Sub
+    End If
+    If mRows.Count = 0 Then Exit Sub
+
+    Dim nm As String
+    nm = LookupListToSheet(mRows, "Serial", CleanId(txtSerial.Text))
+
+    If Len(nm) = 0 Then
+        Me.Caption = "Serial Lookup - could not write the sheet"
+    Else
+        Me.Caption = "Serial Lookup - " & mRows.Count & " record(s) written to '" & nm & "'"
+    End If
 End Sub
 
 ' TRUE/FALSE -> Yes/No, and a dash when the API didn't return the field at
