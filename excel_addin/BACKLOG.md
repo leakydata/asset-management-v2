@@ -179,18 +179,32 @@ be reversed after.
 
 ## 3. Run robustness
 
-- [ ] **3.1 Esc cancels a Run, cleanly** **[bas]**
+- [x] **3.1 Esc cancels a Run, cleanly** **[bas]**
   Stops between rows, never mid-request. Rows already sent keep their result.
   **Done when:** cancelling a 100-row run leaves rows 1..n green and the rest
   untouched, with a clear "cancelled at row n" message.
+  **DONE**, via `GetAsyncKeyState` rather than `Application.EnableCancelKey`.
+  EnableCancelKey can interrupt mid-HTTP-call, which on a write means the
+  request may have gone through with nothing recorded — and disabling it around
+  the send just swallows the keypress instead. Reading the key state directly
+  has neither problem: a press *during* a request is still waiting to be found
+  at the top of the next row, so the stop happens exactly where we choose. A
+  stale press from before the run is drained first. The summary leads with
+  "STOPPED at row n", because "17 rows processed" is not the headline when 483
+  were never sent.
 
-- [ ] **3.2 Run only rows without a green result** **[bas]** **[xml]**
+- [x] **3.2 Run only rows without a green result** **[bas]**
   Resume a partially-completed batch instead of re-sending everything.
   **Why:** Add/Update is idempotent so re-running is *probably* harmless, but
   Expire isn't obviously so, and "just run it all again" is an uncomfortable
   instruction on a write path.
   **Done when:** a run interrupted at row 300 of 500 can be finished with one
   click and no duplicate sends.
+  **DONE**, and with **no new ribbon button** — dropped the [xml] tag. Run
+  detects rows that already came back OK and asks whether to skip them, so the
+  question appears exactly when it is relevant and never on a fresh sheet.
+  Matches on the Result **text**, not the cell colour: colour is presentation,
+  and re-formatting a sheet must not change what gets re-sent.
 
 - [x] **3.3 Progress in the status bar** **[bas]**
   Row n of N, and the serial currently in flight.
