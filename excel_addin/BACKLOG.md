@@ -402,6 +402,15 @@ rule was for.
 
 ## Resolved / not doing
 
+- **Send List to Sheet on the SERIAL window.** Deliberately left off, not
+  overlooked. A DCN returns dozens of assets and wanting them as data is the
+  obvious next thought; a serial returns two or three, where a whole new sheet
+  earns less than Copy Row already does. The two windows being otherwise
+  mirrors makes the gap look accidental, so: it is a decision, and the answer
+  if it comes up is one button, a six-line handler, and a tidier sheet name -
+  `LookupListToSheet` already takes the `kind` argument. Add it when somebody
+  asks, not before.
+
 - **Full shared body between the two lookup forms.** Considered and declined —
   shared code would have to take the form as a late-bound `Object`, turning
   control names the compiler checks today into strings that fail at runtime,
