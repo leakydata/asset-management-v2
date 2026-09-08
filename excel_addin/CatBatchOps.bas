@@ -77,13 +77,22 @@ Private Const OUR_DEALER As String = "B150"
 Private Const OUR_CCID As String = "2969474128"
 
 ' What sending a row would do to a record that is already there.
+' The two things Cat documents an Add/Update doing when a serial is already
+' held, and the only distinction the guard makes:
+'
+'   across dealers -> a transfer request is raised and our record sits PENDING
+'                     until the other dealership approves. It leaves our hands
+'                     and lands in someone else's queue, so it is held back
+'                     until somebody says yes.
+'
+'   within  dealer -> Cat expires the conflicting records and ours goes ACTIVE.
+'                     Ours to do, so it is done - and written down.
+'
+' Anything finer than that - which ownership type, whose CCID - is reported in
+' the Result and the log rather than acted on. Guessing at severity beyond
+' what Cat documents was more machinery than the job needed.
 Private Const CONFLICT_DEALER As String = "DEALER"
-Private Const CONFLICT_DCN As String = "DCN"
-
-' Our own machine, on our own book, sitting in inventory. In the way, but only
-' the way a thing is in the way of being sold - so it is reported and sent
-' rather than held. See ConflictOf.
-Private Const CONFLICT_STOCK As String = "STOCK"
+Private Const CONFLICT_LOCAL As String = "LOCAL"
 
 Private Const OP_ADD As String = "ADD_UPDATE"
 Private Const OP_EXP As String = "EXPIRE"
@@ -1045,7 +1054,7 @@ Private Sub RunCore(ByVal dryRun As Boolean)
             If compare And op = OP_ADD Then
                 cDcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
                 cKind = ConflictOf(RecordsFor(serial), cDcn, cHits)
-                If cKind = CONFLICT_STOCK Then
+                If cKind = CONFLICT_LOCAL Then
                     note = note & "  " & ConflictText(cKind, cHits)
                 ElseIf Len(cKind) > 0 Then
                     If ApprovedOnRow(ws, r, cols) Then
@@ -1077,7 +1086,7 @@ Private Sub RunCore(ByVal dryRun As Boolean)
         If op = OP_ADD Then
             cDcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
             cKind = ConflictOf(RecordsFor(serial), cDcn, cHits)
-            If cKind = CONFLICT_STOCK Then
+            If cKind = CONFLICT_LOCAL Then
                 ' Sent, but the sheet and the log say where it came from.
                 cStock = " - " & ConflictText(cKind, cHits)
             ElseIf Len(cKind) > 0 And Not ApprovedOnRow(ws, r, cols) Then
@@ -1443,19 +1452,13 @@ Private Function ConflictOf(ByVal recs As Collection, ByVal dcn As String, _
     Next i
     If hits.Count = 0 Then Exit Function
 
-    ' The tier is set by the worst of them.
-    v = hits(1)
-    If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
+    ' Which of the two it is, decided by the worst record in the way. Ranking
+    ' still runs, but only to order the list and pick what the sheet columns
+    ' show - it no longer decides anything.
+    If StrComp(CStr(hits(1)(14)), OUR_DEALER, vbTextCompare) <> 0 Then
         ConflictOf = CONFLICT_DEALER
-    ElseIf Not IsStockRecord(v) Then
-        ' Something live is being displaced - an owned, rented or leased
-        ' record. Somebody loses a machine off their books over this.
-        ConflictOf = CONFLICT_DCN
     Else
-        ' Nothing but inventory in the way, all of it under our own dealer.
-        ' That is a machine moving DCN or leaving the lot, which is what an
-        ' Add is usually for. Worth saying, not worth stopping for.
-        ConflictOf = CONFLICT_STOCK
+        ConflictOf = CONFLICT_LOCAL
     End If
 End Function
 
@@ -1479,20 +1482,20 @@ Private Function IsConflicting(ByVal v As Variant, ByVal dcn As String) As Boole
     End If
 End Function
 
-' A record that is stock rather than a live claim on the machine.
+' Is any of this a live claim on the machine rather than a stock line?
 '
-' What decides this is the ownership type, not whose CCID it sits under.
-' Expiring an inventory listing displaces nobody - it is what happens when a
-' machine moves DCN or gets sold. Expiring an "owned" record takes a machine
-' off someone who has it. That difference is worth more than the difference
-' between our book and a customer's.
-'
-' Dealer still matters and is checked before this: another dealer's inventory
-' is not stock we can quietly move, because reaching across dealers raises a
-' transfer request whatever the type says.
-Private Function IsStockRecord(ByVal v As Variant) As Boolean
-    If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then Exit Function
-    IsStockRecord = (StrComp(CStr(v(3)), "inventory", vbTextCompare) = 0)
+' Changes the wording only. Expiring an inventory listing displaces nobody;
+' expiring an owned record takes a machine off someone who has it, and that
+' deserves to read differently in the Result even though Cat lets both through
+' the same way.
+Private Function AnyLive(ByVal hits As Collection) As Boolean
+    Dim i As Long
+    For i = 1 To hits.Count
+        If StrComp(CStr(hits(i)(3)), "inventory", vbTextCompare) <> 0 Then
+            AnyLive = True
+            Exit Function
+        End If
+    Next i
 End Function
 
 ' Every one of them on our own book, so the note can say so.
@@ -1540,19 +1543,21 @@ Private Function ConflictText(ByVal kind As String, ByVal hits As Collection) As
         Case CONFLICT_DEALER
             lead = "held by another dealer - sending raises a transfer request " & _
                    "and leaves ours PENDING"
-        Case CONFLICT_STOCK
-            If AllOurs(hits) Then
+        Case Else
+            ' Same dealer, so this went through. The note has to carry its own
+            ' weight - it is the only place the expiry is ever mentioned.
+            If AnyLive(hits) Then
+                lead = "TOOK OVER a live record under our own dealer - " & _
+                       IIf(many, "those records", "that record") & _
+                       " expired, no transfer request and nobody told"
+            ElseIf AllOurs(hits) Then
                 lead = "came off our own inventory - " & _
                        IIf(many, "those listings expire", "that listing expires")
             Else
                 lead = "inventory only - " & _
                        IIf(many, "those records expire", "that record expires") & _
-                       ", no live ownership is displaced"
+                       ", no live ownership displaced"
             End If
-        Case Else
-            lead = "held by someone else - sending expires " & _
-                   IIf(many, "all " & hits.Count & " records", "that record") & _
-                   " with no notice to anyone"
     End Select
 
     ' Then every record it lands on. All of them: Cat expires the lot, and a
@@ -1640,9 +1645,9 @@ Private Function BuildConflictSheet(ByVal src As Worksheet, ByVal rows As Collec
     notes = Array( _
         "Who CCAT says holds this asset right now. Where more than one record " & _
             "is in the way, this is the one with the most to lose.", _
-        "Ownership type of that record. This is what decides whether a row is " & _
-            "held: inventory under our own dealer is stock and goes through " & _
-            "with a note, anything live - owned, rental, leased - is held.", _
+        "Ownership type of that record - owned, rental, leased, inventory. " & _
+            "It does not decide anything on its own; it is here so you can see " & _
+            "what the other dealership actually has before approving.", _
         "Dealer code holding it. Anything other than " & OUR_DEALER & _
             " is another dealership, and sending raises a transfer request.", _
         "The DCN it currently sits on. Blank when another dealer holds it - " & _
