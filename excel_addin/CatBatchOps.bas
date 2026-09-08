@@ -69,6 +69,16 @@ Option Explicit
 Public Const SH_ADD As String = "Cat Add-Update"
 Public Const SH_EXP As String = "Cat Expire"
 Public Const SH_TRF As String = "Cat Transfer"
+Public Const SH_CONF As String = "Cat Ownership Conflicts"
+
+' Who we are, as CCAT sees us. A record under this dealer is a Cleveland
+' Brothers record; anything else belongs to another dealership.
+Private Const OUR_DEALER As String = "B150"
+Private Const OUR_CCID As String = "2969474128"
+
+' What sending a row would do to a record that is already there.
+Private Const CONFLICT_DEALER As String = "DEALER"
+Private Const CONFLICT_DCN As String = "DCN"
 
 Private Const OP_ADD As String = "ADD_UPDATE"
 Private Const OP_EXP As String = "EXPIRE"
@@ -977,6 +987,11 @@ Private Sub RunCore(ByVal dryRun As Boolean)
 
     Dim nOk As Long, nFailed As Long, nSkipped As Long, done As Long, nAlready As Long
     Dim cancelled As Boolean
+
+    ' Rows an Add/Update would take off somebody else. Collected on a Validate
+    ' so they can be lifted onto a sheet of their own afterwards.
+    Dim held As Collection: Set held = New Collection
+    Dim cKind As String, cHold As Variant, cDcn As String
     Application.ScreenUpdating = False
 
     ClearCancelKey        ' drop any stray Esc from before the run started
@@ -1012,11 +1027,31 @@ Private Sub RunCore(ByVal dryRun As Boolean)
             ' Built with If, NOT IIf. IIf evaluates BOTH arms, so an IIf here
             ' would call DiffNote - and hit the API - even with comparison
             ' turned off.
-            Dim note As String
+            Dim note As String, noteKind As Long
             note = "OK to send" & PreviewNote(ws, r, cols, op)
+            noteKind = 1
             If compare Then note = note & DiffNote(ws, r, cols, op, serial)
-            WriteResult ws, r, cResult, note, 1
-            nOk = nOk + 1
+
+            ' The ownership guard needs a lookup, so Validate can only report it
+            ' when comparison is on. Run enforces it either way - see the guard
+            ' below, which runs off the before-image it was fetching anyway.
+            cKind = ""
+            If compare And op = OP_ADD Then
+                cDcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+                cKind = ConflictOf(RecordsFor(serial), cDcn, cHold)
+                If Len(cKind) > 0 Then
+                    If ApprovedOnRow(ws, r, cols) Then
+                        note = "APPROVED - " & ConflictText(cKind, cHold)
+                    Else
+                        note = "HELD - " & ConflictText(cKind, cHold)
+                        noteKind = 2
+                        held.Add Array(r, cKind, cHold)
+                    End If
+                End If
+            End If
+
+            WriteResult ws, r, cResult, note, noteKind
+            If noteKind = 1 Then nOk = nOk + 1 Else nSkipped = nSkipped + 1
             GoTo NextRow
         End If
 
@@ -1025,6 +1060,21 @@ Private Sub RunCore(ByVal dryRun As Boolean)
         ' whole record is.
         Dim beforeState As String, before As Variant
         beforeState = CaptureBefore(ws, r, cols, serial, before)
+
+        ' The guard, enforced here rather than only in Validate: Validate is
+        ' optional and nothing stops someone pressing Run first. The lookup is
+        ' already cached from the before-image above, so this is free.
+        cKind = ""
+        If op = OP_ADD Then
+            cDcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
+            cKind = ConflictOf(RecordsFor(serial), cDcn, cHold)
+            If Len(cKind) > 0 And Not ApprovedOnRow(ws, r, cols) Then
+                WriteResult ws, r, cResult, "SKIPPED: " & ConflictText(cKind, cHold), 2
+                nSkipped = nSkipped + 1
+                held.Add Array(r, cKind, cHold)
+                GoTo NextRow
+            End If
+        End If
 
         Dim outcome As String, kind As Long
         outcome = SendRow(ws, r, cols, op, serial, kind)
@@ -1041,6 +1091,22 @@ NextRow:
     Application.StatusBar = False
     Application.ScreenUpdating = True
 
+    ' Held rows go onto a sheet of their own, where each one can be approved or
+    ' dropped. Never built silently - it activates a different sheet, and doing
+    ' that to someone without asking is how people lose their place.
+    Dim heldSheet As String
+    If held.Count > 0 And ws.Name <> SH_CONF Then
+        If MsgBox(held.Count & " row(s) are held by someone else and were not sent." & _
+                  vbCrLf & vbCrLf & _
+                  "Put them on a sheet where you can see who holds each one and " & _
+                  "approve the ones you meant?" & vbCrLf & vbCrLf & _
+                  "Yes - build '" & SH_CONF & "'" & vbCrLf & _
+                  "No  - leave them on this sheet", _
+                  vbQuestion + vbYesNo, "Cat Asset Tools") = vbYes Then
+            heldSheet = BuildConflictSheet(ws, held)
+        End If
+    End If
+
     ' The run id is quoted here because it is what Undo asks for. Telling
     ' someone afterwards where the record of what they just did lives is the
     ' difference between having a log and having a log anyone uses.
@@ -1048,6 +1114,22 @@ NextRow:
     If Not dryRun Then
         tail = vbCrLf & vbCrLf & "Logged as run " & runId & vbCrLf & _
                "(CCAT > Logs, or Build Sheet > Undo a Run to put these back)"
+    End If
+
+    If Len(heldSheet) > 0 Then
+        tail = vbCrLf & vbCrLf & held.Count & " held row(s) are on '" & heldSheet & _
+               "'. Type YES in Approve on the ones you meant, delete the rest, " & _
+               "then Run from there." & tail
+    ElseIf held.Count > 0 Then
+        tail = vbCrLf & vbCrLf & held.Count & " row(s) were held - see the Result " & _
+               "column for who owns each one." & tail
+    End If
+
+    ' Say plainly that the guard did not run, rather than letting a clean
+    ' Validate imply there is nothing held.
+    If dryRun And Not compare And op = OP_ADD Then
+        tail = tail & vbCrLf & vbCrLf & "Ownership was NOT checked - that needs the " & _
+               "comparison step. Run will still refuse anything held by someone else."
     End If
 
     ' A cancelled run says so FIRST and says where it stopped. "17 rows
@@ -1088,6 +1170,10 @@ Private Function OperationOf(ByVal ws As Worksheet, ByRef byName As Boolean) As 
         Case SH_ADD: OperationOf = OP_ADD: Exit Function
         Case SH_EXP: OperationOf = OP_EXP: Exit Function
         Case SH_TRF: OperationOf = OP_TRF: Exit Function
+        ' The held-rows sheet is a real Add/Update sheet - that is the point.
+        ' Named here so it is not met with "this isn't a standard Cat sheet",
+        ' which reads like a warning about a sheet we produced ourselves.
+        Case SH_CONF: OperationOf = OP_ADD: Exit Function
     End Select
 
     byName = False
@@ -1290,6 +1376,205 @@ Private Function FindByDcn(ByVal recs As Collection, ByVal dcn As String, _
             Exit Function
         End If
     Next i
+End Function
+
+'==============================================================================
+' PRIVATE: the ownership guard
+'
+' Cat decides what an Add/Update means from who already holds the serial, and
+' the two outcomes are not equally visible:
+'
+'   another dealer holds it  -> a transfer request is raised against them and
+'                               our record sits PENDING until they approve.
+'                               Outward facing: it lands in someone else's
+'                               queue with our name on it.
+'
+'   our dealer, another DCN  -> Cat expires that record and ours goes ACTIVE
+'                               straight away. No approval, no pending state,
+'                               nobody told.
+'
+' The second is the quieter one and the reason this guard is not opt-in. A run
+' can take a machine off a colleague's customer record and leave nothing behind
+' but our own write log.
+'
+' It costs no extra calls: RecordsFor caches per serial, and a Run has already
+' fetched the record for its before-image by the time this asks.
+'==============================================================================
+
+' What sending this row would do to a record that is already there. Returns ""
+' when nothing of anyone else's is at stake, and fills holder with the record
+' that is in the way.
+Private Function ConflictOf(ByVal recs As Collection, ByVal dcn As String, _
+                            ByRef holder As Variant) As String
+    holder = Empty
+    If recs Is Nothing Then Exit Function
+    If recs.Count = 0 Then Exit Function
+
+    ' Already ours on this DCN: an update to our own record, not a takeover.
+    Dim mine As Variant
+    If Len(dcn) > 0 Then
+        If FindByDcn(recs, dcn, mine) Then Exit Function
+    End If
+
+    ' A different dealer outranks a same-dealer clash. It is the one that puts
+    ' a request in front of a third party, so it is the one worth reporting.
+    Dim i As Long, v As Variant
+    For i = 1 To recs.Count
+        v = recs(i)
+        If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
+            holder = v
+            ConflictOf = CONFLICT_DEALER
+            Exit Function
+        End If
+    Next i
+
+    ' Everything left is ours, and none of it is on this DCN - so any record
+    ' carrying one belongs to a different customer of ours.
+    For i = 1 To recs.Count
+        v = recs(i)
+        If Len(CleanId(CStr(v(2)))) > 0 Then
+            holder = v
+            ConflictOf = CONFLICT_DCN
+            Exit Function
+        End If
+    Next i
+End Function
+
+' Says what will happen, not that something is wrong - the row may well be
+' meant. Written to be read in a Result cell without opening anything else.
+Private Function ConflictText(ByVal kind As String, ByVal holder As Variant) As String
+    If Not IsArray(holder) Then
+        ConflictText = "held by a record we could not read"
+        Exit Function
+    End If
+
+    Dim who As String
+    Select Case kind
+        Case CONFLICT_DEALER
+            who = CStr(holder(15))
+            If Len(who) = 0 Then who = "another dealer"
+            ConflictText = "held by " & who & " (dealer " & CStr(holder(14)) & ")" & _
+                           " - sending raises a transfer request and leaves ours PENDING"
+
+        Case CONFLICT_DCN
+            who = CStr(holder(13))
+            If Len(who) = 0 Then who = CStr(holder(11))
+            ConflictText = "held on DCN " & CStr(holder(2)) & _
+                           IIf(Len(who) > 0, " " & who, "") & _
+                           " (CCID " & CStr(holder(12)) & ", our dealer)" & _
+                           " - sending expires that record with no notice to anyone"
+    End Select
+End Function
+
+' The one thing that lets a held row through. Deliberately narrow: an exact
+' YES, in a column only the held-rows sheet is built with, so approving
+' something is always a thing you did rather than a thing you left set.
+Private Function ApprovedOnRow(ByVal ws As Worksheet, ByVal r As Long, _
+                               ByVal cols As Object) As Boolean
+    Dim c As Long: c = ColOf(cols, "approve", "approved", "transferok")
+    If c = 0 Then Exit Function
+    ApprovedOnRow = (UCase$(Trim$(CellStr(ws, r, c))) = "YES")
+End Function
+
+' The held rows, lifted onto a sheet of their own.
+'
+' It carries every column the operation needs, so it is a working Add/Update
+' sheet and Run treats it as one - the point is that you finish the job here
+' rather than going back to edit the original. What it adds is who holds each
+' asset, what sending would do, and the Approve column that has to say YES
+' before anything leaves.
+'
+' Delete a row or leave Approve blank and that asset is simply not sent.
+Private Function BuildConflictSheet(ByVal src As Worksheet, ByVal rows As Collection) As String
+    Dim lastCol As Long: lastCol = LastHeaderCol(src)
+    If lastCol < 1 Then Exit Function
+
+    ' Carry over every source column except Result, which is rewritten here.
+    Dim keep() As Long, nKeep As Long
+    ReDim keep(1 To lastCol)
+    Dim c As Long
+    For c = 1 To lastCol
+        If NormHeader(CStr(src.Cells(HEADER_ROW, c).Value)) <> "result" Then
+            nKeep = nKeep + 1
+            keep(nKeep) = c
+        End If
+    Next c
+    If nKeep = 0 Then Exit Function
+
+    Dim ws As Worksheet: Set ws = FreshSheet(SH_CONF)
+
+    Dim i As Long
+    For i = 1 To nKeep
+        With ws.Cells(HEADER_ROW, i)
+            .Value = src.Cells(HEADER_ROW, keep(i)).Value
+            .Font.Bold = True
+            .Interior.Color = RGB(31, 78, 121)
+            .Font.Color = vbWhite
+        End With
+    Next i
+
+    Dim extra As Variant, notes As Variant
+    extra = Array("Held By", "Held Dealer", "Held DCN", "Held CCID", _
+                  "What Sending Does", "Approve", "Result")
+    notes = Array( _
+        "Who CCAT says holds this asset right now.", _
+        "Dealer code holding it. Anything other than " & OUR_DEALER & _
+            " is another dealership, and sending raises a transfer request.", _
+        "The DCN it currently sits on. Blank when another dealer holds it - " & _
+            "Cat only returns DCNs for our own records.", _
+        "CCID of the current holder. Ours is " & OUR_CCID & ".", _
+        "What Cat will do if this row is sent.", _
+        "Type YES to send this row. Anything else and it stays put. " & _
+            "Deleting the row works just as well.", _
+        "Written by the macro: OK / FAILED / SKIPPED. Do not edit.")
+
+    For i = 0 To UBound(extra)
+        With ws.Cells(HEADER_ROW, nKeep + 1 + i)
+            .Value = extra(i)
+            .Font.Bold = True
+            .Font.Color = vbWhite
+            If extra(i) = "Approve" Then
+                .Interior.Color = RGB(192, 0, 0)
+            Else
+                .Interior.Color = RGB(89, 89, 89)
+            End If
+            If Not .Comment Is Nothing Then .Comment.Delete
+            .AddComment CStr(notes(i))
+            .Comment.Shape.TextFrame.AutoSize = True
+            .Comment.Visible = False
+        End With
+    Next i
+
+    Dim rr As Long, d As Variant, h As Variant, outRow As Long, who As String
+    For rr = 1 To rows.Count
+        d = rows(rr)
+        outRow = HEADER_ROW + rr
+        h = d(2)
+
+        For i = 1 To nKeep
+            ws.Cells(outRow, i).NumberFormat = "@"
+            ws.Cells(outRow, i).Value = CStr(src.Cells(CLng(d(0)), keep(i)).Value)
+        Next i
+
+        who = ""
+        If IsArray(h) Then
+            who = CStr(h(13))
+            If Len(who) = 0 Then who = CStr(h(11))
+            If Len(who) = 0 Then who = CStr(h(15))
+            ws.Cells(outRow, nKeep + 2).NumberFormat = "@"
+            ws.Cells(outRow, nKeep + 2).Value = CStr(h(14))
+            ws.Cells(outRow, nKeep + 3).NumberFormat = "@"
+            ws.Cells(outRow, nKeep + 3).Value = CStr(h(2))
+            ws.Cells(outRow, nKeep + 4).NumberFormat = "@"
+            ws.Cells(outRow, nKeep + 4).Value = CStr(h(12))
+        End If
+        ws.Cells(outRow, nKeep + 1).Value = who
+        ws.Cells(outRow, nKeep + 5).Value = ConflictText(CStr(d(1)), h)
+    Next rr
+
+    RefreshLists ws
+    ws.Columns.AutoFit
+    BuildConflictSheet = ws.Name
 End Function
 
 ' The state of this row's record immediately before it is sent, for the log.
@@ -1696,6 +1981,8 @@ Private Sub RefreshLists(ByVal ws As Worksheet)
                 AddList ws, c, "owned,rental,leased,sold,inventory,unknown"
             Case "status"
                 AddList ws, c, "APPROVED,REJECTED"
+            Case "approve", "approved", "transferok"
+                AddList ws, c, "YES"
         End Select
     Next c
 End Sub
