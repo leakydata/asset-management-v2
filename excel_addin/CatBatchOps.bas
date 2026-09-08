@@ -80,6 +80,11 @@ Private Const OUR_CCID As String = "2969474128"
 Private Const CONFLICT_DEALER As String = "DEALER"
 Private Const CONFLICT_DCN As String = "DCN"
 
+' Our own machine, on our own book, sitting in inventory. In the way, but only
+' the way a thing is in the way of being sold - so it is reported and sent
+' rather than held. See ConflictOf.
+Private Const CONFLICT_STOCK As String = "STOCK"
+
 Private Const OP_ADD As String = "ADD_UPDATE"
 Private Const OP_EXP As String = "EXPIRE"
 Private Const OP_TRF As String = "TRANSFER"
@@ -991,7 +996,8 @@ Private Sub RunCore(ByVal dryRun As Boolean)
     ' Rows an Add/Update would take off somebody else. Collected on a Validate
     ' so they can be lifted onto a sheet of their own afterwards.
     Dim held As Collection: Set held = New Collection
-    Dim cKind As String, cHold As Variant, cDcn As String, cAlso As Long
+    Dim cKind As String, cDcn As String, cStock As String
+    Dim cHits As Collection
     Application.ScreenUpdating = False
 
     ClearCancelKey        ' drop any stray Esc from before the run started
@@ -1038,14 +1044,16 @@ Private Sub RunCore(ByVal dryRun As Boolean)
             cKind = ""
             If compare And op = OP_ADD Then
                 cDcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
-                cKind = ConflictOf(RecordsFor(serial), cDcn, cHold, cAlso)
-                If Len(cKind) > 0 Then
+                cKind = ConflictOf(RecordsFor(serial), cDcn, cHits)
+                If cKind = CONFLICT_STOCK Then
+                    note = note & "  " & ConflictText(cKind, cHits)
+                ElseIf Len(cKind) > 0 Then
                     If ApprovedOnRow(ws, r, cols) Then
-                        note = "APPROVED - " & ConflictText(cKind, cHold, cAlso)
+                        note = "APPROVED - " & ConflictText(cKind, cHits)
                     Else
-                        note = "HELD - " & ConflictText(cKind, cHold, cAlso)
+                        note = "HELD - " & ConflictText(cKind, cHits)
                         noteKind = 2
-                        held.Add Array(r, cKind, cHold, cAlso)
+                        held.Add Array(r, cKind, cHits)
                     End If
                 End If
             End If
@@ -1065,19 +1073,24 @@ Private Sub RunCore(ByVal dryRun As Boolean)
         ' optional and nothing stops someone pressing Run first. The lookup is
         ' already cached from the before-image above, so this is free.
         cKind = ""
+        cStock = ""
         If op = OP_ADD Then
             cDcn = CleanId(CellStr(ws, r, ColOf(cols, "dcn")))
-            cKind = ConflictOf(RecordsFor(serial), cDcn, cHold, cAlso)
-            If Len(cKind) > 0 And Not ApprovedOnRow(ws, r, cols) Then
-                WriteResult ws, r, cResult, "SKIPPED: " & ConflictText(cKind, cHold, cAlso), 2
+            cKind = ConflictOf(RecordsFor(serial), cDcn, cHits)
+            If cKind = CONFLICT_STOCK Then
+                ' Sent, but the sheet and the log say where it came from.
+                cStock = " - " & ConflictText(cKind, cHits)
+            ElseIf Len(cKind) > 0 And Not ApprovedOnRow(ws, r, cols) Then
+                WriteResult ws, r, cResult, "SKIPPED: " & ConflictText(cKind, cHits), 2
                 nSkipped = nSkipped + 1
-                held.Add Array(r, cKind, cHold, cAlso)
+                held.Add Array(r, cKind, cHits)
                 GoTo NextRow
             End If
         End If
 
         Dim outcome As String, kind As Long
         outcome = SendRow(ws, r, cols, op, serial, kind)
+        If kind = 1 And Len(cStock) > 0 Then outcome = outcome & cStock
         WriteResult ws, r, cResult, outcome, kind
         If kind = 1 Then nOk = nOk + 1 Else nFailed = nFailed + 1
 
@@ -1405,9 +1418,8 @@ End Function
 ' when nothing of anyone else's is at stake, and fills holder with the record
 ' that is in the way.
 Private Function ConflictOf(ByVal recs As Collection, ByVal dcn As String, _
-                            ByRef holder As Variant, ByRef alsoHit As Long) As String
-    holder = Empty
-    alsoHit = 0
+                            ByRef hits As Collection) As String
+    Set hits = New Collection
     If recs Is Nothing Then Exit Function
     If recs.Count = 0 Then Exit Function
 
@@ -1417,65 +1429,60 @@ Private Function ConflictOf(ByVal recs As Collection, ByVal dcn As String, _
         If FindByDcn(recs, dcn, mine) Then Exit Function
     End If
 
-    ' Which tier we are in: a different dealer outranks a same-dealer clash,
-    ' because that is the one putting a request in front of a third party.
+    ' Every record our write would land on, worst first.
+    '
+    ' All of them, not the best one and a count. A serial can carry our own
+    ' inventory listing and a customer's owned record at once, and Cat expires
+    ' both - so a report naming one of them is a report of half the damage.
+    ' Which one is "worst" still decides the order and what the sheet columns
+    ' show, but nothing is left out of the description.
     Dim i As Long, v As Variant
     For i = 1 To recs.Count
         v = recs(i)
-        If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
-            ConflictOf = CONFLICT_DEALER
-            Exit For
-        End If
+        If IsConflicting(v, dcn) Then InsertByRank hits, v
     Next i
+    If hits.Count = 0 Then Exit Function
 
-    If Len(ConflictOf) = 0 Then
-        For i = 1 To recs.Count
-            v = recs(i)
-            If Len(CleanId(CStr(v(2)))) > 0 Then
-                ConflictOf = CONFLICT_DCN
-                Exit For
-            End If
-        Next i
+    ' The tier is set by the worst of them.
+    v = hits(1)
+    If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
+        ConflictOf = CONFLICT_DEALER
+    ElseIf Not IsOurStock(v) Then
+        ConflictOf = CONFLICT_DCN
+    Else
+        ' Nothing but our own inventory in the way means a machine leaving our
+        ' lot, which is what an Add is usually for. Worth saying, not worth
+        ' stopping for.
+        ConflictOf = CONFLICT_STOCK
     End If
-    If Len(ConflictOf) = 0 Then Exit Function
-
-    ' Now pick WHICH record to name, and count the others.
-    '
-    ' Naming the first one Cat happened to return was wrong. A serial can carry
-    ' our own inventory listing and a customer's owned record at the same time,
-    ' and reporting the inventory one buries the fact that a real customer is
-    ' about to lose theirs. Cat expires all of the conflicting records, not
-    ' just one, so the honest report is the worst of them plus a count.
-    Dim best As Long, bestRank As Long, rank As Long, nHits As Long
-    bestRank = -1
-    For i = 1 To recs.Count
-        v = recs(i)
-        If IsConflicting(v, dcn) Then
-            nHits = nHits + 1
-            rank = HolderRank(v)
-            If rank > bestRank Then
-                bestRank = rank
-                best = i
-            End If
-        End If
-    Next i
-
-    If best = 0 Then
-        ConflictOf = ""
-        Exit Function
-    End If
-
-    holder = recs(best)
-    alsoHit = nHits - 1
 End Function
 
-' Is this record one of the ones our write would land on?
+' Ranked insert, so hits(1) is always the record with the most to lose.
+Private Sub InsertByRank(ByVal hits As Collection, ByVal v As Variant)
+    Dim i As Long
+    For i = 1 To hits.Count
+        If HolderRank(v) > HolderRank(hits(i)) Then
+            hits.Add v, , i
+            Exit Sub
+        End If
+    Next i
+    hits.Add v
+End Sub
+
 Private Function IsConflicting(ByVal v As Variant, ByVal dcn As String) As Boolean
     If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
         IsConflicting = True                      ' another dealer holds it
     ElseIf Len(CleanId(CStr(v(2)))) > 0 Then
         IsConflicting = (StrComp(CStr(v(2)), dcn, vbTextCompare) <> 0)
     End If
+End Function
+
+' Our own machine, on our own book, in inventory - the thing an Add is meant
+' to move. Anything else under our dealer belongs to a customer.
+Private Function IsOurStock(ByVal v As Variant) As Boolean
+    If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then Exit Function
+    If StrComp(CStr(v(12)), OUR_CCID, vbTextCompare) <> 0 Then Exit Function
+    IsOurStock = (StrComp(CStr(v(3)), "inventory", vbTextCompare) = 0)
 End Function
 
 ' How much a record's loss matters, used only to decide which one to name.
@@ -1498,43 +1505,58 @@ End Function
 
 ' Says what will happen, not that something is wrong - the row may well be
 ' meant. Written to be read in a Result cell without opening anything else.
-Private Function ConflictText(ByVal kind As String, ByVal holder As Variant, _
-                              ByVal alsoHit As Long) As String
-    If Not IsArray(holder) Then
-        ConflictText = "held by a record we could not read"
-        Exit Function
-    End If
+Private Function ConflictText(ByVal kind As String, ByVal hits As Collection) As String
+    If hits Is Nothing Then Exit Function
+    If hits.Count = 0 Then Exit Function
 
-    ' Ownership type is here because it is what tells our own stock apart from
-    ' a customer who actually owns the thing.
-    Dim ot As String
-    ot = CStr(holder(3))
-    If Len(ot) = 0 Then ot = "type unknown"
+    Dim many As Boolean: many = (hits.Count > 1)
 
-    Dim who As String
+    ' What happens, in the words that matter for this tier. The tier is set by
+    ' the worst record, so a transfer request still leads even when our own
+    ' inventory is caught up in the same write.
+    Dim lead As String
     Select Case kind
         Case CONFLICT_DEALER
-            who = CStr(holder(15))
-            If Len(who) = 0 Then who = "another dealer"
-            ConflictText = "held by " & who & " (dealer " & CStr(holder(14)) & _
-                           ", " & ot & ")" & _
-                           " - sending raises a transfer request and leaves ours PENDING"
-
-        Case CONFLICT_DCN
-            who = CStr(holder(11))
-            If Len(who) = 0 Then who = CStr(holder(13))
-            ConflictText = "held on DCN " & CStr(holder(2)) & _
-                           IIf(Len(who) > 0, " " & who, "") & _
-                           " (" & ot & ", CCID " & CStr(holder(12)) & ", our dealer)" & _
-                           " - sending expires that record with no notice to anyone"
+            lead = "held by another dealer - sending raises a transfer request " & _
+                   "and leaves ours PENDING"
+        Case CONFLICT_STOCK
+            lead = "came off our own inventory - " & _
+                   IIf(many, "those listings expire", "that listing expires")
+        Case Else
+            lead = "held by someone else - sending expires " & _
+                   IIf(many, "all " & hits.Count & " records", "that record") & _
+                   " with no notice to anyone"
     End Select
 
-    ' Cat expires every conflicting record, so a report naming one of three is
-    ' a report that understates what is about to happen.
-    If alsoHit > 0 Then
-        ConflictText = ConflictText & " (+" & alsoHit & " more record" & _
-                       IIf(alsoHit = 1, " on this serial goes too)", _
-                                        "s on this serial go too)")
+    ' Then every record it lands on. All of them: Cat expires the lot, and a
+    ' report naming one of two is a report of half the damage.
+    Dim i As Long, out As String
+    For i = 1 To hits.Count
+        If i > 1 Then out = out & "; "
+        If many Then out = out & "(" & i & ") "
+        out = out & OneHolder(hits(i))
+    Next i
+
+    ConflictText = lead & IIf(many, ". In the way: ", " - ") & out
+End Function
+
+' One record, said the way somebody checking CCAT would say it back.
+Private Function OneHolder(ByVal v As Variant) As String
+    Dim who As String, ot As String
+    who = CStr(v(11))
+    If Len(who) = 0 Then who = CStr(v(13))
+    If Len(who) = 0 Then who = CStr(v(15))
+    ot = CStr(v(3))
+    If Len(ot) = 0 Then ot = "type unknown"
+
+    If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
+        ' Cat returns no DCN for another dealer's record, so there is nothing
+        ' to print there - the dealer is the identifying fact.
+        OneHolder = who & " (dealer " & CStr(v(14)) & ", " & ot & _
+                    ", CCID " & CStr(v(12)) & ")"
+    Else
+        OneHolder = "DCN " & CStr(v(2)) & " " & who & _
+                    " (" & ot & ", CCID " & CStr(v(12)) & ")"
     End If
 End Function
 
@@ -1621,10 +1643,13 @@ Private Function BuildConflictSheet(ByVal src As Worksheet, ByVal rows As Collec
     Next i
 
     Dim rr As Long, d As Variant, h As Variant, outRow As Long, who As String
+    Dim hits As Collection
     For rr = 1 To rows.Count
         d = rows(rr)
         outRow = HEADER_ROW + rr
-        h = d(2)
+        Set hits = d(2)
+        h = Empty
+        If hits.Count > 0 Then h = hits(1)
 
         For i = 1 To nKeep
             ws.Cells(outRow, i).NumberFormat = "@"
@@ -1645,7 +1670,7 @@ Private Function BuildConflictSheet(ByVal src As Worksheet, ByVal rows As Collec
             ws.Cells(outRow, nKeep + 5).Value = CStr(h(12))
         End If
         ws.Cells(outRow, nKeep + 1).Value = who
-        ws.Cells(outRow, nKeep + 6).Value = ConflictText(CStr(d(1)), h, CLng(d(3)))
+        ws.Cells(outRow, nKeep + 6).Value = ConflictText(CStr(d(1)), hits)
     Next rr
 
     RefreshLists ws
