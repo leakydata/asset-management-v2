@@ -1043,7 +1043,7 @@ Private Sub RunCore(ByVal dryRun As Boolean)
             ' would call DiffNote - and hit the API - even with comparison
             ' turned off.
             Dim note As String, noteKind As Long
-            note = "OK to send" & PreviewNote(ws, r, cols, op)
+            note = "OK to send"
             noteKind = 1
             If compare Then note = note & DiffNote(ws, r, cols, op, serial)
 
@@ -1066,6 +1066,13 @@ Private Sub RunCore(ByVal dryRun As Boolean)
                     End If
                 End If
             End If
+
+            ' Which optional fields were left blank goes last. It is the least
+            ' of what a row has to say next to a diff or an ownership note, and
+            ' on a held row it is not worth saying at all - that row is not
+            ' going anywhere for a reason that has nothing to do with a blank
+            ' Product Family Code.
+            If noteKind = 1 Then note = note & PreviewNote(ws, r, cols, op)
 
             WriteResult ws, r, cResult, note, noteKind
             If noteKind = 1 Then nOk = nOk + 1 Else nSkipped = nSkipped + 1
