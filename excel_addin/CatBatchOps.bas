@@ -931,8 +931,18 @@ Private Sub RunCore(ByVal dryRun As Boolean)
 
     ' Validate is where you go to check a sheet, so it is also where a sheet
     ' built by an older version gets its dropdowns put back in the right
-    ' column. Nothing is sent and no data is touched - only validation.
-    If dryRun Then RefreshLists ws
+    ' column and its word wrap turned off. Nothing is sent and no data is
+    ' touched - only formatting.
+    '
+    ' The wrap-off is deliberately confined to the grid under the headers.
+    ' Build Sheet also writes a merged instructions block off to the right
+    ' that needs its wrap, and it sits outside the header columns - so
+    ' bounding this by LastHeaderCol is what keeps that note readable.
+    If dryRun Then
+        RefreshLists ws
+        ws.Range(ws.Cells(HEADER_ROW, 1), _
+                 ws.Cells(HEADER_ROW + LIST_ROWS, LastHeaderCol(ws))).WrapText = False
+    End If
 
     Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cSerial).End(xlUp).Row
     Dim nRows As Long: nRows = CountRows(ws, cSerial, lastRow)
