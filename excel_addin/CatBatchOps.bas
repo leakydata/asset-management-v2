@@ -75,6 +75,7 @@ Private Const OP_EXP As String = "EXPIRE"
 Private Const OP_TRF As String = "TRANSFER"
 
 Private Const HEADER_ROW As Long = 1
+Private Const LIST_ROWS As Long = 1000      ' data rows a dropdown covers
 Private Const MAX_ATTEMPTS As Long = 3
 Private Const RETRY_WAIT_SECONDS As Long = 1
 
@@ -917,6 +918,11 @@ Private Sub RunCore(ByVal dryRun As Boolean)
 
     Dim cResult As Long: cResult = EnsureResultColumn(ws, cols)
 
+    ' Validate is where you go to check a sheet, so it is also where a sheet
+    ' built by an older version gets its dropdowns put back in the right
+    ' column. Nothing is sent and no data is touched - only validation.
+    If dryRun Then RefreshLists ws
+
     Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cSerial).End(xlUp).Row
     Dim nRows As Long: nRows = CountRows(ws, cSerial, lastRow)
     If nRows = 0 Then
@@ -1534,12 +1540,7 @@ Private Sub BuildSheet(ByVal op As String)
     Next c
 
     ' Dropdowns on the data rows
-    If op = OP_ADD Then
-        AddList ws, ColOfHeader(headers, "Ownership Type"), _
-                "owned,rental,leased,sold,inventory,unknown"
-    ElseIf op = OP_TRF Then
-        AddList ws, ColOfHeader(headers, "Status"), "APPROVED,REJECTED"
-    End If
+    RefreshLists ws
 
     ws.Range("A1").AutoFilter
     ws.Activate
@@ -1633,19 +1634,44 @@ Private Sub SheetSpec(ByVal op As String, ByRef nm As String, ByRef headers As V
     End Select
 End Sub
 
-Private Function ColOfHeader(ByVal headers As Variant, ByVal label As String) As Long
-    Dim i As Long
-    For i = LBound(headers) To UBound(headers)
-        If headers(i) = label Then ColOfHeader = i + 1: Exit Function
-    Next i
-End Function
-
 Private Sub AddList(ByVal ws As Worksheet, ByVal col As Long, ByVal listCsv As String)
     If col = 0 Then Exit Sub
-    With ws.Range(ws.Cells(HEADER_ROW + 1, col), ws.Cells(HEADER_ROW + 1000, col)).Validation
+    With ws.Range(ws.Cells(HEADER_ROW + 1, col), ws.Cells(HEADER_ROW + LIST_ROWS, col)).Validation
         .Delete
         .Add Type:=xlValidateList, Formula1:=listCsv
     End With
+End Sub
+
+' Put every dropdown where the sheet's own headers say it goes, and nowhere
+' else.
+'
+' Placing them by array index was right only for a sheet built by the same
+' version. Ownership Type used to be the fifth column and is now the fourth,
+' and validation is sticky: Range.Clear removes it, but ClearContents - what
+' selecting the rows and pressing Delete does - leaves it behind. So a sheet
+' carried over from an older build kept its dropdown on column 5, which the
+' new layout calls Model. That is the reported symptom, and it will happen
+' again the next time a column moves.
+'
+' Reading the header text instead means the sheet in front of you decides,
+' and wiping the whole data area first means a list left over from any past
+' layout goes away rather than accumulating.
+Private Sub RefreshLists(ByVal ws As Worksheet)
+    Dim lastCol As Long: lastCol = LastHeaderCol(ws)
+    If lastCol < 1 Then Exit Sub
+
+    ws.Range(ws.Cells(HEADER_ROW + 1, 1), _
+             ws.Cells(HEADER_ROW + LIST_ROWS, lastCol)).Validation.Delete
+
+    Dim c As Long
+    For c = 1 To lastCol
+        Select Case NormHeader(CStr(ws.Cells(HEADER_ROW, c).Value))
+            Case "ownershiptype"
+                AddList ws, c, "owned,rental,leased,sold,inventory,unknown"
+            Case "status"
+                AddList ws, c, "APPROVED,REJECTED"
+        End Select
+    Next c
 End Sub
 
 '==============================================================================
