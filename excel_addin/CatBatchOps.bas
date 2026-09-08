@@ -665,8 +665,14 @@ End Sub
 ' same either way, which is why resume matches on it rather than on the cell
 ' colour. Colour is presentation; someone re-formatting a sheet should not
 ' change what gets re-sent.
+'
+' Matching on "OK" alone was wrong: Validate writes "OK to send" into the very
+' same column, so running Validate and then Run made every checked row look
+' like it had already been sent, and the run offered to skip rows that had
+' never left the building. Only a sent row carries the status code, so the
+' bracket is the thing that actually separates the two.
 Private Function OutcomeWasOk(ByVal outcome As String) As Boolean
-    OutcomeWasOk = (Left$(LTrim$(outcome), 2) = "OK")
+    OutcomeWasOk = (Left$(LTrim$(outcome), 4) = "OK (")
 End Function
 
 '==============================================================================
@@ -842,6 +848,11 @@ Private Function FreshSheet(ByVal nm As String) As Worksheet
         ws.Cells.Clear
         For Each shp In ws.Shapes: shp.Delete: Next shp
     End If
+
+    ' Word wrap off as a rule: it makes rows grow tall and ragged the moment
+    ' a long value lands in one, and every column here is an identifier or a
+    ' code that reads better clipped than stacked.
+    ws.Cells.WrapText = False
 
     Set FreshSheet = ws
 End Function
@@ -1518,6 +1529,11 @@ Private Sub BuildSheet(ByVal op As String)
         ws.Cells.Clear
         For Each shp In ws.Shapes: shp.Delete: Next shp
     End If
+
+    ' Word wrap off as a rule: it makes rows grow tall and ragged the moment
+    ' a long value lands in one, and every column here is an identifier or a
+    ' code that reads better clipped than stacked.
+    ws.Cells.WrapText = False
 
     Dim c As Long, bg As Long, fg As Long
     For c = 0 To UBound(headers)

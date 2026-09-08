@@ -245,6 +245,12 @@ Private Function MakeOutputSheet(ByVal wb As Workbook, ByVal base As String) As 
     Dim ws As Worksheet
     Set ws = wb.Worksheets.Add(After:=wb.Worksheets(wb.Worksheets.Count))
     ws.Name = nm
+
+    ' Word wrap off as a rule: it makes rows grow tall and ragged the moment
+    ' a long value lands in one, and every column here is an identifier or a
+    ' code that reads better clipped than stacked.
+    ws.Cells.WrapText = False
+
     Set MakeOutputSheet = ws
 End Function
 

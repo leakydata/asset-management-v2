@@ -211,6 +211,11 @@ Public Function LookupListToSheet(ByVal rows As Collection, ByVal kind As String
     Dim ws As Worksheet
     Set ws = wb.Worksheets.Add(After:=wb.Worksheets(wb.Worksheets.Count))
 
+    ' Word wrap off as a rule: it makes rows grow tall and ragged the moment
+    ' a long value lands in one, and every column here is an identifier or a
+    ' code that reads better clipped than stacked.
+    ws.Cells.WrapText = False
+
     ' Sheet names cap at 31 characters and cannot hold : \ / ? * [ ].
     Dim nm As String
     nm = Left$("Cat " & kind & " " & CleanSheetName(query), 31)
