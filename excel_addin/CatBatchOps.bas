@@ -1447,12 +1447,14 @@ Private Function ConflictOf(ByVal recs As Collection, ByVal dcn As String, _
     v = hits(1)
     If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
         ConflictOf = CONFLICT_DEALER
-    ElseIf Not IsOurStock(v) Then
+    ElseIf Not IsStockRecord(v) Then
+        ' Something live is being displaced - an owned, rented or leased
+        ' record. Somebody loses a machine off their books over this.
         ConflictOf = CONFLICT_DCN
     Else
-        ' Nothing but our own inventory in the way means a machine leaving our
-        ' lot, which is what an Add is usually for. Worth saying, not worth
-        ' stopping for.
+        ' Nothing but inventory in the way, all of it under our own dealer.
+        ' That is a machine moving DCN or leaving the lot, which is what an
+        ' Add is usually for. Worth saying, not worth stopping for.
         ConflictOf = CONFLICT_STOCK
     End If
 End Function
@@ -1477,12 +1479,29 @@ Private Function IsConflicting(ByVal v As Variant, ByVal dcn As String) As Boole
     End If
 End Function
 
-' Our own machine, on our own book, in inventory - the thing an Add is meant
-' to move. Anything else under our dealer belongs to a customer.
-Private Function IsOurStock(ByVal v As Variant) As Boolean
+' A record that is stock rather than a live claim on the machine.
+'
+' What decides this is the ownership type, not whose CCID it sits under.
+' Expiring an inventory listing displaces nobody - it is what happens when a
+' machine moves DCN or gets sold. Expiring an "owned" record takes a machine
+' off someone who has it. That difference is worth more than the difference
+' between our book and a customer's.
+'
+' Dealer still matters and is checked before this: another dealer's inventory
+' is not stock we can quietly move, because reaching across dealers raises a
+' transfer request whatever the type says.
+Private Function IsStockRecord(ByVal v As Variant) As Boolean
     If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then Exit Function
-    If StrComp(CStr(v(12)), OUR_CCID, vbTextCompare) <> 0 Then Exit Function
-    IsOurStock = (StrComp(CStr(v(3)), "inventory", vbTextCompare) = 0)
+    IsStockRecord = (StrComp(CStr(v(3)), "inventory", vbTextCompare) = 0)
+End Function
+
+' Every one of them on our own book, so the note can say so.
+Private Function AllOurs(ByVal hits As Collection) As Boolean
+    Dim i As Long
+    For i = 1 To hits.Count
+        If StrComp(CStr(hits(i)(12)), OUR_CCID, vbTextCompare) <> 0 Then Exit Function
+    Next i
+    AllOurs = True
 End Function
 
 ' How much a record's loss matters, used only to decide which one to name.
@@ -1495,11 +1514,13 @@ Private Function HolderRank(ByVal v As Variant) As Long
     If StrComp(CStr(v(14)), OUR_DEALER, vbTextCompare) <> 0 Then
         HolderRank = HolderRank + 1000            ' another dealer entirely
     End If
-    If StrComp(CStr(v(12)), OUR_CCID, vbTextCompare) <> 0 Then
-        HolderRank = HolderRank + 100             ' a customer, not us
-    End If
+    ' A live claim outranks whose book the record sits on: losing an owned
+    ' record matters more than losing an inventory line, whoever holds it.
     If StrComp(CStr(v(3)), "inventory", vbTextCompare) <> 0 Then
-        HolderRank = HolderRank + 10              ' a live claim, not stock
+        HolderRank = HolderRank + 100
+    End If
+    If StrComp(CStr(v(12)), OUR_CCID, vbTextCompare) <> 0 Then
+        HolderRank = HolderRank + 10              ' a customer, not us
     End If
 End Function
 
@@ -1520,8 +1541,14 @@ Private Function ConflictText(ByVal kind As String, ByVal hits As Collection) As
             lead = "held by another dealer - sending raises a transfer request " & _
                    "and leaves ours PENDING"
         Case CONFLICT_STOCK
-            lead = "came off our own inventory - " & _
-                   IIf(many, "those listings expire", "that listing expires")
+            If AllOurs(hits) Then
+                lead = "came off our own inventory - " & _
+                       IIf(many, "those listings expire", "that listing expires")
+            Else
+                lead = "inventory only - " & _
+                       IIf(many, "those records expire", "that record expires") & _
+                       ", no live ownership is displaced"
+            End If
         Case Else
             lead = "held by someone else - sending expires " & _
                    IIf(many, "all " & hits.Count & " records", "that record") & _
@@ -1613,8 +1640,9 @@ Private Function BuildConflictSheet(ByVal src As Worksheet, ByVal rows As Collec
     notes = Array( _
         "Who CCAT says holds this asset right now. Where more than one record " & _
             "is in the way, this is the one with the most to lose.", _
-        "Ownership type of that record. 'inventory' under our own CCID is our " & _
-            "stock; 'owned' under a customer's CCID is theirs.", _
+        "Ownership type of that record. This is what decides whether a row is " & _
+            "held: inventory under our own dealer is stock and goes through " & _
+            "with a note, anything live - owned, rental, leased - is held.", _
         "Dealer code holding it. Anything other than " & OUR_DEALER & _
             " is another dealership, and sending raises a transfer request.", _
         "The DCN it currently sits on. Blank when another dealer holds it - " & _
