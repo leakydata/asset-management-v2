@@ -939,20 +939,20 @@ Private Sub RunCore(ByVal dryRun As Boolean)
 
     Dim cResult As Long: cResult = EnsureResultColumn(ws, cols)
 
-    ' Validate is where you go to check a sheet, so it is also where a sheet
-    ' built by an older version gets its dropdowns put back in the right
-    ' column and its word wrap turned off. Nothing is sent and no data is
-    ' touched - only formatting.
+    ' Wrap off on both paths, not just Validate. Nothing this add-in writes
+    ' ever wants it - the sheet note is a shape now - and the usual way it
+    ' arrives is a paste, which carries the source formatting with it. So it
+    ' gets cleared whenever we touch the sheet, whichever button was pressed.
     '
-    ' The wrap-off is deliberately confined to the grid under the headers.
-    ' Build Sheet also writes a merged instructions block off to the right
-    ' that needs its wrap, and it sits outside the header columns - so
-    ' bounding this by LastHeaderCol is what keeps that note readable.
-    If dryRun Then
-        RefreshLists ws
-        ws.Range(ws.Cells(HEADER_ROW, 1), _
-                 ws.Cells(HEADER_ROW + LIST_ROWS, LastHeaderCol(ws))).WrapText = False
-    End If
+    ' Row heights go back too: a row stretched by wrapped text keeps its
+    ' height after the wrap is gone, so clearing one without the other leaves
+    ' the sheet looking exactly as wrong as before.
+    ws.Cells.WrapText = False
+    ws.UsedRange.EntireRow.AutoFit
+
+    ' Dropdowns are Validate's business only - that is the pass you run to
+    ' check a sheet over, and a Run should not be quietly editing validation.
+    If dryRun Then RefreshLists ws
 
     Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cSerial).End(xlUp).Row
     Dim nRows As Long: nRows = CountRows(ws, cSerial, lastRow)
@@ -1859,22 +1859,17 @@ Private Sub BuildSheet(ByVal op As String)
     ActiveWindow.FreezePanes = True
     ws.Columns.AutoFit
 
-    With ws.Cells(3, UBound(headers) + 3)
-        .Value = OpLabel(op) & vbLf & vbLf & _
-                 "Fill one row per asset - a single asset is just one row." & vbLf & _
-                 "Then click Validate, read the Result column, then Run." & vbLf & vbLf & _
-                 "The first columns are in the same order as the batch-lookup" & vbLf & _
-                 "output, so you can Ctrl-select those columns on a results" & vbLf & _
-                 "sheet, copy, and paste them straight in here." & vbLf & vbLf & _
-                 "- Dark blue  = always required" & vbLf & _
-                 "- Mid blue   = conditional (see the header comment)" & vbLf & _
-                 "- Light blue = optional; blank means CCAT keeps its value" & vbLf & _
-                 "- Grey       = written by the macro; do not edit" & vbLf & vbLf & _
-                 "Hover any header for details."
-        .WrapText = True
-        .VerticalAlignment = xlTop
-    End With
-    ws.Range(ws.Cells(3, UBound(headers) + 3), ws.Cells(14, UBound(headers) + 7)).Merge
+    ' The sheet note lives in a floating text box, not in cells.
+    '
+    ' It used to be a merged block with WrapText on. Setting wrap on a cell
+    ' that still holds fifteen lines makes Excel auto-fit the row to all of
+    ' them - row 3 came out 409 points tall, twenty-eight times the others,
+    ' and that row runs straight through the data columns. Merging afterwards
+    ' does not undo it, because the height is already set.
+    '
+    ' A shape has no row height and no wrap to leak. Rebuilds already clear
+    ' every shape on the sheet, so it does not accumulate.
+    AddSheetNote ws, OpLabel(op), UBound(headers) + 3
 
     ws.Cells(HEADER_ROW + 1, 1).Select
     MsgBox "'" & nm & "' is ready." & vbCrLf & vbCrLf & _
@@ -1883,6 +1878,52 @@ Private Sub BuildSheet(ByVal op As String)
     Exit Sub
 Fail:
     MsgBox "Error: " & Err.Description, vbCritical, "Cat Asset Tools"
+End Sub
+
+' Puts the how-to-use note on the sheet as a text box.
+'
+' Numeric literals rather than the mso* names so this cannot fail to compile
+' on a machine where the Office object library is not referenced:
+'   1 = msoTextOrientationHorizontal, 0 = msoFalse,
+'   1 = msoAutoSizeShapeToFitText,   -4160 = xlTop equivalent for shapes.
+'
+' WordWrap is off and AutoSize is on, so the box grows to the text instead of
+' folding it - which is the whole point of moving it out of a cell.
+Private Sub AddSheetNote(ByVal ws As Worksheet, ByVal title As String, ByVal atCol As Long)
+    Dim body As String
+    body = title & vbLf & vbLf & _
+           "Fill one row per asset - a single asset is just one row." & vbLf & _
+           "Then click Validate, read the Result column, then Run." & vbLf & vbLf & _
+           "The first columns are in the same order as the batch-lookup" & vbLf & _
+           "output, so you can Ctrl-select those columns on a results" & vbLf & _
+           "sheet, copy, and paste them straight in here." & vbLf & vbLf & _
+           "- Dark blue  = always required" & vbLf & _
+           "- Mid blue   = conditional (see the header comment)" & vbLf & _
+           "- Light blue = optional; blank means CCAT keeps its value" & vbLf & _
+           "- Grey       = written by the macro; do not edit" & vbLf & vbLf & _
+           "Hover any header for details."
+
+    Dim anchorCell As Range: Set anchorCell = ws.Cells(3, atCol)
+
+    Dim tb As Shape
+    On Error Resume Next
+    Set tb = ws.Shapes.AddTextbox(1, anchorCell.Left, anchorCell.Top, 400, 240)
+    If tb Is Nothing Then Exit Sub
+    On Error GoTo 0
+
+    With tb
+        .Name = "CatSheetNote"
+        .Fill.ForeColor.RGB = RGB(242, 242, 242)
+        .Line.ForeColor.RGB = RGB(191, 191, 191)
+        With .TextFrame2
+            .WordWrap = 0
+            .TextRange.Text = body
+            ' Monospaced so the "- Dark blue  =" column stays lined up.
+            .TextRange.Font.Name = "Consolas"
+            .TextRange.Font.Size = 9
+            .AutoSize = 1
+        End With
+    End With
 End Sub
 
 ' Column layouts. The leading block of each mirrors the batch-lookup column
