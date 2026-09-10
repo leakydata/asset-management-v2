@@ -83,10 +83,10 @@ Private Const LIST_FONT      As String = "Consolas"
 Private Const LIST_FONT_SIZE As Single = 9
 
 ' Past this many rows the list stops being a way to find anything. The list is
-' 140pt tall, so about eleven rows are visible at once - a hundred results is
-' nine screens of scrolling with no way to search within it. Filling it is fast
+' 140pt tall, so about eleven rows are visible at once - thirty-five results is
+' three screens of scrolling with no way to search within it. Filling it is fast
 ' now, so this is not about speed; it is about the list being the wrong tool.
-Private Const BIG_RESULT As Long = 100
+Private Const BIG_RESULT As Long = 35
 
 ' How tall the record list is. THIS IS THE ONE REAL DIFFERENCE FROM THE SERIAL
 ' FORM. A serial returns two or three ownership records; a DCN returns every
