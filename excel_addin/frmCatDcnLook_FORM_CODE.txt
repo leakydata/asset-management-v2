@@ -82,6 +82,12 @@ Private Const FORM_H As Single = 498
 Private Const LIST_FONT      As String = "Consolas"
 Private Const LIST_FONT_SIZE As Single = 9
 
+' Past this many rows the list stops being a way to find anything. The list is
+' 140pt tall, so about eleven rows are visible at once - a hundred results is
+' nine screens of scrolling with no way to search within it. Filling it is fast
+' now, so this is not about speed; it is about the list being the wrong tool.
+Private Const BIG_RESULT As Long = 100
+
 ' How tall the record list is. THIS IS THE ONE REAL DIFFERENCE FROM THE SERIAL
 ' FORM. A serial returns two or three ownership records; a DCN returns every
 ' asset it owns, which is routinely dozens - so the list that was six rows tall
@@ -365,6 +371,8 @@ Private Sub btnLookup_Click()
 
     lstRecords.ListIndex = 0
     ShowRecord
+
+    OfferSheet recs.Count
     Exit Sub
 
 Fail:
@@ -472,6 +480,26 @@ End Sub
 ' The sheet comes out shaped like a batch results sheet, which also means
 ' Validate and Run refuse it - a results sheet must never be mistaken for an
 ' operation sheet.
+
+' Offers a sheet when the list is too long to be much use.
+'
+' Offered rather than forced, and offered AS WELL AS the list rather than
+' instead of it - a form that answers a lookup with an empty list and a new
+' sheet looks broken, however sensible the sheet is. Reuses btnToSheet_Click
+' so there is one path to the sheet and one set of failure messages.
+Private Sub OfferSheet(ByVal n As Long)
+    If n <= BIG_RESULT Then Exit Sub
+
+    DoEvents          ' let the list paint, so the prompt is not the only thing on screen
+
+    If MsgBox(n & " assets - more than the list can usefully show." & vbCrLf & vbCrLf & _
+              "Put them on a sheet as well, where you can sort and filter?" & vbCrLf & vbCrLf & _
+              "The list stays as it is either way.", _
+              vbQuestion + vbYesNo, "DCN Lookup") <> vbYes Then Exit Sub
+
+    btnToSheet_Click
+End Sub
+
 Private Sub btnToSheet_Click()
     If mRows Is Nothing Then
         Me.Caption = "DCN Lookup - look up a DCN first"
