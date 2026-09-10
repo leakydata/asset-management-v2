@@ -481,6 +481,23 @@ End Sub
 ' Validate and Run refuse it - a results sheet must never be mistaken for an
 ' operation sheet.
 
+Private Sub btnToSheet_Click()
+    If mRows Is Nothing Then
+        Me.Caption = "DCN Lookup - look up a DCN first"
+        Exit Sub
+    End If
+    If mRows.Count = 0 Then Exit Sub
+
+    Dim nm As String
+    nm = LookupListToSheet(mRows, "DCN", CleanId(txtSerial.Text))
+
+    If Len(nm) = 0 Then
+        Me.Caption = "DCN Lookup - could not write the sheet"
+    Else
+        Me.Caption = "DCN Lookup - " & mRows.Count & " asset(s) written to '" & nm & "'"
+    End If
+End Sub
+
 ' Offers a sheet when the list is too long to be much use.
 '
 ' Offered rather than forced, and offered AS WELL AS the list rather than
@@ -498,23 +515,6 @@ Private Sub OfferSheet(ByVal n As Long)
               vbQuestion + vbYesNo, "DCN Lookup") <> vbYes Then Exit Sub
 
     btnToSheet_Click
-End Sub
-
-Private Sub btnToSheet_Click()
-    If mRows Is Nothing Then
-        Me.Caption = "DCN Lookup - look up a DCN first"
-        Exit Sub
-    End If
-    If mRows.Count = 0 Then Exit Sub
-
-    Dim nm As String
-    nm = LookupListToSheet(mRows, "DCN", CleanId(txtSerial.Text))
-
-    If Len(nm) = 0 Then
-        Me.Caption = "DCN Lookup - could not write the sheet"
-    Else
-        Me.Caption = "DCN Lookup - " & mRows.Count & " asset(s) written to '" & nm & "'"
-    End If
 End Sub
 
 ' Hands back the selected record, or reports why it can't.
